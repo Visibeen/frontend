@@ -1,0 +1,32 @@
+/* Layout.css */
+
+.header {
+  width: 100%;
+  background-color: #007bff;
+  padding: 10px 30px;
+  display: flex;
+  align-items: center;
+}
+
+.header-logo {
+  height: 100px;
+  width: 150px;
+}
+
+.main-section {
+  display: flex;
+  min-height: calc(100vh - 140px); /* leave space for header/footer */
+}
+
+.main-content {
+  flex-grow: 1;
+  padding: 20px;
+  background-color: #f9f9f9;
+}
+
+footer {
+  width: 100%;
+  background: linear-gradient(to right, #004AAD, #FF005C);
+  color: white;
+  padding: 30px;
+}
