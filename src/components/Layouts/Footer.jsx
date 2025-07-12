@@ -1,5 +1,5 @@
 import React from 'react';
-import logo from '../assets/VisibeenLogo.png';
+import logo from '../../assets/VisibeenLogo.png';
 import { FaFacebookF, FaInstagram, FaTwitter, FaYoutube } from 'react-icons/fa';
 
 const Footer = () => {

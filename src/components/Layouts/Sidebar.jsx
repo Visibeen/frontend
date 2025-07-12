@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import logo from '../assets/VisibeenLogo.png';
+import logo from '../../assets/VisibeenLogo.png'; 
+
 
 const Sidebar = () => {
   const [performanceOpen, setPerformanceOpen] = useState(false);

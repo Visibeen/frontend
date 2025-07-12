@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { setSession } from '../utils/authUtils';
+import { setSession } from '../../utils/authUtils';
 import { signInWithPopup } from 'firebase/auth';
-import { auth, provider } from '../firebase';
-import logo from '../assets/VisibeenLogo.png';
+import { auth, provider } from '../../firebase';
+import logo from '../../assets/VisibeenLogo.png';
 
 function Login() {
     const [contact, setContact] = useState('');
@@ -16,11 +16,11 @@ function Login() {
         setError('');
 
         try {
-            const res = await fetch('http://localhost:5000/api/auth/login', {
+            const res = await fetch('http://localhost:8089/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contact,
+                   phone_number: contact,
                     password,
                     account_type: 'phone',
 
@@ -47,7 +47,7 @@ function Login() {
             const result = await signInWithPopup(auth, provider);
             const token = await result.user.getIdToken();
 
-            const res = await fetch('http://localhost:5000/api/auth/login', {
+            const res = await fetch('http://localhost:8089/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
