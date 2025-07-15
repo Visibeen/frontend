@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithPopup } from 'firebase/auth';
-import { auth, provider } from '../firebase';
-import { setSession } from '../utils/authUtils';
-import logo from '../assets/VisibeenLogo.png';
+import { auth, provider } from '../../firebase';
+import { setSession } from '../../utils/authUtils';
+import logo from '../../assets/VisibeenLogo.png';
 
 function Register() {
   const [form, setForm] = useState({
@@ -14,6 +14,7 @@ function Register() {
     account_type: 'phone',
   });
 
+  const[isGoogleSignup, setIsGoogleSignup]= useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ function Register() {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/signup', {
+      const res = await fetch('http://localhost:8089/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -32,7 +33,7 @@ function Register() {
           email: form.email,
           phone_number: form.contact,
           password: form.password,
-          account_type: form.account_type,
+          account_type: isGoogleSignup ? 'google' : 'phone',
         }),
       });
 
@@ -43,18 +44,23 @@ function Register() {
         setIsSubmitting(false);
         return;
       }
-
-      navigate('/');
+      
+      setSession(data.user);
+      navigate('/dashboard');
     } catch (err) {
+      console.error('Register error:', err);
       setError('Server error, please try again');
       setIsSubmitting(false);
     }
+  
   };const handleGoogleRegister = async () => {
+    setIsGoogleSignup(true);
   try {
     const result = await signInWithPopup(auth, provider);
+    const user =result.user;
     const token = await result.user.getIdToken();
 
-    const res = await fetch('http://localhost:5000/api/auth/signup', {
+    const res = await fetch('http://localhost:8089/api/auth/signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,7 +68,7 @@ function Register() {
       },
       body: JSON.stringify({
         email: result.user.email,
-        account_type: 'google'
+        account_type:  isGoogleSignup ? 'google' : 'phone'
       }),
     });
 
@@ -96,8 +102,11 @@ function Register() {
         <form onSubmit={handleRegister}>
           <input type="text" placeholder="Name" required onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <input type="email" placeholder="Email Id" required onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          {!isGoogleSignup}
+          <>
           <input type="text" placeholder="Contact Number" required onChange={(e) => setForm({ ...form, contact: e.target.value })} />
           <input type="password" placeholder="Password" required onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          </>
           <button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Registering...' : 'Register'}
           </button>

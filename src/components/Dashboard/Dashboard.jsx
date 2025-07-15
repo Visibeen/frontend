@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from './Sidebar';
-import Footer from './Footer';
+import Sidebar from '../Layouts/Sidebar';
+import Footer from '../Layouts/Footer';
 
 const mockBusinesses = [
   {
@@ -10,6 +10,7 @@ const mockBusinesses = [
     address: '23 Maplewood Lane, IL 62704, USA',
     status: 'Verified',
     score: '300/500',
+    
   },
   {
     id: 2,
@@ -25,7 +26,11 @@ const mockBusinesses = [
     status: 'Suspended',
     score: 'Check now',
   },
+  
 ];
+
+
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -60,7 +65,9 @@ const Dashboard = () => {
                 <td><span className={`status-badge ${getStatusClass(biz.status)}`}>{biz.status}</span></td>
                 <td>{biz.score}</td>
                 <td>
-                  <button onClick={() => navigate(`/profile/${biz.id}`)}>View profile</button>
+                  <button onClick={() => navigate(`/profile/${biz.locationId}`)}>
+                    View profile
+                  </button>
                 </td>
               </tr>
             ))}
