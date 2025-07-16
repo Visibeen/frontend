@@ -7,6 +7,9 @@ import VerifyOtp from './components/Login/VerifyOtp';
 import Dashboard from './components/Dashboard/Dashboard';
 import ProfilePage from './components/Dashboard/pages/Profile';
 import Layout from './components/Layouts/Layout';
+import ResetPassword from './components/Login/ResetPassword';
+import GetEDMs from './components/Dashboard/pages/GetEDMs/GetEDMsForm';
+import UploadLogo from './components/Dashboard/pages/GetEDMs/UploadLogo';
 
 // Adjust the path based on where ProfileView.jsx is saved
 
@@ -23,7 +26,10 @@ function App() {
         <Route path="/dashboard" element={<Layout><Dashboard/></Layout> } />
         <Route path="/profile/:locationId" element={<ProfilePage />} />
         <Route path="*" element={<div>Page Not Found</div>} />
-       
+       <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/get-edms" element={<GetEDMs />} />
+        <Route path="/upload-logo" element={<UploadLogo />} />
+
 
       </Routes>
     </Router>
