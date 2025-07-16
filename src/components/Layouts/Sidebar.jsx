@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import logo from '../../assets/VisibeenLogo.png'; 
+import { NavLink } from 'react-router-dom';
+import logo from '../../assets/VisibeenLogo.png';
 
 
 const Sidebar = () => {
@@ -9,7 +10,7 @@ const Sidebar = () => {
 
   return (
     <div className="sidebar">
-      
+
 
       <ul className="sidebar-top">
         <li><Link to="/dashboard">Overview</Link></li>
@@ -31,7 +32,7 @@ const Sidebar = () => {
             </ul>
           )}
         </li>
-        <li>Get EDMs</li>
+        <NavLink to="/get-edms" className="...">Get EDMs</NavLink>
         <li>Free Website</li>
       </ul>
 
