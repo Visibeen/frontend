@@ -8,7 +8,7 @@ const Footer = () => {
       <div className="footer-top">
         <div className="footer-left">
           <img src={logo} alt="Visibeen" className="footer-logo" />
-          <p>Copyright © 2024 ezeu digitech pvt ltd.<br />All rights reserved.</p>
+          <p>Copyright © 2024 e2e digitech pvt ltd.<br />All rights reserved.</p>
           <div className="footer-icons">
             <FaFacebookF />
             <FaInstagram />
