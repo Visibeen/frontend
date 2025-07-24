@@ -6,8 +6,9 @@ import { auth, provider } from '../../firebase';
 import logo from '../../assets/VisibeenLogo.png';
 import logo1 from '../../assets/googleLogo.jpg';
 
+
 function Login() {
-    const [contact, setContact] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -17,13 +18,13 @@ function Login() {
         setError('');
 
         try {
-            const res = await fetch('http://localhost:8089/api/auth/login', {
+            const res = await fetch('http://localhost:8089/api/v1/customer/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    phone_number: contact,
+                    email,
                     password,
-                    account_type: 'phone',
+                    account_type: 'manual',
 
                 }),
             });
@@ -35,8 +36,9 @@ function Login() {
                 return;
             }
 
-            setSession(data.user);
+            setSession(data.data);            
             navigate('/dashboard');
+           
         } catch (err) {
             setError('Server error');
         }
@@ -48,7 +50,7 @@ function Login() {
             const result = await signInWithPopup(auth, provider);
             const token = await result.user.getIdToken();
 
-            const res = await fetch('http://localhost:8089/api/auth/google-login', {
+            const res = await fetch('http://localhost:8089/api/v1/customer/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -111,15 +113,15 @@ function Login() {
 
                     <form onSubmit={handleLogin}>
                         <div className="form-group">
-                            <label htmlFor="contact">Contact Number<span className="required">*</span></label>
+                            <label htmlFor="contact">Email<span className="required">*</span></label>
                             <input
                                 type="text"
                                 id="contact"
                                 name="contact"
                                 placeholder="Enter contact number"
                                 required
-                                value={contact}
-                                onChange={(e) => setContact(e.target.value)}
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                             />
                         </div>
 
