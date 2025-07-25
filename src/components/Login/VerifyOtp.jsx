@@ -1,37 +1,78 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate }  from 'react-router-dom';
+import logo from '../../assets/VisibeenLogo.png';
 
 function VerifyOtp() {
   const [otp, setOtp] = useState('');
-  const navigate = useNavigate();
-  const phone = sessionStorage.getItem('resetPhone');
+  const navigate  = useNavigate();
 
+  /* 1️⃣  Get the email saved in ForgotPassword.jsx*/
+  const email = sessionStorage.getItem('resetEmail');
+  console.log('✅ Email from sessionStorage:', email);
+
+  /* 2️⃣  If the page was refreshed and email is gone,
+         send the user back to start the flow again*/
+  useEffect(() => {
+    if (!email) {
+      alert('Session expired. Please begin the reset process again.');
+      navigate('/forgot-password');
+    }
+  }, [email, navigate]);
+
+
+    // 3️⃣  Verify the OTP
   const handleVerify = async () => {
-    const res = await fetch('http://localhost:5000/api/auth/verify-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contact: phone, otp })
-    });
+    if (!otp.trim()) {
+      alert('Please enter the OTP.');
+      return;
+    }
 
-    const data = await res.json();
-    if (data.success) {
-      navigate('/dashboard');
-    } else {
-      alert(data.message || "Invalid OTP");
+    try {
+      const res  = await fetch('http://localhost:8089/api/auth/verify-otp', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ email, otp })
+      });
+
+      const data = await res.json();
+      console.log('🔵 Verify‑OTP response:', data);
+
+      if (data.success) {
+        /* Success → go to Reset Password */
+        navigate('/reset-password');
+      } else {
+        alert(data.message || 'Invalid OTP');
+      }
+    } catch (err) {
+      console.error('❌ Verify‑OTP error:', err);
+      alert('Network error; please try again.');
     }
   };
+
+  /* ────────────────────────────────────────────────────────── */
 
   return (
     <div className="main-container">
       <div className="left-side">
-        <img src="/assets/VisibeenLogo.png" alt="logo" />
+        <img src={logo} alt="logo" />
         <h2>Think Unlimited</h2>
-        <p>Join over <b>62,000+ Digital marketing and business</b> owners around the world</p>
+        <p>
+          Join over <b>62,000+</b> Digital marketing and <b>business</b>{' '}
+          owners around the world
+        </p>
       </div>
+
       <div className="right-side">
         <h2>Verify OTP</h2>
-        <p>Enter the OTP sent to <b>{phone}</b></p>
-        <input type="text" placeholder="Enter OTP" value={otp} onChange={(e) => setOtp(e.target.value)} />
+        <p>Enter the OTP sent to <b>{email}</b></p>
+
+        <input
+          type="text"
+          placeholder="Enter OTP"
+          value={otp}
+          onChange={(e) => setOtp(e.target.value)}
+        />
+
         <button onClick={handleVerify}>Verify</button>
       </div>
     </div>
