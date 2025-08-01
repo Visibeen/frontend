@@ -179,6 +179,31 @@ const VisibeenOnboarding = () => {
         { label: 'Karnataka', value: 'Karnataka' },
     ];
 
+    document.querySelectorAll('.day-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
+            const row = this.closest('.day-row');
+            const closedLabel = row.querySelector('.closed-label');
+            const timeInputs = row.querySelector('.time-inputs');
+
+            if (this.checked) {
+                closedLabel.style.display = 'none';
+                timeInputs.style.opacity = '1';
+            } else {
+                closedLabel.style.display = 'block';
+                timeInputs.style.opacity = '0.5';
+            }
+        });
+    });
+
+    // Add functionality to hour tags
+    document.querySelectorAll('.hour-tag').forEach(tag => {
+        tag.addEventListener('click', function () {
+            this.style.background = this.style.background === 'rgb(30, 136, 229)' ? 'none' : '#1e88e5';
+            this.style.color = this.style.color === 'white' ? '#666' : 'white';
+            this.style.borderColor = this.style.borderColor === 'rgb(30, 136, 229)' ? '#ddd' : '#1e88e5';
+        });
+    });
+
 
     // const handleSubmit = () => {
     //     // This is where you'd integrate with your backend
@@ -370,7 +395,11 @@ const VisibeenOnboarding = () => {
                                 <input type="text" placeholder="Enter area" className="form-input" />
                             </div>
 
-                            <button onClick={() => setCurrentStep(currentStep + 1)}>Next</button>
+                              <div className="form-actions">
+                                <button type="button" className="cancel-btn" onClick={() => setCurrentStep(currentStep + 2)}>Skip</button>
+                                <button type="submit" className="update-btn" onClick={() => setCurrentStep(currentStep + 1)}>Save</button>
+
+                            </div>
                             <button
                                 onClick={() => setCurrentStep(3)}
                                 className="btn-link"
@@ -547,13 +576,22 @@ const VisibeenOnboarding = () => {
                                 <input type="text" placeholder="Enter area" className="form-input" />
                                 <p>This number won't be visible to customers</p>
                             </div>
-                            <div className="btn-row">
+                            {/* <div className="btn-row">
                                 <button className="btn-outline">Skip</button>
                                 <button onClick={() => setCurrentStep(currentStep + 1)}>Next</button>
                                 <button onClick={() => setCurrentStep(8)} className="btn-link">
                                     ← Back to previous step
                                 </button>
+                            </div> */}
+                            <div className="form-actions">
+                                <button type="button" className="cancel-btn" onClick={() => setCurrentStep(currentStep + 2)}>Skip</button>
+                                <button type="submit" className="update-btn" onClick={() => setCurrentStep(currentStep + 1)}>Next</button>
+
                             </div>
+
+                            <button onClick={() => setCurrentStep(8)} className="btn-link">
+                                ← Back to previous step
+                            </button>
 
                         </div>
                     )}
@@ -649,109 +687,501 @@ const VisibeenOnboarding = () => {
                     {currentStep === 13 && (
                         <div className="card">
                             <h1 className="title">Add Timing</h1>
-                            <p className="subtitle">Lorem ipsum is a dummy or placeholder text...</p>
+                            <p className="subtitle">Lorem Ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.</p>
 
-                            {['Open with main hours', 'Open with no main hours', 'Temporarily closed', 'Permanently closed'].map((option, i) => (
-                                <div className="form-group radio-group" key={i}>
-                                    <input
-                                        type="radio"
-                                        id={`timing-${i}`}
-                                        name="businessHoursType"
-                                        value={option}
-                                        checked={formData.businessHoursType === option}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, businessHoursType: e.target.value }))}
-                                    />
-                                    <label htmlFor={`timing-${i}`}><strong>{option}</strong></label>
-                                </div>
-                            ))}
-
-                            <button onClick={() => setCurrentStep(currentStep + 1)}>Next</button>
-                            <button onClick={() => setCurrentStep(12)} className="btn-link">
-                                ← Back to previous step
-                            </button>
-                        </div>
-
-                    )}
-                    {currentStep === 14 && (
-                        <div className="card">
-                            <h1 className="title">Add Timing</h1>
-                            <p className="subtitle">Set your business open/close hours.</p>
-
-                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                                <div className="form-group" key={day}>
-                                    <label>
+                            <div className="form-section">
+                                <label className="form-label">Hours*</label>
+                                <div className="radio-group">
+                                    <div className="radio-option">
                                         <input
-                                            type="checkbox"
-                                            checked={formData.timing?.[day]?.enabled || false}
-                                            onChange={(e) =>
-                                                setFormData(prev => ({
-                                                    ...prev,
-                                                    timing: {
-                                                        ...prev.timing,
-                                                        [day]: {
-                                                            ...prev.timing?.[day],
-                                                            enabled: e.target.checked,
-                                                        },
-                                                    },
-                                                }))
-                                            }
+                                            type="radio"
+                                            name="hours"
+                                            value="open"
+                                            checked={formData.hours === 'open'}
+                                            onChange={() => setFormData({ ...formData, hours: 'open' })}
                                         />
-                                        <strong>{day}</strong>
-                                    </label>
-                                    {formData.timing?.[day]?.enabled && (
-                                        <div className="time-range">
-                                            <input
-                                                type="time"
-                                                value={formData.timing?.[day]?.from || ''}
-                                                onChange={(e) =>
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        timing: {
-                                                            ...prev.timing,
-                                                            [day]: {
-                                                                ...prev.timing?.[day],
-                                                                from: e.target.value,
-                                                            },
-                                                        },
-                                                    }))
-                                                }
-                                            />
-                                            <input
-                                                type="time"
-                                                value={formData.timing?.[day]?.to || ''}
-                                                onChange={(e) =>
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        timing: {
-                                                            ...prev.timing,
-                                                            [day]: {
-                                                                ...prev.timing?.[day],
-                                                                to: e.target.value,
-                                                            },
-                                                        },
-                                                    }))
-                                                }
-                                            />
+                                        <div className="radio-content">
+                                            <div className="radio-title">Open with main hours</div>
+                                            <div className="radio-description">Show when your business is open</div>
                                         </div>
-                                    )}
+                                    </div>
+                                    <div className="radio-option">
+                                        <input
+                                            type="radio"
+                                            name="hours"
+                                            value="no-main"
+                                            checked={formData.hours === 'no-main'}
+                                            onChange={() => setFormData({ ...formData, hours: 'no-main' })}
+                                        />
+                                        <div className="radio-content">
+                                            <div className="radio-title">Open with no main hours</div>
+                                            <div className="radio-description">Don't show any business hours</div>
+                                        </div>
+                                    </div>
+                                    <div className="radio-option">
+                                        <input
+                                            type="radio"
+                                            name="hours"
+                                            value="temporarily"
+                                            checked={formData.hours === 'temporarily'}
+                                            onChange={() => setFormData({ ...formData, hours: 'temporarily' })}
+                                        />
+                                        <div className="radio-content">
+                                            <div className="radio-title">Temporarily closed</div>
+                                            <div className="radio-description">Show that your business will open again in the future</div>
+                                        </div>
+                                    </div>
+                                    <div className="radio-option">
+                                        <input
+                                            type="radio"
+                                            name="hours"
+                                            value="permanently"
+                                            checked={formData.hours === 'permanently'}
+                                            onChange={() => setFormData({ ...formData, hours: 'permanently' })}
+                                        />
+                                        <div className="radio-content">
+                                            <div className="radio-title">Permanently closed</div>
+                                            <div className="radio-description">Show that your business no longer exists</div>
+                                        </div>
+                                    </div>
                                 </div>
-                            ))}
+                            </div>
 
-                            <button className="btn-primary">Save</button>
-                            <button onClick={() => setCurrentStep(13)} className="btn-link">
-                                ← Back to previous step
-                            </button>
+                            <div className="days-schedule">
+                                <div className="day-row">
+                                    <input
+                                        type="checkbox"
+                                        className="day-checkbox"
+                                        checked={formData.days?.monday?.isOpen || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            days: {
+                                                ...prev.days,
+                                                monday: {
+                                                    ...prev.days?.monday,
+                                                    isOpen: e.target.checked
+                                                }
+                                            }
+                                        }))}
+                                    />
+                                    <div className="day-name">Monday</div>
+                                    <div className="closed-label">Closed</div>
+                                    <div className="time-inputs">
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.monday?.openTime || "09:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    monday: {
+                                                        ...prev.days?.monday,
+                                                        openTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <span className="time-separator">-</span>
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.monday?.closeTime || "17:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    monday: {
+                                                        ...prev.days?.monday,
+                                                        closeTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <button
+                                            className="add-time-btn"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                // Logic to add additional time slot
+                                            }}
+                                        >+</button>
+                                    </div>
+                                </div>
+                                <div className="day-row">
+                                    <input
+                                        type="checkbox"
+                                        className="day-checkbox"
+                                        checked={formData.days?.tuesday?.isOpen || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            days: {
+                                                ...prev.days,
+                                                tuesday: {
+                                                    ...prev.days?.tuesday,
+                                                    isOpen: e.target.checked
+                                                }
+                                            }
+                                        }))}
+                                    />
+                                    <div className="day-name">Tuesday</div>
+                                    <div className="closed-label">Closed</div>
+                                    <div className="time-inputs">
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.tuesday?.openTime || "09:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    tuesday: {
+                                                        ...prev.days?.tuesday,
+                                                        openTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <span className="time-separator">-</span>
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.tuesday?.closeTime || "17:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    tuesday: {
+                                                        ...prev.days?.tuesday,
+                                                        closeTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <button
+                                            className="add-time-btn"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                // Logic to add additional time slot
+                                            }}
+                                        >+</button>
+                                    </div>
+                                </div>
+                                <div className="day-row">
+                                    <input
+                                        type="checkbox"
+                                        className="day-checkbox"
+                                        checked={formData.days?.wednesday?.isOpen || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            days: {
+                                                ...prev.days,
+                                                wednesday: {
+                                                    ...prev.days?.wednesday,
+                                                    isOpen: e.target.checked
+                                                }
+                                            }
+                                        }))}
+                                    />
+                                    <div className="day-name">Wednesday</div>
+                                    <div className="closed-label">Closed</div>
+                                    <div className="time-inputs">
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.wednesday?.openTime || "09:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    wednesday: {
+                                                        ...prev.days?.wednesday,
+                                                        openTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <span className="time-separator">-</span>
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.wednesday?.closeTime || "17:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    wednesday: {
+                                                        ...prev.days?.wednesday,
+                                                        closeTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <button
+                                            className="add-time-btn"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                // Logic to add additional time slot
+                                            }}
+                                        >+</button>
+                                    </div>
+                                </div>
+                                <div className="day-row">
+                                    <input
+                                        type="checkbox"
+                                        className="day-checkbox"
+                                        checked={formData.days?.thursday?.isOpen || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            days: {
+                                                ...prev.days,
+                                                thursday: {
+                                                    ...prev.days?.thursday,
+                                                    isOpen: e.target.checked
+                                                }
+                                            }
+                                        }))}
+                                    />
+                                    <div className="day-name">Thursday</div>
+                                    <div className="closed-label">Closed</div>
+                                    <div className="time-inputs">
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.thursday?.openTime || "09:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    thursday: {
+                                                        ...prev.days?.thursday,
+                                                        openTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <span className="time-separator">-</span>
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.thursday?.closeTime || "17:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    thursday: {
+                                                        ...prev.days?.thursday,
+                                                        closeTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <button
+                                            className="add-time-btn"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                // Logic to add additional time slot
+                                            }}
+                                        >+</button>
+                                    </div>
+                                </div>
+                                <div className="day-row">
+                                    <input
+                                        type="checkbox"
+                                        className="day-checkbox"
+                                        checked={formData.days?.friday?.isOpen || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            days: {
+                                                ...prev.days,
+                                                friday: {
+                                                    ...prev.days?.friday,
+                                                    isOpen: e.target.checked
+                                                }
+                                            }
+                                        }))}
+                                    />
+                                    <div className="day-name">Friday</div>
+                                    <div className="closed-label">Closed</div>
+                                    <div className="time-inputs">
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.friday?.openTime || "09:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    friday: {
+                                                        ...prev.days?.friday,
+                                                        openTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <span className="time-separator">-</span>
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.friday?.closeTime || "17:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    friday: {
+                                                        ...prev.days?.friday,
+                                                        closeTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <button
+                                            className="add-time-btn"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                // Logic to add additional time slot
+                                            }}
+                                        >+</button>
+                                    </div>
+                                </div>
+                                <div className="day-row">
+                                    <input
+                                        type="checkbox"
+                                        className="day-checkbox"
+                                        checked={formData.days?.saturday?.isOpen || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            days: {
+                                                ...prev.days,
+                                                saturday: {
+                                                    ...prev.days?.saturday,
+                                                    isOpen: e.target.checked
+                                                }
+                                            }
+                                        }))}
+                                    />
+                                    <div className="day-name">Saturday</div>
+                                    <div className="closed-label">Closed</div>
+                                    <div className="time-inputs">
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.saturday?.openTime || "09:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    saturday: {
+                                                        ...prev.days?.saturday,
+                                                        openTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <span className="time-separator">-</span>
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.saturday?.closeTime || "17:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    saturday: {
+                                                        ...prev.days?.saturday,
+                                                        closeTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <button
+                                            className="add-time-btn"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                // Logic to add additional time slot
+                                            }}
+                                        >+</button>
+                                    </div>
+                                </div>
+                                <div className="day-row">
+                                    <input
+                                        type="checkbox"
+                                        className="day-checkbox"
+                                        checked={formData.days?.sunday?.isOpen || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            days: {
+                                                ...prev.days,
+                                                sunday: {
+                                                    ...prev.days?.sunday,
+                                                    isOpen: e.target.checked
+                                                }
+                                            }
+                                        }))}
+                                    />
+                                    <div className="day-name">Sunday</div>
+                                    <div className="closed-label">Closed</div>
+                                    <div className="time-inputs">
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.sunday?.openTime || "09:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    sunday: {
+                                                        ...prev.days?.sunday,
+                                                        openTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <span className="time-separator">-</span>
+                                        <input
+                                            type="time"
+                                            className="time-input"
+                                            value={formData.days?.sunday?.closeTime || "17:00"}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                days: {
+                                                    ...prev.days,
+                                                    sunday: {
+                                                        ...prev.days?.sunday,
+                                                        closeTime: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                        />
+                                        <button
+                                            className="add-time-btn"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                // Logic to add additional time slot
+                                            }}
+                                        >+</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="extra-hours">
+                                <div className="extra-hours-title">Add More Hours</div>
+                                <div className="hour-tags">
+                                    <button className="hour-tag" onClick={() => setFormData(prev => ({ ...prev, extraHours: [...(prev.extraHours || []), 'Lunch'] }))}>Lunch</button>
+                                    <button className="hour-tag" onClick={() => setFormData(prev => ({ ...prev, extraHours: [...(prev.extraHours || []), 'Brunch'] }))}>Brunch</button>
+                                    <button className="hour-tag" onClick={() => setFormData(prev => ({ ...prev, extraHours: [...(prev.extraHours || []), 'Dinner'] }))}>Dinner</button>
+                                    <button className="hour-tag" onClick={() => setFormData(prev => ({ ...prev, extraHours: [...(prev.extraHours || []), 'Breakfast'] }))}>Breakfast</button>
+                                    <button className="hour-tag" onClick={() => setFormData(prev => ({ ...prev, extraHours: [...(prev.extraHours || []), 'Happy Hours'] }))}>Happy Hours</button>
+                                    <button className="hour-tag" onClick={() => setFormData(prev => ({ ...prev, extraHours: [...(prev.extraHours || []), 'Delivery'] }))}>Delivery</button>
+                                </div>
+                            </div>
+
+                            <button className="save-btn" onClick={() => setCurrentStep(14)}>Save</button>
                         </div>
-                    )}
-
-
-
-                </div>
+    )}
+    </div>
             </div>
-            {/* </div> */}
-
         </Layout>
 
     );
-};
+}
 export default VisibeenOnboarding;

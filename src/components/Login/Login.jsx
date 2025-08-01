@@ -36,8 +36,17 @@ function Login() {
                 return;
             }
 
-            setSession(data.data);            
-            navigate('/dashboard');
+            // Store user data in session
+            setSession(data.data.user || data.data);
+            
+            // Check if we need to redirect to Google Connect
+            if (data.data.needsGoogleAuth) {
+                navigate('/connect-google');
+            } else if (data.data.hasGMBAccess) {
+                navigate('/dashboard');
+            } else {
+                navigate('/account-not-found');
+            }
            
         } catch (err) {
             setError('Server error');
@@ -54,10 +63,11 @@ function Login() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // 'Authorization': `Bearer ${token}`, // optional
                 },
                 body: JSON.stringify({
                     email: result.user.email,
+                    full_name: result.user.displayName,
+                    account_type: 'google',
                 }),
             });
 
@@ -65,10 +75,17 @@ function Login() {
             console.log("Google response:", data);
 
             if (res.ok) {
-                setSession(data.user);
-                navigate('/dashboard');
+                // Store user data in session
+                setSession(data.data);
+                
+                // Navigate based on GMB access
+                if (data.data.hasGMBAccess) {
+                    navigate('/dashboard');
+                } else {
+                    navigate('/connect-google');
+                }
             } else {
-                alert(data.message || 'Google Login Failed');
+                setError(data.message || 'Google Login Failed');
             }
         } catch (error) {
             if (error.code === 'auth/popup-closed-by-user') {

@@ -12,6 +12,7 @@ import GetEDMs from './components/Dashboard/pages/GetEDMs/GetEDMsForm';
 import UploadLogo from './components/Dashboard/pages/GetEDMs/UploadLogo';
 import ProtectedRoute from './components/ProtectedRoute';
 import AccountNotFound from './components/gmb_accounts/AccountNotFound';
+import GoogleConnect from './components/Services/GoogleConnect';
 import ContactUs from './components/gmb_accounts/ContactUs';
 import CreateAccount from './components/gmb_accounts/Create_Account/CreateAccount';
 import CreatePostForm from './components/Create_Post/CreatePostForm';
@@ -35,6 +36,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/connect-google" element={<GoogleConnect />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard/></Layout> </ProtectedRoute>} />

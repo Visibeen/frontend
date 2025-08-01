@@ -17,6 +17,9 @@ const AccountNotFound = () => {
     navigate('/contact-us');
   };
 
+ const goToCreateAccountPage = () => {
+    navigate('/create-account');
+  };
   const openModal = () => {
     setIsModalOpen(true);
     setCurrentStep(1);
@@ -31,10 +34,10 @@ const AccountNotFound = () => {
     setCurrentStep(step);
   };
 
-  const completeFlow = () => {
-    alert('Flow completed! You can now proceed with account creation.');
-    closeModal();
-  };
+  // const completeFlow = () => {
+  //   alert('Flow completed! You can now proceed with account creation.');
+  //   closeModal();
+  // };
 
   const getProgressWidth = () => {
     switch (currentStep) {
@@ -133,13 +136,13 @@ const AccountNotFound = () => {
               {/* Buttons */}
               <div className="buttons-container">
                 <button
-                  onClick={currentStep === 3 ? completeFlow : () => goToStep(currentStep + 1)}
+                  onClick={currentStep === 3 ? goToCreateAccountPage : () => goToStep(currentStep + 1)}
                   className="button-primary"
                 >
                   Yes
                 </button>
                 <button
-                  onClick={currentStep === 3 ? completeFlow : () => goToStep(currentStep + 1)}
+                  onClick={currentStep === 3 ? goToCreateAccountPage : () => goToStep(currentStep + 1)}
                   className="button-secondary"
                 >
                   No
@@ -188,8 +191,8 @@ const AccountNotFound = () => {
         <div className="anf-modal-overlay">
           <div className="anf-modal">
             <div className="anf-modal-header">
-              <button className="anf-modal-back" onClick={() => setShowSearchModal(false)}>
-                &lt; Back
+              <button className="back-button" onClick={() => setShowSearchModal(false)}>
+                ← Back
               </button>
             </div>
             <div className="anf-search-box">
@@ -273,8 +276,8 @@ const AccountNotFound = () => {
               <h2 class="modal-title">Did you have more than once store with same identity?</h2>
               <p class="modal-description">Lorem Ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.</p>
               <div class="button-group">
-                <button class="btn btn-primary" onclick="completeFlow()">Yes</button>
-                <button class="btn btn-outline" onclick="completeFlow()">No</button>
+                <button class="btn btn-primary" onClick={goToContactUs}>Yes</button>
+                <button class="btn btn-outline" onclick={goToContactUs}>No</button>
               </div>
             </div>
           </div>
