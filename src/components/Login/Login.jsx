@@ -4,8 +4,8 @@ import { setSession } from '../../utils/authUtils';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../../firebase';
 import logo from '../../assets/VisibeenLogo.png';
-import logo1 from '../../assets/googleLogo.jpg';
-
+import googleLogo from '../../assets/google-logo.svg';
+import './Login.css';
 
 function Login() {
     const [email, setEmail] = useState('');
@@ -22,9 +22,9 @@ function Login() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email,
-                    password,
-                    account_type: 'manual',
+                   email: email,
+                   password: password,
+                   account_type: 'email',
 
                 }),
             });
@@ -71,106 +71,87 @@ function Login() {
                 }),
             });
 
-            const data = await res.json();
-            console.log("Google response:", data);
-
-            if (res.ok) {
-                // Store user data in session
-                setSession(data.data);
+    const data = await res.json();
+    if (data.success) {
+        setSession(data.user);
+        navigate('/dashboard');
+    } else {
+        alert(data.message);
+    }
+} catch (error) {
+    if (error.code === 'auth/popup-closed-by-user') {
+        console.log("Google sign-in popup closed.");
+    } else {
+        alert(error.message);
+    }
+}
+};
+return (
+    <div className="login-container">
+        <div className="login-left">
+            <img src={logo} alt="Visibeen Logo" />
+            <h2>Think Unlimited</h2>
+            <p>Join over <b>62,000+ Digital marketing and business</b> owners around the world</p>
+            <div className="services-test">Services test</div>
+        </div>
+        <div className="login-right">
+            <div className="login-form-container">
+                <h2>Welcome to Visibeen</h2>
+                <p>Start managing your system faster and better!</p>
                 
-                // Navigate based on GMB access
-                if (data.data.hasGMBAccess) {
-                    navigate('/dashboard');
-                } else {
-                    navigate('/connect-google');
-                }
-            } else {
-                setError(data.message || 'Google Login Failed');
-            }
-        } catch (error) {
-            if (error.code === 'auth/popup-closed-by-user') {
-                console.log('Google sign-in popup closed.');
-            } else {
-                alert(error.message);
-            }
-        }
-    };
-
-    return (
-
-
-        <div className="main-container">
-            <div className="left-side">
-                <img src={logo} alt="logo" id='img' />
-                <div className="left-content">
-                    <h2>Think Unlimited</h2>
-                    <p>Join over <b>62,000+ Digital marketing and business<br></br></b> owners around the world</p>
-                </div>
-
-                <div className="services-test">Services test</div>
-            </div>
-
-            <div className="right-side">
-                <div className="login-container">
-                    <h2>Welcome to Visibeen</h2>
-                    <p className="subtitle">Start managing your system faster and better!</p>
-
-                    <button className="google-btn" onClick={handleGoogleLogin}>
-                        <span> <img src={logo1} alt="GoogleLogo" id='googleLogo' /> </span>
-                        Continue with Google
-                    </button>
-
-
-
-                    <div className="divider">
-                        <span>or</span>
+                {error && <div className="error-message">{error}</div>}
+                
+                <button className="google-btn" onClick={handleGoogleLogin}>
+                    <img src={googleLogo} alt="Google" width="20" />
+                    Continue with Google
+                </button>
+                
+                <p>or</p>
+                
+                <form className="login-form" onSubmit={handleLogin}>
+                    <div className="form-group">
+                        <label htmlFor="email">Email*</label>
+                        <input 
+                            type="email" 
+                            id="email"
+                            placeholder="Enter email" 
+                            required 
+                            value={email} 
+                            onChange={(e) => setEmail(e.target.value)} 
+                        />
                     </div>
-
-                    {error && <p style={{ color: 'red' }}>{error}</p>}
-
-                    <form onSubmit={handleLogin}>
-                        <div className="form-group">
-                            <label htmlFor="contact">Email<span className="required">*</span></label>
-                            <input
-                                type="text"
-                                id="contact"
-                                name="contact"
-                                placeholder="Enter contact number"
-                                required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
+                    
+                    <div className="form-group">
+                        <label htmlFor="password">Password*</label>
+                        <input 
+                            type="password" 
+                            id="password"
+                            placeholder="Enter password" 
+                            required 
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)} 
+                        />
+                    </div>
+                    
+                    <div className="login-options-row">
+                        <div className="remember-me">
+                            <input type="checkbox" id="remember" />
+                            <label htmlFor="remember">Remember me</label>
                         </div>
-
-                        <div className="form-group">
-                            <label htmlFor="password">Password<span className="required">*</span></label>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                placeholder="Enter password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                            />
+                        
+                        <div className="forgot-password">
+                            <Link to="/forgot-password">Forgot Password?</Link>
                         </div>
-
-                        <div className="form-options">
-                            <label className="remember-me">
-                                <input type="checkbox" name="remember" />
-                                Remember me
-                            </label>
-                            <a href="/forgot-password" className="forgot-password">Forgot Password?</a>
-                        </div>
-
-                        <button type="submit" className="login-btn">Login</button>
-                    </form>
-
-                    <p className="register-link">
-                        Don't have an account? <a href="/register">Register now</a>
-                    </p>
+                    </div>
+                    
+                    <button className="login-btn" type="submit">Login</button>
+                </form>
+                
+                <div className="register-link">
+                    Don't have an account? <Link to="/register">Register now</Link>
                 </div>
             </div>
+        </div>
         </div>
     );
 }

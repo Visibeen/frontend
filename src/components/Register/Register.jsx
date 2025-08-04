@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../../firebase';
 import { setSession } from '../../utils/authUtils';
+import googleLogo from '../../assets/google-logo.svg';
 import logo from '../../assets/VisibeenLogo.png';
 import logo1 from '../../assets/googleLogo.jpg';
+import './Register.css';
 
 function Register() {
   const [form, setForm] = useState({
@@ -99,6 +101,9 @@ function Register() {
           <p>Join over <b>62,000+ Digital marketing and business</b> owners around the world</p>
         </div>
 
+        <img src={logo} alt="logo" />
+        <h2>Think Unlimited</h2>
+        <p>Join over <b>62,000+ Digital marketing and business</b> owners around the world</p>
         <div className="services-test">Services test</div>
       </div>
 
@@ -106,6 +111,13 @@ function Register() {
         <div className="login-container">
           <h2>Welcome to Visibeen</h2>
           <p className="subtitle">Start managing your system faster and better!</p>
+        <h2>Welcome to Visibeen</h2>
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+       <button className="google-btn" onClick={handleRegister}>
+                    <img src={googleLogo} alt="Google" width="20" />
+                    Continue with Google
+                </button>
+        <p style={{ textAlign: 'center' }}>or</p>
 
 
           <button className="google-btn" onClick={handleGoogleRegister}>

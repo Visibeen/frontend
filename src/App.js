@@ -40,6 +40,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard/></Layout> </ProtectedRoute>} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile/:locationId" element={<ProfilePage />} />
         <Route path="*" element={<div>Page Not Found</div>} />
         <Route path="/reset-password" element={<ResetPassword />} />

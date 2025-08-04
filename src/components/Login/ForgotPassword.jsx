@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import logo from '../../assets/VisibeenLogo.png';
-
+import './ForgotPassword.css'; 
 
 function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -38,6 +38,9 @@ function ForgotPassword() {
           <p>Join over <b>62,000+ Digital marketing and business<br></br></b> owners around the world</p>
         </div>
 
+        <img src={logo} alt="logo" />
+        <h2>Think Unlimited</h2>
+        <p>Join over <b>62,000+ Digital marketing and business</b> owners around the world</p>
         <div className="services-test">Services test</div>
       </div>
 
@@ -56,6 +59,10 @@ function ForgotPassword() {
           </div>
           <p className="register-link">Remember password? <Link to="/">Login</Link></p>
         </div>
+        <h2>Forgot Password</h2>
+        <input type="text" placeholder="Enter Email" value={contact} onChange={(e) => setContact(e.target.value)} />
+        <button onClick={handleSendOtp}>Send OTP</button>
+        <p>Remember password? <Link to="/">Login</Link></p>
       </div>
     </div>
   );
