@@ -6,6 +6,7 @@ import ForgotPassword from './components/Login/ForgotPassword';
 import VerifyOtp from './components/Login/VerifyOtp';
 import Dashboard from './components/Dashboard/Dashboard';
 import ProfilePage from './components/Dashboard/pages/Profile';
+import BusinessProfile from './components/Dashboard/pages/BusinessProfile';
 import Layout from './components/Layouts/Layout';
 import ResetPassword from './components/Login/ResetPassword';
 import GetEDMs from './components/Dashboard/pages/GetEDMs/GetEDMsForm';
@@ -39,8 +40,10 @@ function App() {
         <Route path="/connect-google" element={<GoogleConnect />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard/></Layout> </ProtectedRoute>} />
+        {/* <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} /> */}
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile/:locationId" element={<ProfilePage />} />
+        <Route path="/business-profile" element={<BusinessProfile />} />
         <Route path="*" element={<div>Page Not Found</div>} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/get-edms" element={<GetEDMs />} />

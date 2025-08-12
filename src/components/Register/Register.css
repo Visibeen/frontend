@@ -1,0 +1,228 @@
+/* Register Page Styles */
+.login-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  font-family: Arial, sans-serif;
+}
+
+/* Left side with gradient background */
+.login-left {
+  width: 50%;
+  background: linear-gradient(135deg, #EF232A 0%, #EF232A 20%, #D23A55 40%, #5B6DA5 65%, #0B91D6 100%);
+  color: white;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  position: relative;
+  overflow: hidden;
+  padding-top: 60px;
+}
+
+.login-left img {
+  width: 200px;
+  margin-bottom: 100px;
+  margin-top: -80px;
+  position: relative;
+  z-index: 2;
+}
+
+.login-left h2 {
+  font-size: 40px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
+  letter-spacing: 0.5px;
+}
+
+.login-left p {
+  font-size: 18px;
+  line-height: 1.6;
+  max-width: 400px;
+  margin-bottom: 30px;
+  margin-left: 22px;
+  position: relative;
+  z-index: 2;
+}
+
+.login-left p b {
+  font-weight: bold;
+}
+
+.services-test {
+  margin-top: 20px;
+  font-size: 14px;
+  font-weight: 500;
+   margin-left: 22px;
+  position: relative;
+  font-weight: bold;
+  z-index: 2;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Add light circular overlays for the gradient effect */
+.login-left::before,
+.login-left::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 1;
+}
+
+.login-left::before {
+  width: 300px;
+  height: 300px;
+  top: -50px;
+  right: -50px;
+}
+
+.login-left::after {
+  width: 500px;
+  height: 500px;
+  bottom: -250px;
+  left: -200px;
+}
+
+/* Additional overlay for more depth */
+.login-left::before {
+  box-shadow: 200px 200px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Right side with login form */
+.login-right {
+  width: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-form-container {
+  width: 80%;
+  max-width: 400px;
+  padding: 40px 20px;
+}
+
+.login-form-container h2 {
+  font-size: 26px;
+  color: #121927;
+  margin-bottom: 20px;
+  font-weight: 600px;
+  font-style: semi-bold;
+  text-align: center;
+}
+
+.login-form-container p {
+  margin: 15px 0;
+  font-weight: 400px;
+  text-align: center;
+  color: #121927;
+}
+
+/* Right side with form */
+.right-side {
+  width: 50%;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.right-side h2 {
+  font-size: 26px;
+  color: #121927;
+  margin-bottom: 20px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.right-side input {
+  width: 100%;
+  max-width: 400px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+
+/* Google button */
+.google-btn {
+  width: 100%;
+  padding: 12px;
+  background: white;
+  border: 1px solid #ddd;
+  color: #333;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.google-btn:hover {
+  background-color: #c2c2c2;
+}
+
+.google-btn img {
+  margin-right: 10px;
+  width: 20px;
+}
+
+.right-side button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 102, 204, 0.3);
+}
+
+.right-side p {
+  margin: 15px 0;
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+}
+
+.right-side a {
+  color: #0084ff;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.right-side a:hover {
+  color: #0066cc;
+  text-decoration: underline;
+}
+
+.right-side form {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .main-container {
+    flex-direction: column;
+  }
+  
+  .left-side, .right-side {
+    width: 100%;
+  }
+  
+  .left-side {
+    padding: 30px 20px;
+  }
+  
+  .right-side {
+    padding: 30px 15px;
+  }
+}

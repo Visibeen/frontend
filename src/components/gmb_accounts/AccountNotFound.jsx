@@ -3,7 +3,7 @@ import React, { useState, useEffect  } from 'react';
 import logo from '../../assets/VisibeenLogo.png';
 import ANF from '../../assets/Rectangle11.png';
 import { useNavigate } from 'react-router-dom';
-import ContactUs from './ContactUs';
+import './AccountNotFound.css';
 
 
 const AccountNotFound = () => {
@@ -11,6 +11,41 @@ const AccountNotFound = () => {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [answers, setAnswers] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showEmptyState, setShowEmptyState] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState(null);
+
+  const handleAnswer = (question, answer) => {
+    const newAnswers = { ...answers, [question]: answer };
+    setAnswers(newAnswers);
+    
+    if (currentStep === 1 && answer === 'Yes') {
+      goToStep(2);
+    } else if (currentStep === 1 && answer === 'No') {
+      goToStep(2);
+    } else if (currentStep === 2 && answer === 'No' && newAnswers[1] === 'Yes') {
+      navigate('/account-not-found');
+      closeModal();
+    } else if (currentStep === 2 && answer === 'Yes' && newAnswers[1] === 'Yes') {
+      navigate('/account-not-found');
+      closeModal();
+    } else if (currentStep === 2 && answer === 'No' && newAnswers[1] === 'No') {
+      goToStep(3);
+    } else if (currentStep === 2 && answer === 'Yes' && newAnswers[1] === 'No') {
+      goToStep(3);
+    } else if (currentStep === 3 && newAnswers[1] === 'No' && newAnswers[2] === 'No' && answer === 'No') {
+      navigate('/create-account');
+      closeModal();
+    } else if (currentStep === 3) {
+      navigate('/account-not-found');
+      closeModal();
+    } else {
+      goToStep(currentStep + 1);
+    }
+  };
   const navigate = useNavigate();
 
   const goToContactUs = () => {
@@ -18,7 +53,7 @@ const AccountNotFound = () => {
   };
 
  const goToCreateAccountPage = () => {
-    navigate('/create-account');
+    navigate('/account-not-found');
   };
   const openModal = () => {
     setIsModalOpen(true);
@@ -47,6 +82,89 @@ const AccountNotFound = () => {
       default: return '33.33%';
     }
   };
+
+  const handleSelectProfile = (place) => {
+    setSelectedProfile(place);
+  };
+
+  const handleSearch = async (q = searchQuery, { silent = false } = {}) => {
+    if (!q.trim()) {
+      if (!silent) {
+        alert('Please enter a search term');
+      }
+      setSearchResults([]);
+      setShowEmptyState(false);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setShowEmptyState(false);
+    setSearchResults([]);
+
+    try {
+      const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': 'AIzaSyB1M8KDdUFGQJAJamHmpzhYPXBqjuuC_OQ',
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.nationalPhoneNumber,places.types'
+        },
+        body: JSON.stringify({
+          textQuery: q,
+          locationBias: {
+            circle: {
+              center: {
+                latitude: 37.7749,
+                longitude: -122.4194
+              },
+              radius: 10000
+            }
+          }
+        })
+      });
+
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Places API error:', response.status, errorText);
+        throw new Error('Failed to fetch search results');
+      }
+
+      const data = await response.json();
+      const places = Array.isArray(data.places) ? data.places : [];
+
+      const mappedResults = places.map((place) => ({
+        name: place?.displayName?.text || place?.displayName || '',
+        formattedAddress: place?.formattedAddress || '',
+        phone: place?.nationalPhoneNumber || '',
+        category: Array.isArray(place?.types) && place.types.length > 0 ? place.types[0] : '',
+        location: place?.location || null,
+        id: place?.id || ''
+      }));
+
+      if (mappedResults.length > 0) {
+        setSearchResults(mappedResults);
+      } else {
+        setShowEmptyState(true);
+      }
+    } catch (error) {
+      console.error('Error searching GMB profiles:', error);
+      if (!silent) {
+        alert('Error searching profiles. Please try again.');
+      }
+      setShowEmptyState(true);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      handleSearch(searchQuery, { silent: true });
+    }, 400);
+    return () => clearTimeout(timerId);
+  }, [searchQuery]);
 
   const stepContent = {
     1: {
@@ -136,13 +254,13 @@ const AccountNotFound = () => {
               {/* Buttons */}
               <div className="buttons-container">
                 <button
-                  onClick={currentStep === 3 ? goToCreateAccountPage : () => goToStep(currentStep + 1)}
+                  onClick={() => handleAnswer(currentStep, 'Yes')}
                   className="button-primary"
                 >
                   Yes
                 </button>
                 <button
-                  onClick={currentStep === 3 ? goToCreateAccountPage : () => goToStep(currentStep + 1)}
+                  onClick={() => handleAnswer(currentStep, 'No')}
                   className="button-secondary"
                 >
                   No
@@ -195,94 +313,71 @@ const AccountNotFound = () => {
                 ← Back
               </button>
             </div>
-            <div className="anf-search-box">
+            <div className={`anf-search-box ${isSearching ? 'is-searching' : ''}`}>
               <span className="anf-search-icon">🔍</span>
               <input
                 type="text"
-                placeholder="Search GMB profile"
+                placeholder="search GMB profile"
                 className="anf-search-input"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                aria-label="Search GMB profile"
               />
             </div>
-            <div className="anf-modal-actions">
-              <button className="anf-btn anf-btn-primary">Search</button>
+            {/* Auto-search triggers as you type; no explicit Search button */}
+
+            <div className="search-results" id="searchResults">
+              <h3 className="anf-results-title">Your search results</h3>
+              <div id="resultsList">
+                {searchResults.length > 0 && (
+                  <div className="results-list">
+                    {searchResults.map((result, index) => (
+                      <label key={result.id || index} className="result-item" onClick={() => handleSelectProfile(result)}>
+                        <input
+                          type="checkbox"
+                          className="result-checkbox"
+                          onChange={() => handleSelectProfile(result)}
+                          checked={selectedProfile?.id === (result.id || '')}
+                          aria-label={`Select ${result.name || 'place'}`}
+                        />
+                        <div className="result-texts">
+                          <div className="result-name">{result.name || result.businessName}</div>
+                          {!!(result.formattedAddress) && (
+                            <div className="result-sub">{result.formattedAddress}</div>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div class="search-results" id="searchResults">
-              <h3>Your search results</h3>
-              <div id="resultsList"></div>
-            </div>
+            {showEmptyState && (
+              <div className="empty-state" id="emptyState">
+                <p>No results found. Try a different search term.</p>
+              </div>
+            )}
 
-            <div class="empty-state" id="emptyState" >
-              <p>No results found. Try a different search term.</p>
-            </div>
+            {selectedProfile && (
+              <div className="anf-modal-actions">
+                <button
+                  className="anf-btn anf-btn-primary"
+                  onClick={() => {
+                    setShowSearchModal(false);
+                    navigate('/contact-us', { state: { selectedPlace: selectedProfile } });
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Create Account Pop-ups */}
-      <div id="popupModal" class="modal-overlay hidden">
-        <div class="modal">
-          {/* <!-- Step 1 --> */}
-          <div id="step1" class="popup-step">
-            <div class="modal-header">
-              <button class="back-btn" onclick="closeModal()">
-                ← Back
-              </button>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill step-33"></div>
-            </div>
-            <div class="modal-content">
-              <h2 class="modal-title">Is there any suspension you received earlier?</h2>
-              <p class="modal-description">Lorem Ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.</p>
-              <div class="button-group">
-                <button class="btn btn-primary" onclick="setPopupStep(2)">Yes</button>
-                <button class="btn btn-outline" onclick="setPopupStep(2)">No</button>
-              </div>
-            </div>
-          </div>
 
-          {/* <!-- Step 2 --> */}
-          <div id="step2" class="popup-step hidden">
-            <div class="modal-header">
-              <button class="back-btn" onclick="setPopupStep(1)">
-                ← Back
-              </button>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill step-66"></div>
-            </div>
-            <div class="modal-content">
-              <h2 class="modal-title">Any other profile created with same category same address name and phone number which is not live yet or suspended?</h2>
-              <p class="modal-description">Lorem Ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.</p>
-              <div class="button-group">
-                <button class="btn btn-primary" onclick="setPopupStep(3)">Yes</button>
-                <button class="btn btn-outline" onclick="setPopupStep(3)">No</button>
-              </div>
-            </div>
-          </div>
-
-          {/* <!-- Step 3 --> */}
-          <div id="step3" class="popup-step hidden">
-            <div class="modal-header">
-              <button class="back-btn" onclick="setPopupStep(2)">
-                ← Back
-              </button>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill step-100"></div>
-            </div>
-            <div class="modal-content">
-              <h2 class="modal-title">Did you have more than once store with same identity?</h2>
-              <p class="modal-description">Lorem Ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.</p>
-              <div class="button-group">
-                <button class="btn btn-primary" onClick={goToContactUs}>Yes</button>
-                <button class="btn btn-outline" onclick={goToContactUs}>No</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       </div>
     );
