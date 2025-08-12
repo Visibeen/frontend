@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8089/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://52.44.140.230:8089/api/v1';
 
 class ApiService {
     constructor() {
@@ -8,21 +8,33 @@ class ApiService {
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
         const config = {
+            ...options,
             headers: {
                 'Content-Type': 'application/json',
-                ...options.headers,
+                ...(options.headers || {}),
             },
-            ...options,
         };
 
         try {
             const response = await fetch(url, config);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+
+            const rawText = await response.text();
+            let parsed;
+            try {
+                parsed = rawText ? JSON.parse(rawText) : null;
+            } catch (_) {
+                parsed = null;
             }
-            
-            return await response.json();
+
+            if (!response.ok) {
+                const message = parsed?.message || parsed?.error || rawText || `HTTP error! status: ${response.status}`;
+                const err = new Error(message);
+                err.status = response.status;
+                err.body = parsed || rawText;
+                throw err;
+            }
+
+            return parsed;
         } catch (error) {
             console.error('API request failed:', error);
             throw error;

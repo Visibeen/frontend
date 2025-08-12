@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Search, ArrowLeft, Mail, Phone, MapPin, Clock, Facebook, Twitter, Instagram, Youtube, User, Building, MessageSquare, Calendar, Send, X } from 'lucide-react';
 import ContactUsLayout from '../Layouts/ContactUsLayout';
 
 
 const ContactUs = () => {
+    const location = useLocation();
     const [currentPage, setCurrentPage] = useState('contact');
     const [showSearchModal, setShowSearchModal] = useState(false);
     const [showClaimModal, setShowClaimModal] = useState(false);
@@ -15,17 +17,19 @@ const ContactUs = () => {
         businessCategory: '',
         email: '',
         contactNumber: '',
-        callTime: '',
+        date_and_time: '',
         message: ''
     });
 
+    const callTimeRef = useRef(null);
+
     // API Integration Setup
-    const API_BASE_URL = 'https://localhost:8089/api-endpoint.com/api';
+    const API_BASE_URL = 'http://52.44.140.230:8089/api/v1/customer/contact-us/create-contact';
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await fetch(`${API_BASE_URL}/contact`, {
+            const response = await fetch(`${API_BASE_URL}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -41,7 +45,7 @@ const ContactUs = () => {
                     businessCategory: '',
                     email: '',
                     contactNumber: '',
-                    callTime: '',
+                    date_and_time: '',
                     message: ''
                 });
             } else {
@@ -71,6 +75,31 @@ const ContactUs = () => {
             [name]: value
         }));
     };
+
+    // Map Google Places primary type to our limited category options
+    const mapPlaceTypeToCategory = (type) => {
+        if (!type) return '';
+        const t = String(type).toLowerCase();
+        if (t.includes('restaurant') || t.includes('food')) return 'restaurant';
+        if (t.includes('health') || t.includes('doctor') || t.includes('hospital') || t.includes('clinic')) return 'healthcare';
+        if (t.includes('school') || t.includes('university') || t.includes('education')) return 'education';
+        if (t.includes('store') || t.includes('shopping') || t.includes('retail')) return 'retail';
+        return 'services';
+    };
+
+    // Prefill form when arriving from AccountNotFound with a selected profile
+    useEffect(() => {
+        const selectedPlace = location?.state?.selectedPlace;
+        if (selectedPlace) {
+            setFormData((prev) => ({
+                ...prev,
+                businessName: selectedPlace.name || prev.businessName,
+                contactNumber: selectedPlace.phone || prev.contactNumber,
+                businessCategory: mapPlaceTypeToCategory(selectedPlace.category) || prev.businessCategory,
+                // Intentionally do not set date_and_time or message
+            }));
+        }
+    }, [location?.state]);
     return (
         <ContactUsLayout>
         <div className="min-h-screen bg-gray-50">
@@ -174,15 +203,27 @@ const ContactUs = () => {
                             </label>
                             <div className="relative">
                                 <input
-                                    type="text"
-                                    name="callTime"
-                                    value={formData.callTime}
+                                    ref={callTimeRef}
+                                    type="datetime-local"
+                                    name="date_and_time"
+                                    value={formData.date_and_time}
                                     onChange={handleInputChange}
                                     placeholder="Select Time"
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     required
                                 />
-                                <Calendar className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+                                <Calendar
+                                  className="absolute right-3 top-3 h-5 w-5 text-gray-400 cursor-pointer"
+                                  onClick={() => {
+                                    if (callTimeRef.current) {
+                                      if (typeof callTimeRef.current.showPicker === 'function') {
+                                        callTimeRef.current.showPicker();
+                                      } else {
+                                        callTimeRef.current.focus();
+                                      }
+                                    }
+                                  }}
+                                />
                             </div>
                         </div>
 

@@ -1,40 +1,82 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../Layouts/Sidebar';
 import Footer from '../Layouts/Footer';
-import logo from '../../assets/VisibeenLogo.png';
-
-const mockBusinesses = [
-  {
-    id: 1,
-    name: 'E2E Networks Limited',
-    address: '23 Maplewood Lane, IL 62704, USA',
-    status: 'Verified',
-    score: '300/500',
-    
-  },
-  {
-    id: 2,
-    name: 'E2E Networks Limited',
-    address: '23 Maplewood Lane, IL 62704, USA',
-    status: 'Unverified',
-    score: 'Pending',
-  },
-  {
-    id: 3,
-    name: 'E2E Networks Limited',
-    address: '23 Maplewood Lane, IL 62704, USA',
-    status: 'Suspended',
-    score: 'Check now',
-  },
-  
-];
-
-
-
+import Layout from '../Layouts/Layout';
 
 const Dashboard = () => {
+  const [businesses, setBusinesses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+
+
+
+  useEffect(() => {
+    const fetchBusinesses = async () => {
+      try {
+        // Allow providing a token via query param for dev: /dashboard?token=...
+        const params = new URLSearchParams(location.search);
+        const tokenFromUrl = params.get('token');
+        if (tokenFromUrl) {
+          sessionStorage.setItem('googleAccessToken', tokenFromUrl);
+        }
+
+        const accessToken = sessionStorage.getItem('googleAccessToken') || localStorage.getItem('googleAccessToken');
+        if (!accessToken) {
+          throw new Error('Missing Google access token. Connect Google or open /dashboard?token=YOUR_TOKEN');
+        }
+
+        // 1) Get accounts from the correct endpoint
+        const accountsRes = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const accountsJson = await accountsRes.json();
+        if (!accountsRes.ok) {
+          throw new Error(accountsJson?.error?.message || 'Failed to fetch accounts');
+        }
+
+        const accounts = accountsJson.accounts || [];
+        if (accounts.length === 0) {
+          setBusinesses([]);
+          return;
+        }
+
+        // 2) Fetch locations for first account as an example
+        const accountName = accounts[0].name; // e.g., accounts/123456789
+        const locRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const locJson = await locRes.json();
+        if (!locRes.ok) {
+          throw new Error(locJson?.error?.message || 'Failed to fetch locations');
+        }
+
+        const locations = locJson.locations || [];
+        // Normalize to existing table fields
+        const normalized = locations.map((loc) => ({
+          id: loc.name?.split('/').pop(),
+          name: loc.title,
+          address: loc.storefrontAddress?.addressLines?.join(', '),
+          verificationStatus: loc.metadata?.verification?.status || 'Verified',
+          optimizationScore: 'N/A',
+          locationId: loc.name?.split('/').pop(),
+        }));
+
+        setBusinesses(normalized);
+      } catch (err) {
+        console.error('Error fetching businesses:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBusinesses();
+    // we want to re-run if query string changes (token passed)
+  }, [location.search]);
 
   const getStatusClass = (status) => {
     if (status === 'Verified') return 'verified';
@@ -42,125 +84,79 @@ const Dashboard = () => {
     return 'suspended';
   };
 
-  const getStatusIcon = (status) => {
-    if (status === 'Verified') return '✓';
-    if (status === 'Unverified') return '!';
-    return '✕';
-  };
+  if (loading) {
+    return (
+      <Layout>
+        <div className="dashboard">
+          <div className="main-content">
+            <div className="header-blue">Businesses</div>
+            <div className="loading">Loading businesses...</div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="dashboard">
+          <div className="main-content">
+            <div className="header-blue">Businesses</div>
+            <div className="error">
+              <p>Error loading businesses: {error}</p>
+              <button onClick={() => window.location.reload()}>Retry</button>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <img src={logo} alt="Visibeen" className="header-logo" />
-      </div>
-      <div className="dashboard-main-content">
-        <div className="dashboard-sidebar">
-        <nav className="sidebar-nav">
-          <ul>
-            <li className="nav-item active"><a href="#"><span className="nav-icon">🏠</span>Overview</a></li>
-            <li className="nav-item"><a href="#"><span className="nav-icon">📊</span>Performance</a></li>
-            <li className="nav-item"><a href="#"><span className="nav-icon">⭐</span>Reputation Management</a></li>
-            <li className="nav-item"><a href="#"><span className="nav-icon">📧</span>Get EDMs</a></li>
-            <li className="nav-item"><a href="#"><span className="nav-icon">🌐</span>Free Website</a></li>
-          </ul>
-          <ul className="bottom-nav">
-            <li className="nav-item"><a href="#"><span className="nav-icon">📱</span>Whats app <span className="coming-soon">Coming soon</span></a></li>
-            <li className="nav-item"><a href="#"><span className="nav-icon">📝</span>Blogs <span className="coming-soon">Coming soon</span></a></li>
-            <li className="nav-item"><a href="#"><span className="nav-icon">📱</span>Social Media <span className="coming-soon">Coming soon</span></a></li>
-            <li className="nav-item"><a href="#"><span className="nav-icon">🎁</span>Refer & Earn</a></li>
-            <li className="nav-item"><a href="#"><span className="nav-icon">👤</span>My Account</a></li>
-          </ul>
-        </nav>
-      </div>
-      <div className="dashboard-main">
-        <div className="businesses-section">
-          <h2 className="section-title">Businesses</h2>
-          <p className="section-description">Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.</p>
-          
-          <div className="businesses-table">
-            <div className="table-header">
-              <div className="header-cell">Business</div>
-              <div className="header-cell">Status</div>
-              <div className="header-cell">Optimization score</div>
-              <div className="header-cell"></div>
+    <Layout>
+      <div className="dashboard">
+        <div className="main-content">
+          <div className="header-blue">Businesses</div>
+          {businesses.length === 0 ? (
+            <div className="no-businesses">
+              <p>No businesses found. Create your first business profile.</p>
+              <button onClick={() => navigate('/create-account')}>
+                Create Business
+              </button>
             </div>
-            
-            {mockBusinesses.map((biz) => (
-              <div className="table-row" key={biz.id}>
-                <div className="business-cell">
-                  <div className="business-name">{biz.name}</div>
-                  <div className="business-address">{biz.address}</div>
-                </div>
-                <div className="status-cell">
-                  <div className={`status-indicator ${getStatusClass(biz.status)}`}>
-                    <span className="status-icon">{getStatusIcon(biz.status)}</span>
-                    <span className="status-text">{biz.status}</span>
-                  </div>
-                </div>
-                <div className="score-cell">
-                  {biz.status === 'Suspended' ? (
-                    <a href="#" className="check-now">Check now</a>
-                  ) : (
-                    <span className="score-text">{biz.score}</span>
-                  )}
-                </div>
-                <div className="action-cell">
-                  <button className="view-profile-btn" onClick={() => navigate(`/profile/${biz.id}`)}>
-                    View Profile
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Business</th>
+                  <th>Status</th>
+                  <th>Optimization Score</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {businesses.map((biz) => (
+                  <tr key={biz.id || biz._id}>
+                    <td>
+                      <strong>{biz.name || biz.businessName}</strong><br />
+                      <span>{biz.address || biz.formattedAddress}</span>
+                    </td>
+                    <td><span className={`status-badge ${getStatusClass(biz.status || biz.verificationStatus)}`}>{biz.status || biz.verificationStatus}</span></td>
+                    <td>{biz.score || biz.optimizationScore || 'N/A'}</td>
+                    <td>
+                      <button onClick={() => navigate(`/profile/${biz.locationId || biz.id}`)}>
+                        View profile
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
-      </div>
-      
-      <footer className="dashboard-footer">
-        <div className="footer-content">
-          <div className="footer-left">
-            <img src={logo} alt="Visibeen" className="footer-logo" />
-            <p>Copyright © 2025 e2e digitech pvt ltd.</p>
-            <p>All rights reserved</p>
-            <div className="social-icons">
-              <a href="#" className="social-icon">ⓕ</a>
-              <a href="#" className="social-icon">ⓣ</a>
-              <a href="#" className="social-icon">ⓘ</a>
-              <a href="#" className="social-icon">ⓨ</a>
-            </div>
-          </div>
-          <div className="footer-columns">
-            <div className="footer-column">
-              <h3>Company</h3>
-              <ul>
-                <li><a href="#">About us</a></li>
-                <li><a href="#">Blog</a></li>
-                <li><a href="#">Contact us</a></li>
-                <li><a href="#">Pricing</a></li>
-                <li><a href="#">Testimonials</a></li>
-              </ul>
-            </div>
-            <div className="footer-column">
-              <h3>Support</h3>
-              <ul>
-                <li><a href="#">Help center</a></li>
-                <li><a href="#">Terms of service</a></li>
-                <li><a href="#">Legal</a></li>
-                <li><a href="#">Privacy policy</a></li>
-                <li><a href="#">Status</a></li>
-              </ul>
-            </div>
-            <div className="footer-column">
-              <h3>Stay up to date</h3>
-              <div className="newsletter-form">
-                <input type="email" placeholder="Your email address" />
-                <button type="submit">→</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </Layout>
   );
 };
 
