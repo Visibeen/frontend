@@ -1,260 +1,355 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Search, ArrowLeft, Mail, Phone, MapPin, Clock, Facebook, Twitter, Instagram, Youtube, User, Building, MessageSquare, Calendar, Send, X } from 'lucide-react';
-import ContactUsLayout from '../Layouts/ContactUsLayout';
+import React, { useState } from 'react';
+import { 
+  Box, 
+  Stack, 
+  Typography, 
+  TextField, 
+  Button, 
+  Select, 
+  MenuItem, 
+  FormControl,
+  InputLabel,
+  Paper,
+  Container
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import DashboardLayout from '../Layouts/DashboardLayout';
+import PageHeader from '../Dashboard/components/PageHeader';
+import CalendarIcon from '../icons/CalendarIcon';
+import SendArrowIcon from '../icons/SendArrowIcon';
 
+// Styled Components
+
+const FormContainer = styled(Paper)(({ theme }) => ({
+  backgroundColor: '#FFFFFF',
+  borderRadius: '12px',
+  padding: '40px',
+  maxWidth: '540px',
+  width: '100%',
+  margin: '0 auto',
+  boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)'
+}));
+
+const FormStack = styled(Stack)(({ theme }) => ({
+  gap: '24px'
+}));
+
+const FieldLabel = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '10px',
+  fontWeight: 400,
+  marginBottom: '8px'
+}));
+
+const RequiredLabel = styled(FieldLabel)(({ theme }) => ({
+  color: '#EF232A'
+}));
+
+const OptionalLabel = styled(FieldLabel)(({ theme }) => ({
+  color: '#121927'
+}));
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '8px',
+    backgroundColor: '#FFFFFF',
+    '& fieldset': {
+      borderColor: '#A0A0AA',
+      borderWidth: '0.2px'
+    },
+    '&:hover fieldset': {
+      borderColor: '#0B91D6'
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#0B91D6',
+      borderWidth: '1px'
+    },
+    '& input': {
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '14px',
+      fontWeight: 400,
+      color: '#121927',
+      '&::placeholder': {
+        color: '#A0A0AA',
+        opacity: 1
+      }
+    }
+  }
+}));
+
+const StyledSelect = styled(Select)(({ theme }) => ({
+  borderRadius: '8px',
+  backgroundColor: '#FFFFFF',
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '14px',
+  fontWeight: 400,
+  '& .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#A0A0AA',
+    borderWidth: '0.2px'
+  },
+  '&:hover .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#0B91D6'
+  },
+  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#0B91D6',
+    borderWidth: '1px'
+  },
+  '& .MuiSelect-select': {
+    color: '#A0A0AA'
+  }
+}));
+
+const TimePickerContainer = styled(Box)(({ theme }) => ({
+  position: 'relative'
+}));
+
+const TimePickerField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '8px',
+    backgroundColor: '#FFFFFF',
+    '& fieldset': {
+      borderColor: '#A0A0AA',
+      borderWidth: '0.2px'
+    },
+    '&:hover fieldset': {
+      borderColor: '#0B91D6'
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#0B91D6',
+      borderWidth: '1px'
+    },
+    '& input': {
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '14px',
+      fontWeight: 400,
+      color: '#A0A0AA',
+      '&::placeholder': {
+        color: '#A0A0AA',
+        opacity: 1
+      }
+    }
+  }
+}));
+
+const CalendarIconContainer = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  right: '12px',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  cursor: 'pointer',
+  zIndex: 1
+}));
+
+const MessageField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '8px',
+    backgroundColor: '#FFFFFF',
+    '& fieldset': {
+      borderColor: '#A0A0AA',
+      borderWidth: '0.2px'
+    },
+    '&:hover fieldset': {
+      borderColor: '#0B91D6'
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#0B91D6',
+      borderWidth: '1px'
+    },
+    '& textarea': {
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '14px',
+      fontWeight: 400,
+      color: '#121927',
+      '&::placeholder': {
+        color: '#A0A0AA',
+        opacity: 1
+      }
+    }
+  }
+}));
+
+const SubmitButton = styled(Button)(({ theme }) => ({
+  backgroundColor: '#0B91D6',
+  color: '#FFFFFF',
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '14px',
+  fontWeight: 600,
+  textTransform: 'capitalize',
+  borderRadius: '8px',
+  padding: '12px 24px',
+  minHeight: '48px',
+  '&:hover': {
+    backgroundColor: '#0277BD'
+  }
+}));
 
 const ContactUs = () => {
-    const location = useLocation();
-    const [currentPage, setCurrentPage] = useState('contact');
-    const [showSearchModal, setShowSearchModal] = useState(false);
-    const [showClaimModal, setShowClaimModal] = useState(false);
-    const [searchResults, setSearchResults] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [formData, setFormData] = useState({
-        name: '',
-        businessName: '',
-        businessCategory: '',
-        email: '',
-        contactNumber: '',
-        date_and_time: '',
-        message: ''
-    });
+  const [formData, setFormData] = useState({
+    name: '',
+    businessName: '',
+    businessCategory: '',
+    email: '',
+    contactNumber: '',
+    callTime: '',
+    message: ''
+  });
 
-    const callTimeRef = useRef(null);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-    // API Integration Setup
-    const API_BASE_URL = 'http://52.44.140.230:8089/api/v1/customer/contact-us/create-contact';
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log('Form submitted:', formData);
+    // Handle form submission logic here
+  };
 
-    const handleFormSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const response = await fetch(`${API_BASE_URL}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
-            });
+  return (
+    <DashboardLayout>
+      <PageHeader 
+        title="Contact Us" 
+        subtitle="Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development." 
+      />
+      
+      <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'center' }}>
+        <FormContainer>
+          <form onSubmit={handleSubmit}>
+            <FormStack>
+              {/* Name Field */}
+              <Box>
+                <RequiredLabel>Name*</RequiredLabel>
+                <StyledTextField
+                  fullWidth
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Enter name"
+                  variant="outlined"
+                  required
+                />
+              </Box>
 
-            if (response.ok) {
-                alert('Message sent successfully!');
-                setFormData({
-                    name: '',
-                    businessName: '',
-                    businessCategory: '',
-                    email: '',
-                    contactNumber: '',
-                    date_and_time: '',
-                    message: ''
-                });
-            } else {
-                alert('Failed to send message. Please try again.');
-            }
-        } catch (error) {
-            console.error('Error submitting form:', error);
-            alert('Network error. Please try again.');
-        }
-    };
+              {/* Business Name Field */}
+              <Box>
+                <RequiredLabel>Business Name*</RequiredLabel>
+                <StyledTextField
+                  fullWidth
+                  name="businessName"
+                  value={formData.businessName}
+                  onChange={handleInputChange}
+                  placeholder="Enter name"
+                  variant="outlined"
+                  required
+                />
+              </Box>
 
-    const handleSearch = async () => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/search?query=${encodeURIComponent(searchQuery)}`);
-            const data = await response.json();
-            setSearchResults(data.results || []);
-        } catch (error) {
-            console.error('Search error:', error);
-            setSearchResults([]);
-        }
-    };
+              {/* Business Category Field */}
+              <Box>
+                <RequiredLabel>Business Category*</RequiredLabel>
+                <FormControl fullWidth>
+                  <StyledSelect
+                    name="businessCategory"
+                    value={formData.businessCategory}
+                    onChange={handleInputChange}
+                    displayEmpty
+                    required
+                  >
+                    <MenuItem value="" disabled>
+                      <Typography sx={{ color: '#A0A0AA', fontSize: '14px' }}>
+                        Select category
+                      </Typography>
+                    </MenuItem>
+                    <MenuItem value="restaurant">Restaurant</MenuItem>
+                    <MenuItem value="retail">Retail</MenuItem>
+                    <MenuItem value="services">Services</MenuItem>
+                    <MenuItem value="healthcare">Healthcare</MenuItem>
+                    <MenuItem value="education">Education</MenuItem>
+                  </StyledSelect>
+                </FormControl>
+              </Box>
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
+              {/* Email Field */}
+              <Box>
+                <OptionalLabel>Email Id*</OptionalLabel>
+                <StyledTextField
+                  fullWidth
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="Enter email id"
+                  variant="outlined"
+                  required
+                />
+              </Box>
 
-    // Map Google Places primary type to our limited category options
-    const mapPlaceTypeToCategory = (type) => {
-        if (!type) return '';
-        const t = String(type).toLowerCase();
-        if (t.includes('restaurant') || t.includes('food')) return 'restaurant';
-        if (t.includes('health') || t.includes('doctor') || t.includes('hospital') || t.includes('clinic')) return 'healthcare';
-        if (t.includes('school') || t.includes('university') || t.includes('education')) return 'education';
-        if (t.includes('store') || t.includes('shopping') || t.includes('retail')) return 'retail';
-        return 'services';
-    };
+              {/* Contact Number Field */}
+              <Box>
+                <OptionalLabel>Contact Number*</OptionalLabel>
+                <StyledTextField
+                  fullWidth
+                  name="contactNumber"
+                  value={formData.contactNumber}
+                  onChange={handleInputChange}
+                  placeholder="Enter contact number"
+                  variant="outlined"
+                  required
+                />
+              </Box>
 
-    // Prefill form when arriving from AccountNotFound with a selected profile
-    useEffect(() => {
-        const selectedPlace = location?.state?.selectedPlace;
-        if (selectedPlace) {
-            setFormData((prev) => ({
-                ...prev,
-                businessName: selectedPlace.name || prev.businessName,
-                contactNumber: selectedPlace.phone || prev.contactNumber,
-                businessCategory: mapPlaceTypeToCategory(selectedPlace.category) || prev.businessCategory,
-                // Intentionally do not set date_and_time or message
-            }));
-        }
-    }, [location?.state]);
-    return (
-        <ContactUsLayout>
-        <div className="min-h-screen bg-gray-50">
-           
-           
-            {/* Main Content */}
-            <div className="max-w-4xl mx-auto px-6 py-12">
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold text-blue-500 mb-4">Contact Us</h1>
-                    <p className="text-gray-600 max-w-2xl mx-auto">
-                        Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.
-                    </p>
-                </div>
+              {/* Call Time Field */}
+              <Box>
+                <OptionalLabel>Choose when to call*</OptionalLabel>
+                <TimePickerContainer>
+                  <TimePickerField
+                    fullWidth
+                    name="callTime"
+                    value={formData.callTime}
+                    onChange={handleInputChange}
+                    placeholder="Select Time"
+                    variant="outlined"
+                    required
+                  />
+                  <CalendarIconContainer>
+                    <CalendarIcon width={17} height={19} color="#A0A0AA" />
+                  </CalendarIconContainer>
+                </TimePickerContainer>
+              </Box>
 
-                {/* Contact Form */}
-                <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl mx-auto">
-                    <div className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Name*
-                            </label>
-                            <input
-                                type="text"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleInputChange}
-                                placeholder="Enter name"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required
-                            />
-                        </div>
+              {/* Message Field */}
+              <Box>
+                <OptionalLabel>Message*</OptionalLabel>
+                <MessageField
+                  fullWidth
+                  name="message"
+                  value={formData.message}
+                  onChange={handleInputChange}
+                  placeholder="Enter your message"
+                  variant="outlined"
+                  multiline
+                  rows={4}
+                  required
+                />
+              </Box>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Business Name*
-                            </label>
-                            <input
-                                type="text"
-                                name="businessName"
-                                value={formData.businessName}
-                                onChange={handleInputChange}
-                                placeholder="Enter name"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required
-                            />
-                        </div>
+              {/* Submit Button */}
+              <SubmitButton
+                type="submit"
+                fullWidth
+                variant="contained"
+              >
+                Send Message
+              </SubmitButton>
+            </FormStack>
+          </form>
+        </FormContainer>
+      </Container>
+    </DashboardLayout>
+  );
+};
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Business Category*
-                            </label>
-                            <select
-                                name="businessCategory"
-                                value={formData.businessCategory}
-                                onChange={handleInputChange}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-500"
-                                required
-                            >
-                                <option value="">Select category</option>
-                                <option value="restaurant">Restaurant</option>
-                                <option value="retail">Retail</option>
-                                <option value="services">Services</option>
-                                <option value="healthcare">Healthcare</option>
-                                <option value="education">Education</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Email Id*
-                            </label>
-                            <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleInputChange}
-                                placeholder="Enter email id"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Contact Number*
-                            </label>
-                            <input
-                                type="tel"
-                                name="contactNumber"
-                                value={formData.contactNumber}
-                                onChange={handleInputChange}
-                                placeholder="Enter contact number"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Choose when to call*
-                            </label>
-                            <div className="relative">
-                                <input
-                                    ref={callTimeRef}
-                                    type="datetime-local"
-                                    name="date_and_time"
-                                    value={formData.date_and_time}
-                                    onChange={handleInputChange}
-                                    placeholder="Select Time"
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    required
-                                />
-                                <Calendar
-                                  className="absolute right-3 top-3 h-5 w-5 text-gray-400 cursor-pointer"
-                                  onClick={() => {
-                                    if (callTimeRef.current) {
-                                      if (typeof callTimeRef.current.showPicker === 'function') {
-                                        callTimeRef.current.showPicker();
-                                      } else {
-                                        callTimeRef.current.focus();
-                                      }
-                                    }
-                                  }}
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Message*
-                            </label>
-                            <textarea
-                                name="message"
-                                value={formData.message}
-                                onChange={handleInputChange}
-                                placeholder="Enter your message"
-                                rows="4"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                required
-                            />
-                        </div>
-
-                        <button
-                            onClick={handleFormSubmit}
-                            className="w-full bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 transition-colors font-medium"
-                        >
-                            Send Message
-                        </button>
-
-                    </div>
-                </div>
-                
-            </div>
-        </div>
-        </ContactUsLayout>
-    );
-}
 export default ContactUs;

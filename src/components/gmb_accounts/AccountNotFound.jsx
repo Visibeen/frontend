@@ -1,10 +1,78 @@
-
-import React, { useState, useEffect  } from 'react';
-import logo from '../../assets/VisibeenLogo.png';
-import ANF from '../../assets/Rectangle11.png';
+import React, { useState, useEffect } from 'react';
+import { Box } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import './AccountNotFound.css';
+import logo from '../../assets/VisibeenLogo.png';
+import IllustrationSection from './IllustrationSection';
+import ContentSection from './ContentSection';
+import ActionButtons from './ActionButtons';
+import HelpLink from './HelpLink';
 
+const PageContainer = styled(Box)(({ theme }) => ({
+  backgroundColor: '#F8F8F8',
+  minHeight: '100vh',
+  display: 'flex',
+  flexDirection: 'column'
+}));
+
+const HeaderSection = styled(Box)(({ theme }) => ({
+  width: '100%',
+  backgroundColor: '#0B91D6',
+  display: 'flex',
+  alignItems: 'center',
+  height: '80px',
+  padding: '0 30px'
+}));
+
+const HeaderLogo = styled('img')(({ theme }) => ({
+  height: '40px',
+  width: 'auto'
+}));
+
+const ContentArea = styled(Box)(({ theme }) => ({
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: '40px 20px'
+}));
+
+const MainContent = styled(Box)(({ theme }) => ({
+  backgroundColor: '#ffffff',
+  borderRadius: '12px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  padding: '40px',
+  maxWidth: '569px',
+  width: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '40px'
+}));
+
+// Modal styles for existing functionality
+const ModalOverlay = styled(Box)(({ theme }) => ({
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 1000
+}));
+
+const ModalContent = styled(Box)(({ theme }) => ({
+  backgroundColor: '#ffffff',
+  borderRadius: '12px',
+  padding: '32px',
+  maxWidth: '500px',
+  width: '90%',
+  maxHeight: '80vh',
+  overflowY: 'auto'
+}));
 
 const AccountNotFound = () => {
   const [showModal, setShowModal] = useState(false);
@@ -17,6 +85,8 @@ const AccountNotFound = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [showEmptyState, setShowEmptyState] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
+
+  const navigate = useNavigate();
 
   const handleAnswer = (question, answer) => {
     const newAnswers = { ...answers, [question]: answer };
@@ -46,15 +116,15 @@ const AccountNotFound = () => {
       goToStep(currentStep + 1);
     }
   };
-  const navigate = useNavigate();
 
   const goToContactUs = () => {
     navigate('/contact-us');
   };
 
- const goToCreateAccountPage = () => {
-    navigate('/account-not-found');
+  const goToCreateAccountPage = () => {
+    navigate('/create-account');
   };
+
   const openModal = () => {
     setIsModalOpen(true);
     setCurrentStep(1);
@@ -68,11 +138,6 @@ const AccountNotFound = () => {
   const goToStep = (step) => {
     setCurrentStep(step);
   };
-
-  // const completeFlow = () => {
-  //   alert('Flow completed! You can now proceed with account creation.');
-  //   closeModal();
-  // };
 
   const getProgressWidth = () => {
     switch (currentStep) {
@@ -124,7 +189,6 @@ const AccountNotFound = () => {
         })
       });
 
-      
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Places API error:', response.status, errorText);
@@ -181,206 +245,365 @@ const AccountNotFound = () => {
     }
   };
 
+  const handleCreateAccount = () => {
+    console.log('Create Account clicked');
+    openModal();
+  };
+
+  const handleTakeHelpOfExpert = () => {
+    console.log('Take Help Of Expert clicked');
+    goToContactUs();
+  };
+
+  const handleUnableToTrace = () => {
+    console.log('Unable to trace account clicked');
+    setShowModal(true);
+  };
+
   return (
-    <div className="anf-root">
-      <div className="anf-header">
-        <div className="anf-logo">
-          <img src={logo} alt="logo" id='img1' />
+    <PageContainer>
+      <HeaderSection>
+        <HeaderLogo src={logo} alt="Visibeen" />
+      </HeaderSection>
+      
+      <ContentArea>
+        <MainContent>
+          <IllustrationSection />
+          <ContentSection />
+          <ActionButtons 
+            onCreateAccount={handleCreateAccount}
+            onTakeHelpOfExpert={handleTakeHelpOfExpert}
+          />
+          <HelpLink onClick={handleUnableToTrace} />
+        </MainContent>
+      </ContentArea>
 
-          </div>
-        </div>
-
-      <div className="anf-center-card">
-        <div className="anf-illustration">
-          {/* You can put your SVG here */}
-        </div>
-        <img src={ANF} alt="Account Not Found" className="anf-illustration-img" />
-        <h2 className="anf-title">Account Not Found</h2>
-        <p className="anf-desc">
-          Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.
-        </p>
-
-        <div className="anf-actions">
-
-          <button onClick={openModal} className="anf-btn anf-btn-primary" >Create Account</button>
-          <button className="anf-btn anf-btn-outline" onClick={goToContactUs}>Take Help Of Expert</button>
-        </div>
-
-        <div className="anf-link-row">
-          <a
-            href="#"
-            className="anf-link-danger"
-            onClick={e => {
-              e.preventDefault();
-              setShowModal(true);
-            }}
-          >
-            Unable to trace account?
-          </a>
-        </div>
-      </div>
-      {/* Modal */}
+      {/* Existing Modal Functionality */}
       {isModalOpen && (
-        <div className="modal-container">
-          <div className="modal-content">
+        <ModalOverlay>
+          <ModalContent>
             {/* Header */}
-            <div className="modal-header">
+            <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
               <button
                 onClick={currentStep === 1 ? closeModal : () => goToStep(currentStep - 1)}
-                className="back-button"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  color: '#0B91D6'
+                }}
               >
                 ← Back
               </button>
-            </div>
+            </Box>
 
             {/* Progress Bar */}
-            <div className="progress-container">
-              <div 
-                className="progress-fill"
-                style={{ width: getProgressWidth() }}
-              />
-            </div> 
+            <Box sx={{ 
+              width: '100%', 
+              height: '4px', 
+              backgroundColor: '#f0f0f0', 
+              borderRadius: '2px',
+              marginBottom: '32px'
+            }}>
+              <Box sx={{ 
+                width: getProgressWidth(),
+                height: '100%',
+                backgroundColor: '#0B91D6',
+                borderRadius: '2px',
+                transition: 'width 0.3s ease'
+              }} />
+            </Box>
 
             {/* Content */}
-            <div className="content-container">
-              <h2 className="step-content">
+            <Box sx={{ textAlign: 'center' }}>
+              <h2 style={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '20px',
+                fontWeight: 600,
+                color: '#121927',
+                marginBottom: '16px'
+              }}>
                 {stepContent[currentStep].title}
               </h2>
               
-              <p className="step-description">
+              <p style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 400,
+                color: '#30302e',
+                marginBottom: '32px'
+              }}>
                 {stepContent[currentStep].description}
               </p>
 
               {/* Buttons */}
-              <div className="buttons-container">
+              <Box sx={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
                 <button
                   onClick={() => handleAnswer(currentStep, 'Yes')}
-                  className="button-primary"
+                  style={{
+                    backgroundColor: '#0B91D6',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'Inter, sans-serif'
+                  }}
                 >
                   Yes
                 </button>
                 <button
                   onClick={() => handleAnswer(currentStep, 'No')}
-                  className="button-secondary"
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: '#0B91D6',
+                    border: '1px solid #0B91D6',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'Inter, sans-serif'
+                  }}
                 >
                   No
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-           )}
-
+              </Box>
+            </Box>
+          </ModalContent>
+        </ModalOverlay>
+      )}
 
       {/* Confirmation Modal */}
       {showModal && (
-        <div className="anf-modal-overlay">
-          <div className="anf-modal">
-            <div className="anf-modal-header">
-              <button className="back-button" onClick={() => setShowModal(false)}>
+        <ModalOverlay>
+          <ModalContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+              <button 
+                onClick={() => setShowModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  color: '#0B91D6'
+                }}
+              >
                 ← Back
               </button>
-            </div>
-            <h2 className="anf-modal-title">You want to take claim from existing profile?</h2>
-            <p className="anf-modal-desc">
+            </Box>
+            <h2 style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '20px',
+              fontWeight: 600,
+              color: '#121927',
+              marginBottom: '16px',
+              textAlign: 'center'
+            }}>
+              You want to take claim from existing profile?
+            </h2>
+            <p style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '14px',
+              fontWeight: 400,
+              color: '#30302e',
+              marginBottom: '32px',
+              textAlign: 'center'
+            }}>
               Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.
             </p>
-            <div className="anf-modal-actions">
+            <Box sx={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
               <button
-                className="anf-btn anf-btn-primary"
                 onClick={() => {
                   setShowModal(false);
                   setShowSearchModal(true);
                 }}
+                style={{
+                  backgroundColor: '#0B91D6',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'Inter, sans-serif'
+                }}
               >
                 Yes
               </button>
-              <button className="anf-btn anf-btn-outline" onClick={() => setShowModal(false)}>
+              <button 
+                onClick={() => setShowModal(false)}
+                style={{
+                  backgroundColor: 'transparent',
+                  color: '#0B91D6',
+                  border: '1px solid #0B91D6',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'Inter, sans-serif'
+                }}
+              >
                 No
               </button>
-            </div>
-          </div>
-        </div>
+            </Box>
+          </ModalContent>
+        </ModalOverlay>
       )}
-
 
       {/* GMB Search Modal */}
       {showSearchModal && (
-        <div className="anf-modal-overlay">
-          <div className="anf-modal">
-            <div className="anf-modal-header">
-              <button className="back-button" onClick={() => setShowSearchModal(false)}>
+        <ModalOverlay>
+          <ModalContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+              <button 
+                onClick={() => setShowSearchModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  color: '#0B91D6'
+                }}
+              >
                 ← Back
               </button>
-            </div>
-            <div className={`anf-search-box ${isSearching ? 'is-searching' : ''}`}>
-              <span className="anf-search-icon">🔍</span>
+            </Box>
+            
+            <Box sx={{ 
+              position: 'relative',
+              marginBottom: '24px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <span>🔍</span>
               <input
                 type="text"
                 placeholder="search GMB profile"
-                className="anf-search-input"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                aria-label="Search GMB profile"
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  flex: 1,
+                  fontSize: '14px',
+                  fontFamily: 'Inter, sans-serif'
+                }}
               />
-            </div>
-            {/* Auto-search triggers as you type; no explicit Search button */}
+            </Box>
 
-            <div className="search-results" id="searchResults">
-              <h3 className="anf-results-title">Your search results</h3>
-              <div id="resultsList">
-                {searchResults.length > 0 && (
-                  <div className="results-list">
-                    {searchResults.map((result, index) => (
-                      <label key={result.id || index} className="result-item" onClick={() => handleSelectProfile(result)}>
-                        <input
-                          type="checkbox"
-                          className="result-checkbox"
-                          onChange={() => handleSelectProfile(result)}
-                          checked={selectedProfile?.id === (result.id || '')}
-                          aria-label={`Select ${result.name || 'place'}`}
-                        />
-                        <div className="result-texts">
-                          <div className="result-name">{result.name || result.businessName}</div>
-                          {!!(result.formattedAddress) && (
-                            <div className="result-sub">{result.formattedAddress}</div>
-                          )}
+            <Box>
+              <h3 style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '16px',
+                fontWeight: 600,
+                color: '#121927',
+                marginBottom: '16px'
+              }}>
+                Your search results
+              </h3>
+              
+              {searchResults.length > 0 && (
+                <Box sx={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {searchResults.map((result, index) => (
+                    <Box
+                      key={result.id || index}
+                      onClick={() => handleSelectProfile(result)}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        marginBottom: '8px',
+                        cursor: 'pointer',
+                        backgroundColor: selectedProfile?.id === (result.id || '') ? '#f0f9ff' : 'transparent',
+                        '&:hover': {
+                          backgroundColor: '#f9fafb'
+                        }
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedProfile?.id === (result.id || '')}
+                        onChange={() => handleSelectProfile(result)}
+                      />
+                      <Box>
+                        <div style={{
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          color: '#121927'
+                        }}>
+                          {result.name || result.businessName}
                         </div>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+                        {result.formattedAddress && (
+                          <div style={{
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '12px',
+                            color: '#6b7280'
+                          }}>
+                            {result.formattedAddress}
+                          </div>
+                        )}
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              )}
 
-            {showEmptyState && (
-              <div className="empty-state" id="emptyState">
-                <p>No results found. Try a different search term.</p>
-              </div>
-            )}
+              {showEmptyState && (
+                <Box sx={{ textAlign: 'center', padding: '40px 20px' }}>
+                  <p style={{
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '14px',
+                    color: '#6b7280'
+                  }}>
+                    No results found. Try a different search term.
+                  </p>
+                </Box>
+              )}
 
-            {selectedProfile && (
-              <div className="anf-modal-actions">
-                <button
-                  className="anf-btn anf-btn-primary"
-                  onClick={() => {
-                    setShowSearchModal(false);
-                    navigate('/contact-us', { state: { selectedPlace: selectedProfile } });
-                  }}
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+              {selectedProfile && (
+                <Box sx={{ marginTop: '24px', textAlign: 'center' }}>
+                  <button
+                    onClick={() => {
+                      setShowSearchModal(false);
+                      navigate('/contact-us', { state: { selectedPlace: selectedProfile } });
+                    }}
+                    style={{
+                      backgroundColor: '#0B91D6',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: 'Inter, sans-serif'
+                    }}
+                  >
+                    Next
+                  </button>
+                </Box>
+              )}
+            </Box>
+          </ModalContent>
+        </ModalOverlay>
       )}
-
-
-
-      </div>
-    );
-}
+    </PageContainer>
+  );
+};
 
 export default AccountNotFound;

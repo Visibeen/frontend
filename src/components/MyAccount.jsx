@@ -1,16 +1,99 @@
 import React, { useState } from 'react';
-import { Home, BarChart3, Users, Download, Globe, MessageSquare, FileText, Share2, Gift, User, Instagram, Settings, Twitter, Youtube } from 'lucide-react';
-import Layout from './Layouts/Layout';
-import logo from '../assets/VisibeenLogo.png';
+import { Box, Typography, Button, Stack } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import DashboardLayout from './Layouts/DashboardLayout';
+import LogoUploadSection from './MyAccount/LogoUploadSection';
+import FormFieldWithEdit from './MyAccount/FormFieldWithEdit';
+import DatePickerField from './MyAccount/DatePickerField';
+import DropdownField from './MyAccount/DropdownField';
 
-export default function VisiBeenMyAccountPage() {
+const PageContainer = styled(Box)(({ theme }) => ({
+  maxWidth: '1015px',
+  margin: '0 auto'
+}));
+
+const SectionTitle = styled(Typography)(({ theme }) => ({
+  textAlign: 'center',
+  fontSize: '26px',
+  fontWeight: 600,
+  color: '#121927',
+  marginBottom: '6px',
+  fontFamily: 'Inter, sans-serif'
+}));
+
+const SectionDescription = styled(Typography)(({ theme }) => ({
+  textAlign: 'center',
+  fontSize: '14px',
+  fontWeight: 400,
+  color: '#30302e',
+  marginBottom: '40px',
+  fontFamily: 'Inter, sans-serif'
+}));
+
+const FormCard = styled(Box)(({ theme }) => ({
+  width: '100%',
+  maxWidth: '740px',
+  margin: '0 auto',
+  background: '#ffffff',
+  borderRadius: '12px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  padding: '24px'
+}));
+
+const FormContainer = styled(Stack)(({ theme }) => ({
+  gap: '0px'
+}));
+
+const DateRow = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  gap: '30px',
+  marginBottom: '24px'
+}));
+
+const ActionButtons = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  gap: '20px',
+  justifyContent: 'center',
+  marginTop: '32px'
+}));
+
+const CancelButton = styled(Button)(({ theme }) => ({
+  backgroundColor: 'transparent',
+  color: '#EF232A',
+  border: 'none',
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '14px',
+  fontWeight: 600,
+  textTransform: 'capitalize',
+  padding: '12px 24px',
+  borderRadius: '8px',
+  '&:hover': {
+    backgroundColor: 'rgba(239, 35, 42, 0.04)'
+  }
+}));
+
+const UpdateButton = styled(Button)(({ theme }) => ({
+  backgroundColor: '#0B91D6',
+  color: '#ffffff',
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '14px',
+  fontWeight: 600,
+  textTransform: 'capitalize',
+  padding: '12px 25px',
+  borderRadius: '8px',
+  '&:hover': {
+    backgroundColor: '#0277BD'
+  }
+}));
+
+export default function MyAccountPage() {
   const [formData, setFormData] = useState({
-    name: 'John wick',
     businessName: 'Medical shop',
-    address: 'Office Floor, Bestech, Sector 66, Sahibzada Ajit Singh Nagar, Punjab 160066',
+    industryType: 'Dental clinic',
+    startDate: '02-01-2025',
+    endDate: '02-01-2025',
     email: 'xyz@gmail.com',
-    contactNumber: '6858653555',
-    alternativeContactNumber: '6858653555',
+    address: 'Office Floor, Bestech, Sector 66, Sahibzada Ajit Singh Nagar, Punjab 160066',
     website: 'www.visibeen.com'
   });
 
@@ -29,92 +112,105 @@ export default function VisiBeenMyAccountPage() {
     console.log('Update clicked', formData);
   };
 
-  const sidebarItems = [
-    { icon: Home, label: 'Overview', active: false },
-    { icon: BarChart3, label: 'Performance', active: false },
-    { icon: Users, label: 'Reputation Management', active: false },
-    { icon: Download, label: 'Get EDMs', active: false },
-    { icon: Globe, label: 'Free Website', active: false },
-    { icon: MessageSquare, label: 'Whats app', active: false, badge: 'Coming soon' },
-    { icon: FileText, label: 'Blogs', active: false, badge: 'Coming soon' },
-    { icon: Share2, label: 'Social Media', active: false, badge: 'Coming soon' },
-    { icon: Gift, label: 'Refer & Earn', active: false },
-    { icon: User, label: 'My Account', active: true }
-  ];
+  const handleLogoClick = () => {
+    console.log('Logo upload clicked');
+  };
+
+  const handleEdit = (field) => {
+    console.log('Edit clicked for:', field);
+  };
+
+  const handleCalendarClick = (field) => {
+    console.log('Calendar clicked for:', field);
+  };
+
+  const handleDropdownClick = (field) => {
+    console.log('Dropdown clicked for:', field);
+  };
 
   return (
-    <Layout>
-      <div className="edm-shell px-[24px] md:px-[60px] lg:px-[120px] pt-[24px] md:pt-[36px] pb-[40px]">
-        {/* Header card */}
-        <div className="edm-header-card">
-          <div className="edm-welcome">
-            <img src={logo} alt="logo" className="edm-logo" />
-            <div>
-              <div className="edm-welcome-title">Welcome</div>
-              <div className="edm-company">E2E Digitech Pvt Ltd</div>
-            </div>
-          </div>
-        </div>
+    <DashboardLayout>
+      <PageContainer>
+        <SectionTitle>Account Information</SectionTitle>
+        <SectionDescription>
+          Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing
+        </SectionDescription>
 
-        {/* Title */}
-        <div className="text-center mt-6 mb-6">
-          <h2 className="text-[22px] md:text-[24px] font-semibold">Account Information</h2>
-          <p className="text-gray-500">Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing</p>
-        </div>
+        <LogoUploadSection onLogoClick={handleLogoClick} />
 
-        {/* Form card */}
-        <div className="edm-form-card">
-          {[
-            { label: 'Name', field: 'name', placeholder: 'Enter name' },
-            { label: 'Business Name', field: 'businessName', placeholder: 'Enter business name' },
-            { label: 'Address', field: 'address', placeholder: 'Enter address', type: 'textarea' },
-            { label: 'Email Id', field: 'email', placeholder: 'Enter email id' },
-            { label: 'Contact Number', field: 'contactNumber', placeholder: 'Enter contact number' },
-            { label: 'Alternative Contact Number', field: 'alternativeContactNumber', placeholder: 'Enter alternative contact number' },
-            { label: 'Website', field: 'website', placeholder: 'Enter website' },
-          ].map((field, idx) => (
-            <div key={idx} className="edm-field">
-              <label className="edm-label">
-                {field.label}<span className="text-red-500">*</span>
-              </label>
-              {field.type === 'textarea' ? (
-                <div className="edm-input-wrap">
-                  <textarea
-                    value={formData[field.field]}
-                    onChange={(e) => handleInputChange(field.field, e.target.value)}
-                    placeholder={field.placeholder}
-                    rows={3}
-                    className="edm-input"
-                    style={{ borderRadius: '10px 0 0 10px', resize: 'none', border: 'solid 1px #d1d5db' }}
-                  />
-                  <button type="button" className="edm-edit" aria-label={`Edit ${field.label}`}>
-                    ✎
-                  </button>
-                </div>
-              ) : (
-                <div className="edm-input-wrap">
-                  <input
-                    type="text"
-                    value={formData[field.field]}
-                    onChange={(e) => handleInputChange(field.field, e.target.value)}
-                    placeholder={field.placeholder}
-                    className="edm-input"
-                  />
-                  <button type="button" className="edm-edit" aria-label={`Edit ${field.label}`}>
-                    ✎
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+        <FormCard>
+          <FormContainer>
+            <FormFieldWithEdit
+              label="Business Name*"
+              value={formData.businessName}
+              onChange={(e) => handleInputChange('businessName', e.target.value)}
+              placeholder="Enter business name"
+              onEdit={() => handleEdit('businessName')}
+            />
 
-          <div className="edm-actions">
-            <button type="button" onClick={handleCancel} className="edm-btn edm-btn-outline">Cancel</button>
-            <button type="button" onClick={handleUpdate} className="edm-btn edm-btn-primary">Update</button>
-          </div>
-        </div>
-      </div>
-    </Layout>
+            <DropdownField
+              label="Industry Type*"
+              value={formData.industryType}
+              onChange={(e) => handleInputChange('industryType', e.target.value)}
+              placeholder="Select industry type"
+              onEdit={() => handleEdit('industryType')}
+              onClick={() => handleDropdownClick('industryType')}
+            />
+
+            <DateRow>
+              <DatePickerField
+                label="Start Date*"
+                value={formData.startDate}
+                onChange={(e) => handleInputChange('startDate', e.target.value)}
+                placeholder="Select start date"
+                onCalendarClick={() => handleCalendarClick('startDate')}
+              />
+              <DatePickerField
+                label="End Date*"
+                value={formData.endDate}
+                onChange={(e) => handleInputChange('endDate', e.target.value)}
+                placeholder="Select end date"
+                onCalendarClick={() => handleCalendarClick('endDate')}
+              />
+            </DateRow>
+
+            <FormFieldWithEdit
+              label="Email Id*"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              placeholder="Enter email address"
+              onEdit={() => handleEdit('email')}
+            />
+
+            <FormFieldWithEdit
+              label="Address *"
+              value={formData.address}
+              onChange={(e) => handleInputChange('address', e.target.value)}
+              placeholder="Enter address"
+              multiline={true}
+              rows={2}
+              onEdit={() => handleEdit('address')}
+            />
+
+            <FormFieldWithEdit
+              label="Website*"
+              value={formData.website}
+              onChange={(e) => handleInputChange('website', e.target.value)}
+              placeholder="Enter website URL"
+              onEdit={() => handleEdit('website')}
+            />
+
+            <ActionButtons>
+              <CancelButton onClick={handleCancel}>
+                Cancel
+              </CancelButton>
+              <UpdateButton onClick={handleUpdate}>
+                Update
+              </UpdateButton>
+            </ActionButtons>
+          </FormContainer>
+        </FormCard>
+      </PageContainer>
+    </DashboardLayout>
   );
 }
-
