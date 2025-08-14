@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, provider } from '../firebase';
+import { auth, provider, signInWithPopup } from '../firebase';
+import { GoogleAuthProvider } from 'firebase/auth';
 import { getSession } from '../utils/authUtils';
+import api from './api';
 import logo from '../../assets/VisibeenLogo.png';
 import logo1 from '../../assets/googleLogo.jpg';
 
@@ -27,11 +29,11 @@ function GoogleConnect() {
                 'prompt': 'consent'
             });
 
-            const result = await auth.signInWithPopup(provider);
+            const result = await signInWithPopup(auth, provider);
             
             // Get the OAuth access token (not Firebase ID token)
-            const credential = result.credential;
-            const googleAccessToken = credential.accessToken;
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            const googleAccessToken = credential?.accessToken || '';
             
             console.log('Google OAuth token received:', !!googleAccessToken);
 
@@ -55,25 +57,18 @@ function GoogleConnect() {
             }
 
             // Link Google account to current user with GMB verification
-            const res = await fetch('http://localhost:8089/api/v1/customer/auth/link-google', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentUser.token}`
-                },
-                body: JSON.stringify({
-                    googleEmail: result.user.email,
-                    googleAccessToken: googleAccessToken,
-                    googleDisplayName: result.user.displayName,
-                    hasGMBAccess: hasGMBAccess,
-                    gmbAccounts: hasGMBAccess ? gmbData.accounts : []
-                }),
+            const data = await api.post('/customer/auth/link-google', {
+                googleEmail: result.user.email,
+                googleAccessToken: googleAccessToken,
+                googleDisplayName: result.user.displayName,
+                hasGMBAccess: hasGMBAccess,
+                gmbAccounts: hasGMBAccess ? gmbData.accounts : []
+            }, {
+                Authorization: `Bearer ${currentUser.token}`
             });
-
-            const data = await res.json();
             console.log('Backend response:', data);
 
-            if (res.ok) {
+            if (data) {
                 // Navigate based on actual GMB access
                 if (hasGMBAccess) {
                     console.log('User has GMB access, redirecting to dashboard');
@@ -82,8 +77,6 @@ function GoogleConnect() {
                     console.log('User does not have GMB access, redirecting to account not found');
                     navigate('/account-not-found');
                 }
-            } else {
-                setError(data.message || 'Failed to connect Google account');
             }
         } catch (error) {
             if (error.code === 'auth/popup-closed-by-user') {

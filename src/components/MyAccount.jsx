@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Home, BarChart3, Users, Download, Globe, MessageSquare, FileText, Share2, Gift, User, Instagram, Settings, Twitter, Youtube } from 'lucide-react';
 import Layout from './Layouts/Layout';
+import logo from '../assets/VisibeenLogo.png';
 
 export default function VisiBeenMyAccountPage() {
   const [formData, setFormData] = useState({
@@ -42,173 +43,78 @@ export default function VisiBeenMyAccountPage() {
   ];
 
   return (
-    // <div className="min-h-screen bg-gray-50 flex">
-      <Layout>
-
-        {/* Main Content */}
-        <div className="main-content">
-          {/* Main Form Area */}
-          <div className="content-area">
-            <div className="form-container">
-              <h1 className="page-title">Account Information</h1>
-              <p className="page-description">Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing</p>
-
-              <div className="form-group">
-                {/* Name */}
-                <div>
-                  <label className="form-label">
-                    Name*
-                  </label>
-                  <div className="input-wrapper">
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="form-input "
-                    />
-                    <button className="edit-button ">
-                      <svg className="edit-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Business Name */}
-                <div>
-                  <label className="form-label">
-                    Business Name*
-                  </label>
-                  <div className="input-wrapper">
-                    <input
-                      type="text"
-                      value={formData.businessName}
-                      onChange={(e) => handleInputChange('businessName', e.target.value)}
-                      className="form-input"
-                    />
-                    <button className="edit-button ">
-                      <svg className="edit-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Address */}
-                <div>
-                  <label className="form-label">
-                    Address*
-                  </label>
-                  <textarea
-                    value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                    rows={3}
-                    className="form-input"
-                  />
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label className="form-label">
-                    Email Id*
-                  </label>
-                  <div className="input-wrapper">
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="form-input"
-                    />
-                    <button className="edit-button">
-                      <svg className="edit-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Contact Number */}
-                <div>
-                  <label className="form-label">
-                    Contact Number*
-                  </label>
-                  <div className="input-wrapper">
-                    <input
-                      type="tel"
-                      value={formData.contactNumber}
-                      onChange={(e) => handleInputChange('contactNumber', e.target.value)}
-                      className="form-input"
-                    />
-                    <button className="edit-button">
-                      <svg className="edit-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Alternative Contact Number */}
-                <div>
-                  <label className="form-label">
-                    Alternative Contact Number*
-                  </label>
-                  <div className="input-wrapper">
-                    <input
-                      type="tel"
-                      value={formData.alternativeContactNumber}
-                      onChange={(e) => handleInputChange('alternativeContactNumber', e.target.value)}
-                      className="form-input"
-                    />
-                    <button className="edit-button">
-                      <svg className="edit-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Website */}
-                <div>
-                  <label className="form-label">
-                    Website*
-                  </label>
-                  <div className="input-wrapper">
-                    <input
-                      type="url"
-                      value={formData.website}
-                      onChange={(e) => handleInputChange('website', e.target.value)}
-                      className="form-input"
-                    />
-                    <button className="edit-button">
-                      <svg className="edit-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Buttons */}
-                <div className="action-buttons">
-                  <button
-                    onClick={handleCancel}
-                    className="btn-cancel"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleUpdate}
-                    className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                  >
-                    Update
-                  </button>
-                </div>
-              </div>
+    <Layout>
+      <div className="edm-shell px-[24px] md:px-[60px] lg:px-[120px] pt-[24px] md:pt-[36px] pb-[40px]">
+        {/* Header card */}
+        <div className="edm-header-card">
+          <div className="edm-welcome">
+            <img src={logo} alt="logo" className="edm-logo" />
+            <div>
+              <div className="edm-welcome-title">Welcome</div>
+              <div className="edm-company">E2E Digitech Pvt Ltd</div>
             </div>
           </div>
         </div>
-      </Layout >
-    // </div >
-  );
 
+        {/* Title */}
+        <div className="text-center mt-6 mb-6">
+          <h2 className="text-[22px] md:text-[24px] font-semibold">Account Information</h2>
+          <p className="text-gray-500">Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing</p>
+        </div>
+
+        {/* Form card */}
+        <div className="edm-form-card">
+          {[
+            { label: 'Name', field: 'name', placeholder: 'Enter name' },
+            { label: 'Business Name', field: 'businessName', placeholder: 'Enter business name' },
+            { label: 'Address', field: 'address', placeholder: 'Enter address', type: 'textarea' },
+            { label: 'Email Id', field: 'email', placeholder: 'Enter email id' },
+            { label: 'Contact Number', field: 'contactNumber', placeholder: 'Enter contact number' },
+            { label: 'Alternative Contact Number', field: 'alternativeContactNumber', placeholder: 'Enter alternative contact number' },
+            { label: 'Website', field: 'website', placeholder: 'Enter website' },
+          ].map((field, idx) => (
+            <div key={idx} className="edm-field">
+              <label className="edm-label">
+                {field.label}<span className="text-red-500">*</span>
+              </label>
+              {field.type === 'textarea' ? (
+                <div className="edm-input-wrap">
+                  <textarea
+                    value={formData[field.field]}
+                    onChange={(e) => handleInputChange(field.field, e.target.value)}
+                    placeholder={field.placeholder}
+                    rows={3}
+                    className="edm-input"
+                    style={{ borderRadius: '10px 0 0 10px', resize: 'none', border: 'solid 1px #d1d5db' }}
+                  />
+                  <button type="button" className="edm-edit" aria-label={`Edit ${field.label}`}>
+                    ✎
+                  </button>
+                </div>
+              ) : (
+                <div className="edm-input-wrap">
+                  <input
+                    type="text"
+                    value={formData[field.field]}
+                    onChange={(e) => handleInputChange(field.field, e.target.value)}
+                    placeholder={field.placeholder}
+                    className="edm-input"
+                  />
+                  <button type="button" className="edm-edit" aria-label={`Edit ${field.label}`}>
+                    ✎
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+
+          <div className="edm-actions">
+            <button type="button" onClick={handleCancel} className="edm-btn edm-btn-outline">Cancel</button>
+            <button type="button" onClick={handleUpdate} className="edm-btn edm-btn-primary">Update</button>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
 }
 
