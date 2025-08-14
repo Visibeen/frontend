@@ -11,7 +11,7 @@ import {
     User,
     ChevronDown
 } from 'lucide-react';
-import Layout from '../../Layouts/Layout';
+import DashboardLayout from '../../Layouts/DashboardLayout';
 import Select from 'react-select';
 import countryList from 'react-select-country-list';
 import { useMemo } from 'react';
@@ -245,8 +245,7 @@ const VisibeenOnboarding = () => {
     //     alert('Account creation completed! Data logged to console.');
     // }
     return (
-        <Layout>
-
+        <DashboardLayout>
             {/* Main Content */}
             <div className="main-content">
                 <div className="content-container">
@@ -1255,8 +1254,7 @@ const VisibeenOnboarding = () => {
     )}
     </div>
             </div>
-        </Layout>
-
+        </DashboardLayout>
     );
 }
 export default VisibeenOnboarding;

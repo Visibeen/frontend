@@ -1,5 +1,5 @@
 import React from "react";
-import Layout from "./Layouts/Layout";
+import DashboardLayout from "./Layouts/DashboardLayout";
 import { AiOutlineMail, AiOutlineLink } from "react-icons/ai";
 import { FaFacebook, FaWhatsapp, FaInstagram } from "react-icons/fa";
 
@@ -32,7 +32,7 @@ export default function ReferEarn() {
   }, [showShareMenu]);
 
   return (
-    <Layout>
+    <DashboardLayout>
       <div className="refer-earn-page">
         {/* Top Section */}
         <div className="refer-earn-header">
@@ -126,6 +126,6 @@ export default function ReferEarn() {
           </p>
         </div>
       </div>
-    </Layout>
+    </DashboardLayout>
   );
 }

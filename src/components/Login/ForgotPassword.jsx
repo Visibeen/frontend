@@ -1,70 +1,65 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import logo from '../../assets/VisibeenLogo.png';
-import './ForgotPassword.css'; 
+import React from 'react';
+import { Box } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import LeftPanel from './LeftPanel';
+import AuthRightPanelLayout from './AuthRightPanelLayout';
+import ForgotPasswordForm from './ForgotPasswordForm';
+import DecorativeBackgroundIcon from './DecorativeBackgroundIcon';
+
+const PageContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  height: '100vh',
+  width: '100%',
+  overflow: 'hidden',
+  backgroundColor: '#F8F8F8',
+  '@media (max-width: 768px)': {
+    flexDirection: 'column'
+  }
+}));
+
+const RightPanelWithBackground = styled(Box)(({ theme }) => ({
+  width: '50%',
+  minHeight: '100vh',
+  backgroundColor: '#ffffff',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: theme.spacing(5),
+  position: 'relative'
+}));
+
+const BackgroundDecoration = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  zIndex: 0,
+  opacity: 0.07
+}));
+
+const ContentWrapper = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  zIndex: 1
+}));
 
 function ForgotPassword() {
-  const [email, setEmail] = useState('');
-  const navigate = useNavigate();
-
-  const handleSendOtp = async () => {
-    const res = await fetch('http://52.44.140.230:8089/api/v1/customer/auth/forget_password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      // ✅ This line is MISSING or not working
-      sessionStorage.setItem('resetEmail', email);
-      console.log("✅ Email saved in sessionStorage:", email);
-
-      alert('OTP sent to your email.');
-      navigate('/verify-otp');
-    } else {
-      alert(data.message || "OTP not sent");
-    }
-  };
-
-
   return (
-    <div className="main-container">
-      <div className="left-side">
-        <img src={logo} alt="logo" id='img' />
-        <div className="left-content">
-          <h2>Think Unlimited</h2>
-           <p>Join over <b>62,000+ Digital marketing <span>and</span> business</b> owners around the world</p>
-        </div>
-
-        <img src={logo} alt="logo" />
-        <h2>Think Unlimited</h2>
-        <p>Join over <b>62,000+ Digital marketing and business</b> owners around the world</p>
-        <div className="services-test">Services test</div>
-      </div>
-
-      <div className="right-side">
-        <div className="login-container">
-          <h2>Enter Email Address</h2>
-          <p class="form-subtitle">Get OTP on registered email address to login your account</p>
-
-          {/* {error && <p style={{ color: 'red' }}>{error}</p>} */}
-          <div className="form-group">
-            <input type="text" placeholder="Enter Email address:" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <button className="login-btn" onClick={handleSendOtp}>Send OTP</button>
-          <div class="otp-info">
-            We sent a Reset Link to your registered email. Please check your inbox.
-          </div>
-          <p className="register-link">Remember password? <Link to="/">Login</Link></p>
-        </div>
-        <h2>Forgot Password</h2>
-        <input type="text" placeholder="Enter Email" value={contact} onChange={(e) => setContact(e.target.value)} />
-        <button onClick={handleSendOtp}>Send OTP</button>
-        <p>Remember password? <Link to="/">Login</Link></p>
-      </div>
-    </div>
+    <PageContainer>
+      <LeftPanel />
+      <RightPanelWithBackground>
+        <BackgroundDecoration>
+          <DecorativeBackgroundIcon width={225} height={168} color="#121927" />
+        </BackgroundDecoration>
+        <ContentWrapper>
+          <AuthRightPanelLayout 
+            heading="Forgot Password" 
+            subtext="Restore your password with few easy step!"
+          >
+            <ForgotPasswordForm />
+          </AuthRightPanelLayout>
+        </ContentWrapper>
+      </RightPanelWithBackground>
+    </PageContainer>
   );
 }
 

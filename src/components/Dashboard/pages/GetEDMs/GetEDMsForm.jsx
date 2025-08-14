@@ -1,8 +1,49 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../../../Layouts/Layout';
-import '../../../../styles.css';
-import logo from '../../../../assets/VisibeenLogo.png';
+import { Box, Typography, Stack } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import DashboardLayout from '../../../Layouts/DashboardLayout';
+import WelcomeHeader from './components/WelcomeHeader';
+import FormField from './components/FormField';
+import ActionButtons from './components/ActionButtons';
+
+const ContentContainer = styled(Box)(({ theme }) => ({
+  maxWidth: '1015px',
+  margin: '0 auto'
+}));
+
+const SectionTitle = styled(Typography)(({ theme }) => ({
+  textAlign: 'center',
+  fontSize: '26px',
+  fontWeight: 600,
+  color: '#121927',
+  marginTop: '24px',
+  marginBottom: '6px',
+  fontFamily: 'Inter, sans-serif'
+}));
+
+const SectionDescription = styled(Typography)(({ theme }) => ({
+  textAlign: 'center',
+  fontSize: '14px',
+  fontWeight: 400,
+  color: '#30302e',
+  marginBottom: '40px',
+  fontFamily: 'Inter, sans-serif'
+}));
+
+const FormCard = styled(Box)(({ theme }) => ({
+  width: '100%',
+  maxWidth: '740px',
+  margin: '0 auto',
+  background: '#ffffff',
+  borderRadius: '12px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  padding: '18px 18px 22px 18px'
+}));
+
+const FormContainer = styled(Stack)(({ theme }) => ({
+  gap: '24px'
+}));
 
 const GetEDMs = () => {
   const navigate = useNavigate();
@@ -10,8 +51,7 @@ const GetEDMs = () => {
   const [formData, setFormData] = useState({
     name: 'John wick',
     businessName: 'Medical shop',
-    address:
-      'Office Floor, Bestech, Sector 66, Sahibzada Ajit Singh Nagar, Punjab 160066',
+    address: 'Office Floor, Bestech, Sector 66, Sahibzada Ajit Singh Nagar, Punjab 160066',
     email: 'xyz@gmail.com',
     contactNumber: '6858653555',
     altContactNumber: '6858653555',
@@ -29,7 +69,6 @@ const GetEDMs = () => {
     e.preventDefault();
 
     try {
-    
       const response = await fetch('/api/save-client-info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,64 +83,56 @@ const GetEDMs = () => {
     }
   };
 
+  const handleCancel = () => {
+    // Handle cancel action
+    console.log('Cancel clicked');
+  };
+
+  const formFields = [
+    { label: 'Name', name: 'name', placeholder: 'Enter name', required: true },
+    { label: 'Business Name', name: 'businessName', placeholder: 'Enter business name', required: true },
+    { label: 'Address', name: 'address', placeholder: 'Enter address', required: true },
+    { label: 'Email Id', name: 'email', placeholder: 'Enter email id', required: true },
+    { label: 'Contact Number', name: 'contactNumber', placeholder: 'Enter contact number', required: true },
+    { label: 'Alternative Contact Number', name: 'altContactNumber', placeholder: 'Enter alternative contact number', required: true },
+    { label: 'Website', name: 'website', placeholder: 'Enter website', required: true },
+  ];
+
   return (
-    <Layout>
-      <div className="edm-shell px-[24px] md:px-[60px] lg:px-[120px] pt-[24px] md:pt-[36px] pb-[40px]">
-        {/* Header card */}
-        <div className="edm-header-card">
-          <div className="edm-welcome">
-          <img src={logo} alt="logo" className="edm-logo" />
-            <div>
-              <div className="edm-welcome-title">Welcome</div>
-              <div className="edm-company">E2E Digitech Pvt Ltd</div>
-            </div>
-          </div>
-        </div>
+    <DashboardLayout>
+      <ContentContainer>
+        <WelcomeHeader />
+        
+        <SectionTitle>Account Information</SectionTitle>
+        <SectionDescription>
+          Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing
+        </SectionDescription>
 
-        {/* Title */}
-        <div className="text-center mt-6 mb-6">
-          <h2 className="text-[22px] md:text-[24px] font-semibold">Account Information</h2>
-          <p className="text-gray-500">Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing</p>
-        </div>
-
-        {/* Form card */}
-        <form onSubmit={handleSubmit} className="edm-form-card">
-          {[
-            { label: 'Name', name: 'name', placeholder: 'Enter name' },
-            { label: 'Business Name', name: 'businessName', placeholder: 'Enter business name' },
-            { label: 'Address', name: 'address', placeholder: 'Enter address' },
-            { label: 'Email Id', name: 'email', placeholder: 'Enter email id' },
-            { label: 'Contact Number', name: 'contactNumber', placeholder: 'Enter contact number' },
-            { label: 'Alternative Contact Number', name: 'altContactNumber', placeholder: 'Enter alternative contact number' },
-            { label: 'Website', name: 'website', placeholder: 'Enter website' },
-          ].map((field, idx) => (
-            <div key={idx} className="edm-field">
-              <label className="edm-label">
-                {field.label}<span className="text-red-500">*</span>
-              </label>
-              <div className="edm-input-wrap">
-                <input
-                  type="text"
+        <FormCard>
+          <form onSubmit={handleSubmit}>
+            <FormContainer>
+              {formFields.map((field, idx) => (
+                <FormField
+                  key={idx}
+                  label={field.label}
                   name={field.name}
                   value={formData[field.name]}
                   onChange={handleChange}
                   placeholder={field.placeholder}
-                  className="edm-input"
+                  required={field.required}
                 />
-                <button type="button" className="edm-edit" aria-label={`Edit ${field.label}`}>
-                  ✎
-                </button>
-              </div>
-            </div>
-          ))}
+              ))}
 
-          <div className="edm-actions">
-            <button type="button" className="edm-btn edm-btn-outline">Cancel</button>
-            <button type="submit" className="edm-btn edm-btn-primary">Save & Next</button>
-          </div>
-        </form>
-      </div>
-    </Layout>
+              <ActionButtons
+                onCancel={handleCancel}
+                onSubmit={handleSubmit}
+                submitText="Save & Next"
+              />
+            </FormContainer>
+          </form>
+        </FormCard>
+      </ContentContainer>
+    </DashboardLayout>
   );
 };
 

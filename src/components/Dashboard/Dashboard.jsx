@@ -1,8 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import Sidebar from '../Layouts/Sidebar';
-import Footer from '../Layouts/Footer';
-import Layout from '../Layouts/Layout';
+import { Box, Typography, Button, CircularProgress, Alert } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import DashboardLayout from '../Layouts/DashboardLayout';
+import PageHeader from './components/PageHeader';
+import BusinessTable from './components/BusinessTable';
+
+const LoadingContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '400px',
+  gap: '16px'
+}));
+
+const NoBusinessesContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '400px',
+  gap: '16px',
+  textAlign: 'center'
+}));
+
+const CreateBusinessButton = styled(Button)(({ theme }) => ({
+  backgroundColor: '#0B91D6',
+  color: '#ffffff',
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '14px',
+  fontWeight: 600,
+  textTransform: 'none',
+  padding: '12px 24px',
+  borderRadius: '8px',
+  '&:hover': {
+    backgroundColor: '#0277BD'
+  }
+}));
 
 const Dashboard = () => {
   const [businesses, setBusinesses] = useState([]);
@@ -10,9 +45,6 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-
-
-
 
   useEffect(() => {
     const fetchBusinesses = async () => {
@@ -26,7 +58,36 @@ const Dashboard = () => {
 
         const accessToken = sessionStorage.getItem('googleAccessToken') || localStorage.getItem('googleAccessToken');
         if (!accessToken) {
-          throw new Error('Missing Google access token. Connect Google or open /dashboard?token=YOUR_TOKEN');
+          // Set mock data for demo purposes
+          const mockBusinesses = [
+            {
+              id: '1',
+              name: 'E2E Networks Limited',
+              address: '23 Maplewood Lane,IL 62704,USA',
+              status: 'verified',
+              optimizationScore: '300/500',
+              locationId: '1'
+            },
+            {
+              id: '2',
+              name: 'E2E Networks Limited',
+              address: '23 Maplewood Lane,IL 62704,USA',
+              status: 'unverified',
+              optimizationScore: 'Pending',
+              locationId: '2'
+            },
+            {
+              id: '3',
+              name: 'E2E Networks Limited',
+              address: '23 Maplewood Lane,IL 62704,USA',
+              status: 'suspended',
+              optimizationScore: 'Check now',
+              locationId: '3'
+            }
+          ];
+          setBusinesses(mockBusinesses);
+          setLoading(false);
+          return;
         }
 
         // 1) Get accounts from the correct endpoint
@@ -60,7 +121,7 @@ const Dashboard = () => {
           id: loc.name?.split('/').pop(),
           name: loc.title,
           address: loc.storefrontAddress?.addressLines?.join(', '),
-          verificationStatus: loc.metadata?.verification?.status || 'Verified',
+          status: loc.metadata?.verification?.status || 'verified',
           optimizationScore: 'N/A',
           locationId: loc.name?.split('/').pop(),
         }));
@@ -78,85 +139,63 @@ const Dashboard = () => {
     // we want to re-run if query string changes (token passed)
   }, [location.search]);
 
-  const getStatusClass = (status) => {
-    if (status === 'Verified') return 'verified';
-    if (status === 'Unverified') return 'unverified';
-    return 'suspended';
-  };
-
   if (loading) {
     return (
-      <Layout>
-        <div className="dashboard">
-          <div className="main-content">
-            <div className="header-blue">Businesses</div>
-            <div className="loading">Loading businesses...</div>
-          </div>
-        </div>
-      </Layout>
+      <DashboardLayout>
+        <PageHeader 
+          title="Businesses" 
+          subtitle="Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development." 
+        />
+        <LoadingContainer>
+          <CircularProgress size={40} sx={{ color: '#0B91D6' }} />
+          <Typography variant="body1" color="textSecondary">
+            Loading businesses...
+          </Typography>
+        </LoadingContainer>
+      </DashboardLayout>
     );
   }
 
   if (error) {
     return (
-      <Layout>
-        <div className="dashboard">
-          <div className="main-content">
-            <div className="header-blue">Businesses</div>
-            <div className="error">
-              <p>Error loading businesses: {error}</p>
-              <button onClick={() => window.location.reload()}>Retry</button>
-            </div>
-          </div>
-        </div>
-      </Layout>
+      <DashboardLayout>
+        <PageHeader 
+          title="Businesses" 
+          subtitle="Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development." 
+        />
+        <Alert severity="error" sx={{ marginBottom: '24px' }}>
+          Error loading businesses: {error}
+        </Alert>
+        <Button 
+          variant="contained" 
+          onClick={() => window.location.reload()}
+          sx={{ backgroundColor: '#0B91D6' }}
+        >
+          Retry
+        </Button>
+      </DashboardLayout>
     );
   }
 
   return (
-    <Layout>
-      <div className="dashboard">
-        <div className="main-content">
-          <div className="header-blue">Businesses</div>
-          {businesses.length === 0 ? (
-            <div className="no-businesses">
-              <p>No businesses found. Create your first business profile.</p>
-              <button onClick={() => navigate('/create-account')}>
-                Create Business
-              </button>
-            </div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Business</th>
-                  <th>Status</th>
-                  <th>Optimization Score</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {businesses.map((biz) => (
-                  <tr key={biz.id || biz._id}>
-                    <td>
-                      <strong>{biz.name || biz.businessName}</strong><br />
-                      <span>{biz.address || biz.formattedAddress}</span>
-                    </td>
-                    <td><span className={`status-badge ${getStatusClass(biz.status || biz.verificationStatus)}`}>{biz.status || biz.verificationStatus}</span></td>
-                    <td>{biz.score || biz.optimizationScore || 'N/A'}</td>
-                    <td>
-                      <button onClick={() => navigate(`/profile/${biz.locationId || biz.id}`)}>
-                        View profile
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-    </Layout>
+    <DashboardLayout>
+      <PageHeader 
+        title="Businesses" 
+        subtitle="Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development." 
+      />
+      {businesses.length === 0 ? (
+        <NoBusinessesContainer>
+          <Typography variant="h6" color="textSecondary">
+            No businesses found. Create your first business profile.
+          </Typography>
+          <CreateBusinessButton onClick={() => navigate('/create-account')}>
+            Create Business
+          </CreateBusinessButton>
+        </NoBusinessesContainer>
+      ) : (
+        <BusinessTable businesses={businesses} />
+      )}
+    </DashboardLayout>
   );
 };
 

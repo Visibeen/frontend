@@ -1,0 +1,3 @@
+import * as React from "react";
+const Component = props => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 225 168.5" {...props}><g fill="currentColor" fillOpacity={0.07} clipPath="url(#prefix__a)" data-node-id="239:3118"><circle cx={112.5} cy={56} r={112} data-node-id="239:3148" /><circle cx={112} cy={55.5} r={97.5} data-node-id="239:3149" /></g><defs><clipPath id="prefix__a"><path fill="currentColor" d="M-560.5 0h1440v1024h-1440z" /></clipPath></defs></svg>;
+export default Component;
