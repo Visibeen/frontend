@@ -17,6 +17,7 @@ import GoogleConnect from './components/Services/GoogleConnect';
 import ContactUs from './components/gmb_accounts/ContactUs';
 import CreateAccount from './components/gmb_accounts/Create_Account/CreateAccount';
 import CreatePostForm from './components/Create_Post/CreatePostForm';
+import CreatePost from './components/CreatePost/CreatePost';
 import ReferEarn from './components/Refer&Earn';
 import MyAccount from './components/MyAccount';
 import FontStyleSelection from './components/Create_Post/FontStyleSelection';
@@ -53,6 +54,7 @@ function App() {
         <Route path="/contact-us" element={<ContactUs />} />
         <Route path="/create-account" element={<CreateAccount />} />
         <Route path="/create-post" element={<CreatePostForm />} />
+        <Route path="/reputation" element={<CreatePost />} />
         <Route path="/font-style" element={<FontStyleSelection />} />
         <Route path="/refer-earn" element={<ReferEarn />} />
         <Route path="/my-account" element={<MyAccount />}  />

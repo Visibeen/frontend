@@ -139,7 +139,17 @@ const BusinessTable = ({ businesses = [] }) => {
                 </Stack>
               </TableCell>
               <TableCell>
-                <StatusBadge status={business.status || business.verificationStatus || 'verified'} />
+                {(() => {
+                  const vs = (business.verificationState || business.verification_status || '').toUpperCase();
+                  let derived = business.status;
+                  if (!derived) {
+                    if (vs === 'VERIFIED') derived = 'verified';
+                    else if (vs === 'PENDING_VERIFICATION' || vs === 'PENDING') derived = 'pending_verification';
+                    else if (vs === 'SUSPENDED') derived = 'suspended';
+                    else if (vs) derived = 'unverified';
+                  }
+                  return <StatusBadge status={(derived || 'unverified')} />;
+                })()}
               </TableCell>
               <TableCell>
                 {getOptimizationDisplay(business)}

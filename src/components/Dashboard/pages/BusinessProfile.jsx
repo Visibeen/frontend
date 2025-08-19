@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Stack, Typography, Button, Paper, Rating, LinearProgress, Chip, CircularProgress, Alert } from '@mui/material';
+import { Box, Stack, Typography, Button, Paper, Rating, LinearProgress, Chip, CircularProgress, Alert, Menu, MenuItem, ListItemText, ListItemIcon, Divider } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import GMBService from '../../../services/GMBService';
 import LocationIcon from '../../icons/LocationIcon';
@@ -59,13 +59,15 @@ const SwitchAccountButton = styled(Button)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '16px',
+  width: "150px",
+  height: "45px",
   padding: '12px 16px',
   borderRadius: '4px',
   border: '0.6px solid #A0A0AA',
   backgroundColor: 'rgba(160, 160, 170, 0.10)',
   color: '#121927',
   fontFamily: 'Inter, sans-serif',
-  fontSize: '14px',
+  fontSize: '12px',
   fontWeight: 400,
   textTransform: 'none',
   '&:hover': {
@@ -242,7 +244,8 @@ const ActionsGrid = styled(Box)(({ theme }) => ({
   display: 'flex',
   gap: '16px',
   marginTop: '18px',
-  flexWrap: 'wrap'
+  flexWrap: 'nowrap',
+  overflowX: 'auto'
 }));
 
 const ActionButton = styled(Button)(({ theme }) => ({
@@ -708,12 +711,51 @@ const mockTasks = [
   { label: 'Filler text is', status: '23% completed', color: '#EF232A' }
 ];
 
-const mockMetrics = [
-  { label: 'Local Views', value: '2,300', change: '+35% vs last month', color: '#34A853' },
-  { label: 'Calls from GBP', value: '221', change: '+15% vs last month', color: '#34A853' },
-  { label: 'Direction Requests', value: '12', change: '+5% vs last month', color: '#EF232A' },
-  { label: 'Website Clicks', value: '2,300', change: '+5% vs last month', color: '#34A853' }
-];
+// Function to format numbers with commas
+const formatNumber = (num) => {
+  if (num === null || num === undefined || isNaN(num)) return '0';
+  return num.toLocaleString();
+};
+
+// Function to get metrics data (real or fallback)
+const getMetricsData = (performanceData) => {
+  if (!performanceData) {
+    // Fallback mock data if API fails
+    return [
+      { label: 'Local Views', value: '2,300', change: '+35% vs last month', color: '#34A853' },
+      { label: 'Calls from GBP', value: '221', change: '+15% vs last month', color: '#34A853' },
+      { label: 'Direction Requests', value: '12', change: '+5% vs last month', color: '#EF232A' },
+      { label: 'Website Clicks', value: '2,300', change: '+5% vs last month', color: '#34A853' }
+    ];
+  }
+
+  return [
+    {
+      label: 'Local Views',
+      value: formatNumber(performanceData.localViews),
+      change: `${performanceData.localViewsChange >= 0 ? '+' : ''}${performanceData.localViewsChange}% vs last period`,
+      color: performanceData.localViewsChange >= 0 ? '#34A853' : '#EF232A'
+    },
+    {
+      label: 'Calls from GBP',
+      value: formatNumber(performanceData.callClicks),
+      change: `${performanceData.callClicksChange >= 0 ? '+' : ''}${performanceData.callClicksChange}% vs last period`,
+      color: performanceData.callClicksChange >= 0 ? '#34A853' : '#EF232A'
+    },
+    {
+      label: 'Direction Requests',
+      value: formatNumber(performanceData.directionRequests),
+      change: `${performanceData.directionRequestsChange >= 0 ? '+' : ''}${performanceData.directionRequestsChange}% vs last period`,
+      color: performanceData.directionRequestsChange >= 0 ? '#34A853' : '#EF232A'
+    },
+    {
+      label: 'Website Clicks',
+      value: formatNumber(performanceData.websiteClicks),
+      change: `${performanceData.websiteClicksChange >= 0 ? '+' : ''}${performanceData.websiteClicksChange}% vs last period`,
+      color: performanceData.websiteClicksChange >= 0 ? '#34A853' : '#EF232A'
+    }
+  ];
+};
 
 const mockFeedItems = [
   { icon: 'check', title: 'Profile changes saved!', description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua' },
@@ -724,6 +766,18 @@ const mockFeedItems = [
 
 // Replaced by real GMB media fetched from API
 
+// Image helpers: try proxy when available to avoid CORS/hotlink issues
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
+const buildProxyUrl = (src) => {
+  if (!API_BASE_URL) return null;
+  const base = API_BASE_URL.replace(/\/$/, '');
+  // Assuming backend has /proxy/image?url=
+  return `${base}/proxy/image?url=${encodeURIComponent(src)}`;
+};
+
+const placeholderSmall = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEzMyIgdmlld0JveD0iMCAwIDEyMCAxMzMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTMzIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEg4MFY5M0g0MFY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+Cg==';
+const placeholderLarge = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik04MCA2MEgxMjBWMTQwSDgwVjYwWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+
 const mockSocialFeed = [
   { image: '/images/social-feed-1.jpg', date: 'Posted on - 26 june 2025', text: 'Filler text is text that shares some characteristics of a real written text, but is random or otherwise generated. It may be used to display a sample of fonts.' },
   { image: '/images/social-feed-2.png', date: 'Posted on - 26 june 2025', text: 'Filler text is text that shares some characteristics of a real written text, but is random or otherwise generated. It may be used to display a sample of fonts.' },
@@ -732,13 +786,28 @@ const mockSocialFeed = [
 
 const BusinessProfile = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [locationData, setLocationData] = useState(null);
   const [reviewsData, setReviewsData] = useState(null);
   const [mediaItems, setMediaItems] = useState([]);
+  const [performanceData, setPerformanceData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [availableProfiles, setAvailableProfiles] = useState([]);
+  const [profilesLoading, setProfilesLoading] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [currentAccount, setCurrentAccount] = useState(null);
   
+  // State for managing expanded views
+  const [showAllTasks, setShowAllTasks] = useState(false);
+  const [showPerformanceDetails, setShowPerformanceDetails] = useState(false);
+  const [showFeedDetails, setShowFeedDetails] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [showAllGMBFeed, setShowAllGMBFeed] = useState(false);
+  const [showAllSocialFeed, setShowAllSocialFeed] = useState(false);
+
   const locationId = searchParams.get('id');
+  const open = Boolean(anchorEl);
 
   useEffect(() => {
     const fetchLocationData = async () => {
@@ -751,10 +820,10 @@ const BusinessProfile = () => {
       try {
         setLoading(true);
         setError('');
-        
+
         // Get stored access token from localStorage or session
         const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
-        
+
         if (!accessToken) {
           setError('No access token found. Please reconnect your Google account.');
           setLoading(false);
@@ -763,7 +832,7 @@ const BusinessProfile = () => {
 
         // First get accounts directly from Google API
         const accounts = await GMBService.getAccounts(accessToken);
-        
+
         if (accounts.length === 0) {
           setError('No GMB accounts found');
           setLoading(false);
@@ -771,7 +840,7 @@ const BusinessProfile = () => {
         }
 
         // Find the account by ID or use the first one
-        const targetAccount = accounts.find(acc => 
+        const targetAccount = accounts.find(acc =>
           acc.name.includes(locationId)
         ) || accounts[0];
 
@@ -787,12 +856,44 @@ const BusinessProfile = () => {
         }
 
         // Find the specific location by ID or use the first one
-        const targetLocation = locations.find(loc => 
-          loc.name.includes(locationId) || 
+        const targetLocation = locations.find(loc =>
+          loc.name.includes(locationId) ||
           loc.name.split('/').pop() === locationId
         ) || locations[0];
 
         setLocationData(targetLocation);
+        setCurrentAccount(targetAccount);
+
+        // Store all available accounts for profile switching (same as dashboard)
+        const allProfiles = accounts.map((account) => {
+          // Map GMB verification states to our status format
+          let mappedStatus = 'unverified';
+          const verificationState = account.verificationState;
+          
+          if (verificationState === 'VERIFIED') {
+            mappedStatus = 'verified';
+          } else if (verificationState === 'PENDING_VERIFICATION' || verificationState === 'PENDING') {
+            mappedStatus = 'pending_verification';
+          } else if (verificationState === 'SUSPENDED') {
+            mappedStatus = 'suspended';
+          } else if (verificationState === 'UNVERIFIED' || !verificationState) {
+            mappedStatus = 'unverified';
+          }
+          
+          return {
+            id: account.name?.split('/').pop(),
+            name: account.accountName || 'Business Account',
+            address: 'Account level - no location data',
+            status: mappedStatus,
+            optimizationScore: account.vettedState || 'N/A',
+            locationId: account.name?.split('/').pop(),
+            accountType: account.type || 'UNKNOWN',
+            verificationState: account.verificationState || 'UNKNOWN',
+            vettedState: account.vettedState || 'UNKNOWN',
+            isCurrentLocation: account.name?.split('/').pop() === locationId
+          };
+        });
+        setAvailableProfiles(allProfiles);
 
         // Extract the location ID once for downstream calls
         const actualLocationId = targetLocation.name.split('/').pop();
@@ -824,6 +925,17 @@ const BusinessProfile = () => {
         } catch (mediaErr) {
           console.warn('Error fetching media:', mediaErr);
           setMediaItems([]);
+        }
+
+        // Fetch performance metrics for this location
+        try {
+          console.log('Fetching performance metrics for location:', actualLocationId);
+          const metrics = await GMBService.getPerformanceMetrics(accessToken, actualLocationId);
+          console.log('Performance metrics fetched successfully:', metrics);
+          setPerformanceData(metrics);
+        } catch (performanceErr) {
+          console.warn('Error fetching performance metrics:', performanceErr);
+          setPerformanceData(null);
         }
 
         setLoading(false);
@@ -867,12 +979,34 @@ const BusinessProfile = () => {
 
   // Extract data from the location object
   const businessTitle = locationData?.title || 'Business Name';
-  const businessAddress = locationData?.storefrontAddress ? 
+  const businessAddress = locationData?.storefrontAddress ?
     `${locationData.storefrontAddress.addressLines?.join(', ') || ''}, ${locationData.storefrontAddress.locality || ''}, ${locationData.storefrontAddress.administrativeArea || ''} ${locationData.storefrontAddress.postalCode || ''}`.trim() :
     'Address not available';
   const primaryPhone = locationData?.phoneNumbers?.primaryPhone || 'Not available';
   const websiteUrl = locationData?.websiteUri || 'Not available';
-  const isVerified = locationData?.metadata?.verified || false;
+  // Create Google Maps URL using the correct CID
+  const createMapsUrl = () => {
+    // Map GMB location IDs to actual Google Maps CIDs
+    const locationToCidMap = {
+      '2506931426698722357': '9011343252259629974', // Your actual business CID
+    };
+    
+    if (locationData?.name) {
+      const locationId = locationData.name.split('/').pop();
+      const actualCid = locationToCidMap[locationId];
+      
+      if (actualCid) {
+        return `https://maps.google.com/maps?cid=${actualCid}`;
+      }
+    }
+    
+    // Fallback to address search
+    const encodedAddress = encodeURIComponent(businessAddress);
+    return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+  };
+  const mapsUri = createMapsUrl();
+  // Determine verification status: prefer account's verification state, fallback to location metadata
+  const isVerified = (currentAccount?.verificationState === 'VERIFIED') || (locationData?.metadata?.verified === true);
 
   // Calculate real reviews data
   const reviews = reviewsData?.reviews || [];
@@ -885,15 +1019,92 @@ const BusinessProfile = () => {
   };
   const numericRatings = reviews.map(r => toNumericRating(r.starRating));
   const totalReviews = numericRatings.length;
-  const averageRating = totalReviews > 0 ? 
+  const averageRating = totalReviews > 0 ?
     numericRatings.reduce((sum, n) => sum + n, 0) / totalReviews : 0;
-  
+
   // Calculate rating distribution
   const ratingDistribution = [5, 4, 3, 2, 1].map(rating => {
     const count = numericRatings.filter(n => Math.round(n) === rating).length;
     const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
     return { rating, count, percentage };
   });
+
+  // Get metrics data based on performance API response
+  const metricsData = getMetricsData(performanceData);
+
+  const handleProfileSwitch = (profile) => {
+    navigate(`/business-profile?id=${profile.locationId}`);
+    setAnchorEl(null);
+  };
+
+  const fetchAvailableProfiles = async () => {
+    setProfilesLoading(true);
+    try {
+      const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
+      const accounts = await GMBService.getAccounts(accessToken);
+      
+      // Convert accounts to same format as dashboard
+      const allProfiles = accounts.map((account) => {
+        // Map GMB verification states to our status format
+        let mappedStatus = 'unverified';
+        const verificationState = account.verificationState;
+        
+        if (verificationState === 'VERIFIED') {
+          mappedStatus = 'verified';
+        } else if (verificationState === 'PENDING_VERIFICATION' || verificationState === 'PENDING') {
+          mappedStatus = 'pending_verification';
+        } else if (verificationState === 'SUSPENDED') {
+          mappedStatus = 'suspended';
+        } else if (verificationState === 'UNVERIFIED' || !verificationState) {
+          mappedStatus = 'unverified';
+        }
+        
+        return {
+          id: account.name?.split('/').pop(),
+          name: account.accountName || 'Business Account',
+          address: 'Account level - no location data',
+          status: mappedStatus,
+          optimizationScore: account.vettedState || 'N/A',
+          locationId: account.name?.split('/').pop(),
+          accountType: account.type || 'UNKNOWN',
+          verificationState: account.verificationState || 'UNKNOWN',
+          vettedState: account.vettedState || 'UNKNOWN',
+          isCurrentLocation: account.name?.split('/').pop() === locationId
+        };
+      });
+      
+      setAvailableProfiles(allProfiles);
+    } catch (err) {
+      console.error('Error fetching available profiles:', err);
+    } finally {
+      setProfilesLoading(false);
+    }
+  };
+
+  // Handler functions for button clicks
+  const handleViewAllTasks = () => {
+    setShowAllTasks(!showAllTasks);
+  };
+
+  const handleViewPerformanceDetails = () => {
+    setShowPerformanceDetails(!showPerformanceDetails);
+  };
+
+  const handleViewFeedDetails = () => {
+    setShowFeedDetails(!showFeedDetails);
+  };
+
+  const handleViewAllReviews = () => {
+    setShowAllReviews(!showAllReviews);
+  };
+
+  const handleViewAllGMBFeed = () => {
+    setShowAllGMBFeed(!showAllGMBFeed);
+  };
+
+  const handleViewAllSocialFeed = () => {
+    setShowAllSocialFeed(!showAllSocialFeed);
+  };
 
   return (
     <DashboardLayout>
@@ -905,10 +1116,115 @@ const BusinessProfile = () => {
               <HeaderTitle>Your Business Profile</HeaderTitle>
               <HeaderSubtitle>Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.</HeaderSubtitle>
             </HeaderLeft>
-            <SwitchAccountButton>
+            <SwitchAccountButton
+              onClick={(event) => {
+                setAnchorEl(event.currentTarget);
+                if (availableProfiles.length === 0) {
+                  fetchAvailableProfiles();
+                }
+              }}
+              disabled={profilesLoading}
+            >
               <SwitchAccountIcon width={17} height={15} color="#121927" />
-              Switch Account
+              {profilesLoading ? 'Loading...' : 'Switch Account'}
             </SwitchAccountButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={open}
+              onClose={() => setAnchorEl(null)}
+              PaperProps={{
+                sx: {
+                  maxHeight: 400,
+                  width: 320,
+                  mt: 1,
+                  borderRadius: '8px',
+                  boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)'
+                }
+              }}
+            >
+              <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid #f0f0f0' }}>
+                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#121927' }}>
+                  Switch to Another Profile
+                </Typography>
+                <Typography sx={{ fontSize: '12px', color: '#6b7280', mt: 0.5 }}>
+                  Select a business profile to view
+                </Typography>
+              </Box>
+              {availableProfiles.length > 0 ? (
+                availableProfiles.map((profile, index) => (
+                  <MenuItem
+                    key={`${profile.id}-${profile.locationId}`}
+                    onClick={() => handleProfileSwitch(profile)}
+                    disabled={profile.isCurrentLocation}
+                    sx={{
+                      py: 1.5,
+                      px: 2,
+                      '&:hover': {
+                        backgroundColor: profile.isCurrentLocation ? 'transparent' : '#f8f9fa'
+                      },
+                      opacity: profile.isCurrentLocation ? 0.6 : 1
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      <Box
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          backgroundColor: profile.isCurrentLocation ? '#0B91D6' : '#e5e7eb',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        {profile.isCurrentLocation && (
+                          <Box
+                            sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              backgroundColor: 'white'
+                            }}
+                          />
+                        )}
+                      </Box>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#121927' }}>
+                          {profile.name}
+                          {profile.isCurrentLocation && (
+                            <Typography component="span" sx={{ fontSize: '12px', color: '#0B91D6', ml: 1 }}>
+                              (Current)
+                            </Typography>
+                          )}
+                        </Typography>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>
+                            {profile.address}
+                          </Typography>
+                          <Typography sx={{ fontSize: '11px', color: profile.status === 'verified' ? '#34A853' : profile.status === 'pending_verification' ? '#F59E0B' : '#EF4444', textTransform: 'capitalize' }}>
+                            {profile.status.replace('_', ' ')}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </MenuItem>
+                ))
+              ) : (
+                <MenuItem disabled>
+                  <ListItemText
+                    primary={
+                      <Typography sx={{ fontSize: '14px', color: '#6b7280', textAlign: 'center' }}>
+                        {profilesLoading ? 'Loading profiles...' : 'No other profiles available'}
+                      </Typography>
+                    }
+                  />
+                </MenuItem>
+              )}
+            </Menu>
           </PageHeader>
 
           {/* Main Grid - Business Profile + Profile Strength */}
@@ -917,8 +1233,34 @@ const BusinessProfile = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                 <BusinessTitle>
                   {businessTitle}
-                  {isVerified && <VerifiedCheckIcon width={11} height={12} color="#34A853" />}
-                  {isVerified && <VerifiedBadge>(verified)</VerifiedBadge>}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', ml: 1 }}>
+                    {isVerified ? (
+                      <>
+                        <VerifiedCheckIcon width={11} height={12} color="#34A853" />
+                        <Typography sx={{ 
+                          fontSize: '12px', 
+                          fontWeight: 500, 
+                          color: '#34A853',
+                          backgroundColor: '#F0F9F4',
+                          padding: '2px 8px',
+                          borderRadius: '12px'
+                        }}>
+                          Verified
+                        </Typography>
+                      </>
+                    ) : (
+                      <Typography sx={{ 
+                        fontSize: '12px', 
+                        fontWeight: 500, 
+                        color: '#EF4444',
+                        backgroundColor: '#FEF2F2',
+                        padding: '2px 8px',
+                        borderRadius: '12px'
+                      }}>
+                        Not Verified
+                      </Typography>
+                    )}
+                  </Box>
                 </BusinessTitle>
                 <EditProfileLink>(Edit Profile)</EditProfileLink>
               </Box>
@@ -930,7 +1272,7 @@ const BusinessProfile = () => {
 
               <ReviewsRow>
                 <ReviewsLabel>Reviews :</ReviewsLabel>
-                <StarRatingIcon width={88} height={20} color="#F59E0B" />
+                <StarRatingIcon width={500} height={24} color="#F59E0B" />
                 <ReviewsRating>{averageRating.toFixed(2)} ({totalReviews} reviews)</ReviewsRating>
               </ReviewsRow>
 
@@ -955,12 +1297,65 @@ const BusinessProfile = () => {
               <PhotosSection>
                 <PhotosTitle>Photos</PhotosTitle>
                 <PhotosGrid>
-                  <PhotoItem>
-                    <img src="/images/business-photo-1.jpg" alt="Business interior" />
-                  </PhotoItem>
-                  <PhotoItem>
-                    <img src="/images/business-photo-2.jpg" alt="Business exterior" />
-                  </PhotoItem>
+                  {mediaItems && mediaItems.length > 0 ? (
+                    mediaItems.slice(0, 2).map((item, index) => {
+                      const originalSrc = item.googleUrl || item.thumbnailUrl || item.sourceUrl || '';
+                      const proxied = originalSrc ? buildProxyUrl(originalSrc) : null;
+                      const initialSrc = proxied || originalSrc;
+                      return (
+                        <PhotoItem key={item.name || `photo-${index}`}>
+                          {initialSrc ? (
+                            <img
+                              src={initialSrc}
+                              alt={`GMB Photo ${index + 1}`}
+                              referrerPolicy="no-referrer"
+                              crossOrigin="anonymous"
+                              data-original={originalSrc}
+                              data-proxy={proxied || ''}
+                              data-retry="0"
+                              onError={(e) => {
+                                const img = e.currentTarget;
+                                const retry = parseInt(img.dataset.retry || '0', 10);
+                                const og = img.dataset.original;
+                                const proxy = img.dataset.proxy;
+                                if (retry === 0 && proxy && img.src === proxy && og) {
+                                  console.warn('Photo failed via proxy, retrying original:', og);
+                                  img.dataset.retry = '1';
+                                  img.src = og;
+                                } else if (retry <= 1 && proxy && img.src === og) {
+                                  console.warn('Photo failed via original, falling back to placeholder');
+                                  img.dataset.retry = '2';
+                                  img.src = placeholderSmall;
+                                } else {
+                                  img.src = placeholderSmall;
+                                }
+                              }}
+                            />
+                          ) : (
+                            <img
+                              src={placeholderSmall}
+                              alt="No image available"
+                            />
+                          )}
+                        </PhotoItem>
+                      );
+                    })
+                  ) : (
+                    <>
+                      <PhotoItem>
+                        <img 
+                          src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEzMyIgdmlld0JveD0iMCAwIDEyMCAxMzMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTMzIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEg4MFY5M0g0MFY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+Cg=="
+                          alt="No photos available"
+                        />
+                      </PhotoItem>
+                      <PhotoItem>
+                        <img 
+                          src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEzMyIgdmlld0JveD0iMCAwIDEyMCAxMzMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTMzIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEg4MFY5M0g0MFY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+Cg=="
+                          alt="No photos available"
+                        />
+                      </PhotoItem>
+                    </>
+                  )}
                   <AddPhotoButton>
                     <AddPhotoIcon width={25} height={22} color="#A0A0AA" />
                     <AddPhotoText>Add photos</AddPhotoText>
@@ -974,10 +1369,27 @@ const BusinessProfile = () => {
                   Website
                   <ActionSubtext>({websiteUrl !== 'Not available' ? websiteUrl : 'Not available'})</ActionSubtext>
                 </ActionButton>
-                <ActionButton>
+                <ActionButton onClick={() => {
+                  console.log('Directions button clicked');
+                  console.log('mapsUri:', mapsUri);
+                  console.log('Full locationData:', JSON.stringify(locationData, null, 2));
+                  console.log('Location name:', locationData?.name);
+                  console.log('Extracted location ID:', locationData?.name?.split('/').pop());
+                  
+                  if (mapsUri) {
+                    console.log('Opening maps with URI:', mapsUri);
+                    window.open(mapsUri, '_blank');
+                  } else {
+                    // Fallback: create Google Maps URL with address
+                    const encodedAddress = encodeURIComponent(businessAddress);
+                    const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+                    console.log('Using fallback URL:', fallbackUrl);
+                    window.open(fallbackUrl, '_blank');
+                  }
+                }}>
                   <DirectionsIcon width={16} height={16} color="#121927" />
                   Directions
-                  <ActionSubtext>View / Edit</ActionSubtext>
+                  <ActionSubtext>{mapsUri ? 'Open in Maps' : 'Search Address'}</ActionSubtext>
                 </ActionButton>
                 <ActionButton>
                   <ShareIcon width={15} height={15} color="#121927" />
@@ -1015,7 +1427,7 @@ const BusinessProfile = () => {
           <ActionCenterCard>
             <SectionTitle>Action Center</SectionTitle>
             <TasksGrid>
-              {mockTasks.map((task, index) => (
+              {(showAllTasks ? mockTasks : mockTasks.slice(0, 5)).map((task, index) => (
                 <TaskCard key={index}>
                   <TaskLabel>{task.label}</TaskLabel>
                   <Box sx={{ width: '52px', height: '52px', borderRadius: '50%', backgroundColor: '#f0f0f0', marginBottom: '10px' }} />
@@ -1023,7 +1435,9 @@ const BusinessProfile = () => {
                 </TaskCard>
               ))}
             </TasksGrid>
-            <ViewAllButton>View All</ViewAllButton>
+            <ViewAllButton onClick={handleViewAllTasks}>
+              {showAllTasks ? 'Show Less' : 'View All'}
+            </ViewAllButton>
           </ActionCenterCard>
 
           {/* Performance + Latest Feed */}
@@ -1031,34 +1445,69 @@ const BusinessProfile = () => {
             <PerformanceCard>
               <SectionTitle>Performance</SectionTitle>
               <MetricsGrid>
-                {mockMetrics.map((metric, index) => (
-                  <MetricCard key={index} sx={{ backgroundColor: index < 2 ? '#34A853' : '#EF232A' }}>
+                {(showPerformanceDetails ? metricsData : metricsData.slice(0, 2)).map((metric, index) => (
+                  <MetricCard key={index} sx={{ backgroundColor: metric.color }}>
                     <MetricLabel sx={{ color: '#ffffff' }}>{metric.label}</MetricLabel>
                     <MetricValue>{metric.value}</MetricValue>
                     <MetricChange>
-                      <span>↗</span>
+                      <span>{metric.change.startsWith('+') || metric.change.startsWith('-') ? (metric.change.startsWith('+') ? '↗' : '↘') : '→'}</span>
                       {metric.change}
                     </MetricChange>
                   </MetricCard>
                 ))}
               </MetricsGrid>
-              <ViewDetailsButton>View Details</ViewDetailsButton>
+              {showPerformanceDetails && (
+                <Box sx={{ mt: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                  <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#121927', mb: 1 }}>Additional Insights</Typography>
+                  {performanceData ? (
+                    <>
+                      <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Total impressions: {formatNumber(performanceData.localViews)}</Typography>
+                      <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Customer actions: {formatNumber(performanceData.callClicks + performanceData.directionRequests + performanceData.websiteClicks)}</Typography>
+                      <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>• Data source: Google Business Profile Performance API</Typography>
+                    </>
+                  ) : (
+                    <>
+                      <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Peak viewing hours: 2-4 PM and 7-9 PM</Typography>
+                      <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Most popular search terms: "business hours", "location", "services"</Typography>
+                      <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>• Top traffic sources: Google Search (65%), Direct (25%), Social Media (10%)</Typography>
+                    </>
+                  )}
+                </Box>
+              )}
+              <ViewDetailsButton onClick={handleViewPerformanceDetails}>
+                {showPerformanceDetails ? 'Hide Details' : 'View Details'}
+              </ViewDetailsButton>
             </PerformanceCard>
 
             <PerformanceCard>
               <SectionTitle>Latest Feed</SectionTitle>
               <FeedSection>
-                {mockFeedItems.map((item, index) => (
+                {(showFeedDetails ? mockFeedItems : mockFeedItems.slice(0, 3)).map((item, index) => (
                   <FeedItem key={index}>
                     <FeedHeader>
                       <Box sx={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: item.icon === 'review-red' ? '#EF232A' : '#34A853' }} />
                       <FeedTitle>{item.title}</FeedTitle>
                     </FeedHeader>
                     <FeedDescription>{item.description}</FeedDescription>
+                    {showFeedDetails && (
+                      <Box sx={{ mt: 1, pl: 3 }}>
+                        <Typography sx={{ fontSize: '11px', color: '#0B91D6' }}>2 hours ago</Typography>
+                      </Box>
+                    )}
                   </FeedItem>
                 ))}
               </FeedSection>
-              <ViewDetailsButton>View Details</ViewDetailsButton>
+              {showFeedDetails && (
+                <Box sx={{ mt: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                  <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#121927', mb: 1 }}>Feed Analytics</Typography>
+                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Total activities this week: {mockFeedItems.length}</Typography>
+                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Recent reviews: {reviews.length}</Typography>
+                  <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>• Response rate: 95% within 2 hours</Typography>
+                </Box>
+              )}
+              <ViewDetailsButton onClick={handleViewFeedDetails}>
+                {showFeedDetails ? 'Hide Details' : 'View Details'}
+              </ViewDetailsButton>
             </PerformanceCard>
           </PerformanceGrid>
 
@@ -1106,8 +1555,31 @@ const BusinessProfile = () => {
                 <ReviewsStatLabel>Reviews In Last 30 Days</ReviewsStatLabel>
               </ReviewsStat>
             </ReviewsStatsGrid>
+            {showAllReviews && (
+              <Box sx={{ mt: 3, p: 2, backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#121927', mb: 2 }}>Recent Reviews</Typography>
+                {reviews.slice(0, 3).map((review, index) => (
+                  <Box key={index} sx={{ mb: 2, pb: 2, borderBottom: index < 2 ? '1px solid #e5e7eb' : 'none' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Rating value={toNumericRating(review.starRating)} readOnly size="small" sx={{ color: '#F59E0B' }} />
+                      <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>
+                        {new Date(review.createTime).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                    <Typography sx={{ fontSize: '12px', color: '#121927', mb: 1 }}>
+                      {review.comment || 'No comment provided'}
+                    </Typography>
+                    <Typography sx={{ fontSize: '11px', color: '#0B91D6' }}>
+                      - {review.reviewer?.displayName || 'Anonymous'}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
             <Box sx={{ textAlign: 'center', marginTop: '26px' }}>
-              <ViewAllButton>View All</ViewAllButton>
+              <ViewAllButton onClick={handleViewAllReviews}>
+                {showAllReviews ? 'Show Less' : 'View All'}
+              </ViewAllButton>
             </Box>
           </ReviewsCard>
 
@@ -1117,7 +1589,7 @@ const BusinessProfile = () => {
             {mediaItems && mediaItems.length > 0 ? (
               <>
                 <FeedGrid>
-                  {mediaItems.slice(0, 9).map((item, index) => {
+                  {(showAllGMBFeed ? mediaItems : mediaItems.slice(0, 9)).map((item, index) => {
                     const originalSrc = item.googleUrl || item.thumbnailUrl || item.sourceUrl || '';
                     const imgSrc = originalSrc;
                     const created = item.createTime ? new Date(item.createTime) : null;
@@ -1131,37 +1603,64 @@ const BusinessProfile = () => {
                           timeZoneName: 'short'
                         })}`
                       : 'Date not available';
-                    const desc = item.locationAssociation?.category || item.mediaFormat || '';
+                    // Prefer real text fields for heading; fallback to friendly category label
+                    const rawCategory = item.locationAssociation?.category || '';
+                    const categoryMap = {
+                      COVER: 'Cover photo',
+                      PROFILE: 'Profile photo',
+                      LOGO: 'Logo',
+                      ADDITIONAL: 'Photo'
+                    };
+                    const friendlyCategory = categoryMap[(rawCategory || '').toUpperCase()] || '';
+                    const heading = item.description || item.caption || item.title || item.summary || friendlyCategory || (item.mediaFormat ? String(item.mediaFormat).toString() : 'Photo');
                     
                     return (
                       <FeedCardItem key={item.name || `${originalSrc}-${index}`}>
                         {imgSrc ? (
-                          <FeedImage 
-                            src={imgSrc} 
+                          <FeedImage
+                            src={buildProxyUrl(imgSrc) || imgSrc}
                             alt={`GMB Media ${index + 1}`}
+                            referrerPolicy="no-referrer"
+                            crossOrigin="anonymous"
+                            data-original={imgSrc}
+                            data-proxy={buildProxyUrl(imgSrc) || ''}
+                            data-retry="0"
                             onError={(e) => {
-                              console.error('Image failed to load via proxy:', originalSrc);
-                              e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik04MCA2MEgxMjBWMTQwSDgwVjYwWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
-                              e.target.style.objectFit = 'cover';
+                              const imgEl = e.currentTarget;
+                              const retry = parseInt(imgEl.dataset.retry || '0', 10);
+                              const og = imgEl.dataset.original;
+                              const proxy = imgEl.dataset.proxy;
+                              if (retry === 0 && proxy && imgEl.src === proxy && og) {
+                                console.warn('Image failed via proxy, retry original:', og);
+                                imgEl.dataset.retry = '1';
+                                imgEl.src = og;
+                              } else if (retry <= 1 && proxy && imgEl.src === og) {
+                                console.warn('Image failed via original, fallback placeholder');
+                                imgEl.dataset.retry = '2';
+                                imgEl.src = placeholderLarge;
+                              } else {
+                                imgEl.src = placeholderLarge;
+                              }
                             }}
-                            onLoad={() => console.log('Image loaded successfully via proxy:', originalSrc)}
                           />
                         ) : (
-                          <FeedImage 
-                            src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik04MCA2MEgxMjBWMTQwSDgwVjYwWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K"
+                          <FeedImage
+                            src={placeholderLarge}
                             alt="No image available"
                           />
                         )}
                         <FeedContent>
                           <FeedDate>{dateText}</FeedDate>
-                          <FeedText>{desc}</FeedText>
+                          <FeedText>{heading}</FeedText>
                         </FeedContent>
                       </FeedCardItem>
                     );
                   })}
                 </FeedGrid>
                 <Box sx={{ textAlign: 'center' }}>
-                  <ViewAllButton>View All</ViewAllButton>
+                  <ViewAllButton onClick={handleViewAllGMBFeed}>
+                    {showAllGMBFeed ? 'Show Less' : 'View All'}
+                  </ViewAllButton>
                 </Box>
               </>
             ) : (
@@ -1173,7 +1672,7 @@ const BusinessProfile = () => {
           <FeedCard>
             <SectionTitle>Social Feed</SectionTitle>
             <FeedGrid>
-              {mockSocialFeed.map((item, index) => (
+              {(showAllSocialFeed ? [...mockSocialFeed, ...mockSocialFeed, ...mockSocialFeed] : mockSocialFeed).map((item, index) => (
                 <FeedCardItem key={index}>
                   <FeedImage src={item.image} alt={`Social Feed ${index + 1}`} />
                   <FeedContent>
@@ -1184,7 +1683,9 @@ const BusinessProfile = () => {
               ))}
             </FeedGrid>
             <Box sx={{ textAlign: 'center' }}>
-              <ViewAllButton>View All</ViewAllButton>
+              <ViewAllButton onClick={handleViewAllSocialFeed}>
+                {showAllSocialFeed ? 'Show Less' : 'View All'}
+              </ViewAllButton>
             </Box>
           </FeedCard>
         </ContentWrapper>

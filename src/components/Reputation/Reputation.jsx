@@ -4,12 +4,14 @@ import { styled } from '@mui/material/styles';
 import DashboardLayout from '../Layouts/DashboardLayout';
 
 const PageContainer = styled(Box)(({ theme }) => ({
-  maxWidth: '1200px',
+  maxWidth: '1600px',
+  width: '100%',
   margin: '0 auto'
 }));
 
 const PageHeader = styled(Box)(({ theme }) => ({
-  marginBottom: '32px'
+  marginBottom: '32px',
+  width: '100%'
 }));
 
 const PageTitle = styled(Typography)(({ theme }) => ({
@@ -28,20 +30,23 @@ const PageSubtitle = styled(Typography)(({ theme }) => ({
 }));
 
 const ReviewsGrid = styled(Stack)(({ theme }) => ({
-  gap: '24px'
+  gap: '24px',
+  width: '100%'
 }));
 
 const ReviewCard = styled(Card)(({ theme }) => ({
   borderRadius: '12px',
   boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-  border: '1px solid #f0f0f0'
+  border: '1px solid #f0f0f0',
+  width: '100%'
 }));
 
 const ReviewHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  marginBottom: '16px'
+  marginBottom: '16px',
+  width: '100%'
 }));
 
 const ReviewerName = styled(Typography)(({ theme }) => ({
@@ -69,8 +74,9 @@ const ReviewText = styled(Typography)(({ theme }) => ({
 const StatusChip = styled(Chip)(({ theme }) => ({
   fontFamily: 'Inter, sans-serif',
   fontSize: '12px',
-  fontWeight: 500
-}));
+  fontWeight: 500,
+  width: '100%'
+  }));
 
 const Reputation = () => {
   const reviews = [
@@ -125,7 +131,7 @@ const Reputation = () => {
         <ReviewsGrid>
           {reviews.map((review) => (
             <ReviewCard key={review.id}>
-              <CardContent sx={{ padding: '24px' }}>
+              <CardContent sx={{ padding: '24px', width: '100%' }}>
                 <ReviewHeader>
                   <Box>
                     <ReviewerName>{review.reviewer}</ReviewerName>
