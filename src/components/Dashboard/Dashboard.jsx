@@ -3,11 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Box, Typography, Button, CircularProgress, Alert } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import DashboardLayout from '../Layouts/DashboardLayout';
-<<<<<<< HEAD
-import PageHeader from './components/PageHeader';
-import BusinessTable from './components/BusinessTable';
-
-=======
 import GMBService from '../../services/GMBService';
 import PageHeader from './components/PageHeader';
 import BusinessTable from './components/BusinessTable';
@@ -23,7 +18,6 @@ const envGmbProjectId = process.env.REACT_APP_GMB_PROJECT_ID || '';
 const envUseLiveApi = (process.env.REACT_APP_USE_LIVE_API || 'true') === 'true';
 const envDebugMode = (process.env.REACT_APP_DEBUG_MODE || 'false') === 'true';
 
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
 const LoadingContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
@@ -64,8 +58,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-<<<<<<< HEAD
-=======
   // Display current configuration when debug mode is enabled
   useEffect(() => {
     if (envDebugMode) {
@@ -82,7 +74,6 @@ const Dashboard = () => {
     }
   }, []);
 
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
   useEffect(() => {
     const fetchBusinesses = async () => {
       try {
@@ -93,38 +84,6 @@ const Dashboard = () => {
           sessionStorage.setItem('googleAccessToken', tokenFromUrl);
         }
 
-<<<<<<< HEAD
-        const accessToken = sessionStorage.getItem('googleAccessToken') || localStorage.getItem('googleAccessToken');
-        if (!accessToken) {
-          // Set mock data for demo purposes
-          const mockBusinesses = [
-            {
-              id: '1',
-              name: 'E2E Networks Limited',
-              address: '23 Maplewood Lane,IL 62704,USA',
-              status: 'verified',
-              optimizationScore: '300/500',
-              locationId: '1'
-            },
-            {
-              id: '2',
-              name: 'E2E Networks Limited',
-              address: '23 Maplewood Lane,IL 62704,USA',
-              status: 'unverified',
-              optimizationScore: 'Pending',
-              locationId: '2'
-            },
-            {
-              id: '3',
-              name: 'E2E Networks Limited',
-              address: '23 Maplewood Lane,IL 62704,USA',
-              status: 'suspended',
-              optimizationScore: 'Check now',
-              locationId: '3'
-            }
-          ];
-          setBusinesses(mockBusinesses);
-=======
         // Prefer .env token if provided
         const accessToken = envGoogleAccessToken || sessionStorage.getItem('googleAccessToken') || localStorage.getItem('googleAccessToken');
         
@@ -176,35 +135,10 @@ const Dashboard = () => {
           } else {
             setBusinesses([]);
           }
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
           setLoading(false);
           return;
         }
 
-<<<<<<< HEAD
-        // 1) Get accounts from the correct endpoint
-        const accountsRes = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        const accountsJson = await accountsRes.json();
-        if (!accountsRes.ok) {
-          throw new Error(accountsJson?.error?.message || 'Failed to fetch accounts');
-        }
-
-        const accounts = accountsJson.accounts || [];
-        if (accounts.length === 0) {
-          setBusinesses([]);
-          return;
-        }
-
-        // 2) Fetch locations for first account as an example
-        const accountName = accounts[0].name; // e.g., accounts/123456789
-        const locRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        const locJson = await locRes.json();
-        if (!locRes.ok) {
-=======
         if (envDebugMode) {
           console.log('Using live GMB API with configuration:', {
             hasAccessToken: !!accessToken,
@@ -371,18 +305,10 @@ const Dashboard = () => {
             }
           }
           
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
           throw new Error(locJson?.error?.message || 'Failed to fetch locations');
         }
 
         const locations = locJson.locations || [];
-<<<<<<< HEAD
-        // Normalize to existing table fields
-        const normalized = locations.map((loc) => ({
-          id: loc.name?.split('/').pop(),
-          name: loc.title,
-          address: loc.storefrontAddress?.addressLines?.join(', '),
-=======
         if (envDebugMode) {
           console.log('Found GMB locations:', locations.length);
         }
@@ -392,17 +318,13 @@ const Dashboard = () => {
           id: loc.name?.split('/').pop(),
           name: loc.title || envBusinessName,
           address: loc.storefrontAddress?.addressLines?.join(', ') || 'Address not available',
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
           status: loc.metadata?.verification?.status || 'verified',
           optimizationScore: 'N/A',
           locationId: loc.name?.split('/').pop(),
         }));
 
         setBusinesses(normalized);
-<<<<<<< HEAD
-=======
         */
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
       } catch (err) {
         console.error('Error fetching businesses:', err);
         setError(err.message);
@@ -425,11 +347,7 @@ const Dashboard = () => {
         <LoadingContainer>
           <CircularProgress size={40} sx={{ color: '#0B91D6' }} />
           <Typography variant="body1" color="textSecondary">
-<<<<<<< HEAD
-            Loading businesses...
-=======
             Loading GMB accounts...
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
           </Typography>
         </LoadingContainer>
       </DashboardLayout>
@@ -444,11 +362,7 @@ const Dashboard = () => {
           subtitle="Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development." 
         />
         <Alert severity="error" sx={{ marginBottom: '24px' }}>
-<<<<<<< HEAD
-          Error loading businesses: {error}
-=======
           Error loading GMB accounts: {error}
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
         </Alert>
         <Button 
           variant="contained" 
@@ -464,18 +378,6 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <PageHeader 
-<<<<<<< HEAD
-        title="Businesses" 
-        subtitle="Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development." 
-      />
-      {businesses.length === 0 ? (
-        <NoBusinessesContainer>
-          <Typography variant="h6" color="textSecondary">
-            No businesses found. Create your first business profile.
-          </Typography>
-          <CreateBusinessButton onClick={() => navigate('/create-account')}>
-            Create Business
-=======
         title="GMB Accounts" 
         subtitle="Google My Business accounts and their verification status. No location data required." 
       />
@@ -491,7 +393,6 @@ const Dashboard = () => {
           </Typography>
           <CreateBusinessButton onClick={() => navigate('/create-account')}>
             Create GMB Account
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
           </CreateBusinessButton>
         </NoBusinessesContainer>
       ) : (

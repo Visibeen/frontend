@@ -1,43 +1,8 @@
-<<<<<<< HEAD
-// Theme updates for login page design
-=======
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
 import { createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
   palette: {
     primary: {
-<<<<<<< HEAD
-      main: '#0B91D6', // Blue from gradient
-      light: '#4FC3F7',
-      dark: '#0277BD'
-    },
-    secondary: {
-      main: '#EF232A', // Red from gradient  
-      light: '#FF5722',
-      dark: '#C62828'
-    },
-    background: {
-      default: '#F8F8F8',
-      paper: '#FFFFFF'
-    },
-    text: {
-      primary: '#121927',
-      secondary: '#A0A0AA'
-    },
-    error: {
-      main: '#EF232A'
-    }
-  },
-  typography: {
-    fontFamily: 'Inter, sans-serif',
-    h4: {
-      fontSize: '26px',
-      fontWeight: 600,
-      color: '#121927'
-    },
-    body2: {
-=======
       main: '#0B91D6',
       light: '#EFF6FF',
       dark: '#0980C2',
@@ -127,31 +92,10 @@ const theme = createTheme({
     },
     body1: {
       fontFamily: 'Inter, sans-serif',
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
       fontSize: '14px',
       fontWeight: 400,
       color: '#121927'
     },
-<<<<<<< HEAD
-    caption: {
-      fontSize: '10px',
-      fontWeight: 400
-    }
-  },
-  shape: {
-    borderRadius: 8
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-          fontWeight: 600
-        }
-      }
-    }
-  }
-=======
     body2: {
       fontFamily: 'Inter, sans-serif',
       fontSize: '12px',
@@ -195,7 +139,6 @@ const theme = createTheme({
     '0 80px 320px rgba(0,0,0,0.96)',
     '0 84px 336px rgba(0,0,0,1.00)'
   ]
->>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
 });
 
 export default theme;
