@@ -41,7 +41,12 @@ function GoogleConnect() {
             const gmbResponse = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts`, {
                 headers: {
                     'Authorization': `Bearer ${googleAccessToken}`,
+<<<<<<< HEAD
                     'Content-Type': 'application/json'
+=======
+                    'Content-Type': 'application/json',
+                    'X-Goog-User-Project': process.env.REACT_APP_GMB_PROJECT_ID
+>>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
                 }
             });
 

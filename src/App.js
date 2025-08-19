@@ -20,11 +20,19 @@ import CreatePostForm from './components/Create_Post/CreatePostForm';
 import ReferEarn from './components/Refer&Earn';
 import MyAccount from './components/MyAccount';
 import FontStyleSelection from './components/Create_Post/FontStyleSelection';
+<<<<<<< HEAD
+=======
+import GMBDataFetcher from './components/gmb_accounts/GMBDataFetcher';
+>>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
 import 'leaflet/dist/leaflet.css';
 import 'leaflet/dist/leaflet.css';
 
 
+<<<<<<< HEAD
 //dhjsdhjh
+=======
+
+>>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
 // Adjust the path based on where ProfileView.jsx is saved
 
 import './styles.css';
@@ -55,6 +63,10 @@ function App() {
         <Route path="/font-style" element={<FontStyleSelection />} />
         <Route path="/refer-earn" element={<ReferEarn />} />
         <Route path="/my-account" element={<MyAccount />}  />
+<<<<<<< HEAD
+=======
+        <Route path="/gmb-data" element={<GMBDataFetcher />} />
+>>>>>>> e4aa61a6fda85690c9f178617e8c4926c007dfe5
       </Routes>
     </Router>
   );
