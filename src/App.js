@@ -20,11 +20,12 @@ import CreatePostForm from './components/Create_Post/CreatePostForm';
 import ReferEarn from './components/Refer&Earn';
 import MyAccount from './components/MyAccount';
 import FontStyleSelection from './components/Create_Post/FontStyleSelection';
+import GMBDataFetcher from './components/gmb_accounts/GMBDataFetcher';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet/dist/leaflet.css';
 
 
-//dhjsdhjh
+
 // Adjust the path based on where ProfileView.jsx is saved
 
 import './styles.css';
@@ -55,6 +56,7 @@ function App() {
         <Route path="/font-style" element={<FontStyleSelection />} />
         <Route path="/refer-earn" element={<ReferEarn />} />
         <Route path="/my-account" element={<MyAccount />}  />
+        <Route path="/gmb-data" element={<GMBDataFetcher />} />
       </Routes>
     </Router>
   );

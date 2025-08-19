@@ -36,12 +36,22 @@ function GoogleConnect() {
             const googleAccessToken = credential?.accessToken || '';
             
             console.log('Google OAuth token received:', !!googleAccessToken);
+            // Persist token for subsequent backend proxy requests
+            if (googleAccessToken) {
+                try {
+                    localStorage.setItem('googleAccessToken', googleAccessToken);
+                } catch (_) {}
+                try {
+                    sessionStorage.setItem('googleAccessToken', googleAccessToken);
+                } catch (_) {}
+            }
 
             // Verify GMB access by calling Google My Business API
             const gmbResponse = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts`, {
                 headers: {
                     'Authorization': `Bearer ${googleAccessToken}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-Goog-User-Project': process.env.REACT_APP_GMB_PROJECT_ID
                 }
             });
 

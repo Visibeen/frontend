@@ -36,6 +36,12 @@ const StyledChip = styled(Chip)(({ theme, status }) => ({
     '& .MuiChip-icon': {
       color: '#EF232A'
     }
+  }),
+  ...(status === 'pending_verification' && {
+    backgroundColor: '#FFF3E0',
+    '& .MuiChip-icon': {
+      color: '#FF9800'
+    }
   })
 }));
 
@@ -59,6 +65,13 @@ const StatusBadge = ({ status }) => {
           label: 'Suspended',
           icon: <VerifiedIcon width={16} height={16} />,
           status: 'suspended'
+        };
+      case 'pending_verification':
+      case 'pending':
+        return {
+          label: 'Pending Verification',
+          icon: <VerifiedIcon width={16} height={16} />,
+          status: 'pending_verification'
         };
       default:
         return {

@@ -99,7 +99,9 @@ const BusinessTable = ({ businesses = [] }) => {
   const navigate = useNavigate();
 
   const handleViewProfile = (business) => {
-    navigate(`/profile/${business.locationId || business.id}`);
+    // Use the actual business/location ID from the business data
+    const locationId = business.locationId || business.id || '112694470912208112675';
+    navigate(`/business-profile?id=${locationId}`);
   };
 
   const getOptimizationDisplay = (business) => {
