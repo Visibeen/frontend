@@ -9,8 +9,7 @@ import ProfilePage from './components/Dashboard/pages/Profile';
 import BusinessProfile from './components/Dashboard/pages/BusinessProfile';
 import Layout from './components/Layouts/Layout';
 import ResetPassword from './components/Login/ResetPassword';
-import GetEDMs from './components/Dashboard/pages/GetEDMs/GetEDMsForm';
-import UploadLogo from './components/Dashboard/pages/GetEDMs/UploadLogo';
+import EDMsFlow from './components/edms/EDMsFlow';
 import ProtectedRoute from './components/ProtectedRoute';
 import AccountNotFound from './components/gmb_accounts/AccountNotFound';
 import GoogleConnect from './components/Services/GoogleConnect';
@@ -48,8 +47,7 @@ function App() {
         <Route path="/business-profile" element={<BusinessProfile />} />
         <Route path="*" element={<div>Page Not Found</div>} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/get-edms" element={<GetEDMs />} />
-        <Route path="/upload-logo" element={<UploadLogo />} />
+        <Route path="/get-edms/*" element={<EDMsFlow />} />
         <Route path="/account-not-found" element={<AccountNotFound />} />
         <Route path="/contact-us" element={<ContactUs />} />
         <Route path="/create-account" element={<CreateAccount />} />

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import visibeenLogo from "../../assets/VisibeenLogo.png";
+import '../edms/visibeen/FontStyleSelection.css';
+import { useNavigate } from 'react-router-dom';
 
 const FONT_STYLES = [
   "Modern",
@@ -14,19 +16,20 @@ export default function FontStyleSelection({ selectedStyles = [], onGenerate, on
   // Only one style can be selected at a time
   const [selected, setSelected] = useState(selectedStyles[0] ? [selectedStyles[0]] : []);
 
-  useEffect(() => {
-    setSelected(selectedStyles[0] ? [selectedStyles[0]] : []);
-  }, [selectedStyles]);
-
   const toggleStyle = (style) => {
+    console.log('Toggling style:', style);
     setSelected((prev) =>
       prev[0] === style ? [] : [style]
     );
+    console.log('New selected state (after toggle):', selected);
   };
 
+  const navigate = useNavigate();
   const handleGenerate = () => {
+    console.log('Generate button clicked. Current selected:', selected);
     if (selected.length > 0) {
-      onGenerate(selected);
+      // You can still call onGenerate if it does something else, but navigation will happen here
+      navigate('../select-edm');
     }
   };
 
@@ -58,10 +61,9 @@ export default function FontStyleSelection({ selectedStyles = [], onGenerate, on
         {/* Generate and Back Buttons with gap and fixed width */}
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', width: '100%', marginTop: 8 }}>
           <button
-            className="btn btn-primary font-style-generate"
+            className="font-style-generate"
             onClick={handleGenerate}
             disabled={selected.length === 0}
-            style={{ maxWidth: 180, width: '100%' }}
           >
             Generate
           </button>
