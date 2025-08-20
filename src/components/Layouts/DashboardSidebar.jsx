@@ -90,7 +90,7 @@ const DashboardSidebar = () => {
           <NavText className="nav-text">Reputation Management</NavText>
         </NavItem>
         
-        <NavItem to="/get-edms" className={({ isActive }) => isActive ? 'active' : ''}>
+        <NavItem to="/get-edms/account-info" className={({ isActive }) => isActive ? 'active' : ''}>
           <EDMIcon className="nav-icon" width={16} height={16} color="currentColor" />
           <NavText className="nav-text">Get EDMs</NavText>
         </NavItem>

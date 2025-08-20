@@ -32,17 +32,17 @@ const ProductsEDMs = () => {
     setSelectedTemplate(template.label);
     setDropdownOpen(false);
     // Navigate to special day EDMs page with the selected product template
-    navigate('/special-day-edms', { 
+    navigate('../product-template-display', { 
       state: { selectedTemplate: template.label } 
     });
   };
 
   return (
-    <DashboardLayout>
+  
       <div className="main-content">
         <div className="main-title">
           <div className="products-title">Products EDMs</div>
-          <div className="products-subtitle">Design 1</div>
+          <div className="products-subtitle">Select your product template</div>
         </div>
         <div className="template-section">
           <div className={`custom-dropdown${dropdownOpen ? ' open' : ''}`} ref={dropdownRef}>
@@ -58,7 +58,7 @@ const ProductsEDMs = () => {
         </div>
         <div className="spacer"></div>
       </div>
-    </DashboardLayout>
+  
   );
 };
 

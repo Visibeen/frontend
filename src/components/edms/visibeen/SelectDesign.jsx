@@ -61,11 +61,10 @@ const SelectDesign = () => {
   const { accountInfo } = useAccount();
   
   const handleCardClick = () => {
-    navigate('/font-style');
+    navigate('../font-style');
   };
 
   return (
-    <DashboardLayout>
       <main>
         <section className="welcome-section">
           <img src={visibenLogo} width={143} height={48} alt="VISIBEEN Logo" />
@@ -95,7 +94,6 @@ const SelectDesign = () => {
           </div>
         </section>
       </main>
-    </DashboardLayout>
   );
 };
 

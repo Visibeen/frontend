@@ -35,7 +35,7 @@ const FestivalEDMs = () => {
     setSelectedTemplate(template.label);
     setDropdownOpen(false);
     // Navigate to festival special EDMs page with the selected festival
-    navigate('/festival-special-edms', { 
+    navigate('../festival-template-display', { 
       state: { selectedFestival: template.label } 
     });
   };

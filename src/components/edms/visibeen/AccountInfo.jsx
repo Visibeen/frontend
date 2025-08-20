@@ -35,7 +35,7 @@ const AccountInfo = () => {
     console.log('Account info updated'); // Debug log
 
     // Navigate to next page
-    navigate('/upload-logo');
+    navigate('../upload-logo');
   };
 
   const handleCancel = () => {
@@ -49,7 +49,8 @@ const AccountInfo = () => {
   };
 
   return (
-    <DashboardLayout>
+  
+
       <div className="container">
         <h2>Account Information</h2>
         <h6>Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing</h6>
@@ -104,7 +105,6 @@ const AccountInfo = () => {
           </div>
         </form>
       </div>
-    </DashboardLayout>
   );
 };
 

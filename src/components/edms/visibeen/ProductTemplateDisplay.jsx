@@ -1,25 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
 import { useAccount } from './AccountContext';
-import './SpecialDaysPhotoEDMs.css';
+import './ProductsEDMs.css'; // Reusing ProductsEDMs.css for initial styling
+import visibenLogo from './VISIBEN.svg';
 import ImageWithAccountInfo from './ImageWithAccountInfo';
 
 const templateData = [
-  // World Refugee Day
-  ['home.jpg', 'Plot  on sale.png', 'car.jpg'],
-  // Happy Father's Day
-  ['Export  Web Development services.png', 'car.jpg', 'home.jpg'],
-  // Happy Mother's Day
-  ['Export  Web Development services.png', 'car.jpg', 'home.jpg'],
-  // World Wind Day
-  ['Export  Web Development services.png', 'car.jpg', 'home.jpg'],
+  // Product Template 1 - Use placeholder images from visibeen
+  ['car1.jpg', 'digital market agency.png', 'home.jpg'],
+  // Product Template 2
+  ['Export  Web Development services.png', 'car repair.png', 'crackers.jpg'],
+  // Product Template 3
+  ['car2.jpg', 'Plot  on sale.png', 'car3.jpg'],
+  // Product Template 4
+  ['car4.jpeg', 'car5.jpg', 'car6.jpg'],
 ];
 
 const templateNames = [
-  'World Refugee Day',
-  'Happy Father\'s Day',
-  'Happy Mother\'s Day',
-  'World Wind Day',
+  'Template 1',
+  'Template 2',
+  'Template 3',
+  'Template 4',
 ];
 
 const shareOptions = [
@@ -31,11 +33,30 @@ const shareOptions = [
   { icon: 'fas fa-link', label: 'Copy link' },
 ];
 
-const SpecialDaysPhotoEDMs = () => {
+const ProductTemplateDisplay = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { uploadedLogo, isLogoUploaded, loadAccountInfo, accountInfo, selectedFontStyle } = useAccount();
-  const selectedSpecialDay = location.state?.selectedSpecialDay || 'World Refugee Day';
+  const selectedProductTemplate = location.state?.selectedTemplate || templateNames[0];
+
+  const initialTemplateIndex = templateNames.findIndex(name => 
+    name.toLowerCase() === selectedProductTemplate.toLowerCase()
+  );
   
+  const [currentTemplate, setCurrentTemplate] = useState(
+    initialTemplateIndex >= 0 ? initialTemplateIndex : 0
+  );
+  const [imageOrder, setImageOrder] = useState(templateData.map(() => [0, 1, 2]));
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [mainImg, setMainImg] = useState(templateData[initialTemplateIndex >= 0 ? initialTemplateIndex : 0][1]);
+  const [logoPosition, setLogoPosition] = useState(50); // Logo position (0-100)
+  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+  const [customFooterColor, setCustomFooterColor] = useState('#4A90E2'); // Custom footer color
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const dropdownRef = useRef(null);
+  const shareRef = useRef(null);
+
   // Load account info when component mounts
   useEffect(() => {
     loadAccountInfo();
@@ -53,25 +74,6 @@ const SpecialDaysPhotoEDMs = () => {
     };
     return fontMappings[fontStyle] || 'Arial, sans-serif';
   };
-  
-  // Find the index of the selected special day
-  const initialTemplateIndex = templateNames.findIndex(name => 
-    name.toLowerCase() === selectedSpecialDay.toLowerCase()
-  );
-  
-  const [currentTemplate, setCurrentTemplate] = useState(
-    initialTemplateIndex >= 0 ? initialTemplateIndex : 0
-  );
-  const [imageOrder, setImageOrder] = useState(templateData.map(() => [0, 1, 2]));
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [mainImg, setMainImg] = useState(templateData[initialTemplateIndex >= 0 ? initialTemplateIndex : 0][1]);
-  const [logoPosition, setLogoPosition] = useState(50); // Logo position (0-100)
-  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
-  const [customFooterColor, setCustomFooterColor] = useState('#4A90E2'); // Custom footer color
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const dropdownRef = useRef(null);
-  const shareRef = useRef(null);
 
   // Update mainImg when template changes
   useEffect(() => {
@@ -150,7 +152,7 @@ const SpecialDaysPhotoEDMs = () => {
   const toggleColorPicker = () => {
     setShowColorPicker(!showColorPicker);
   };
-
+ 
   const downloadImage = async () => {
     try {
       // Get the large preview element
@@ -323,11 +325,10 @@ const SpecialDaysPhotoEDMs = () => {
   };
 
   return (
-    <>
-      {/* Main Content */}
+     
       <div className="main-content">
         <div className="main-title">
-          <div className="products-title">Special Days EDMs</div>
+          <div className="products-title">Product EDMs</div>
           <div className="products-subtitle">Select your Template</div>
         </div>
         {/* Dropdown */}
@@ -601,8 +602,8 @@ const SpecialDaysPhotoEDMs = () => {
           </div>
         )}
       </div>
-    </>
+    
   );
 };
 
-export default SpecialDaysPhotoEDMs; 
+export default ProductTemplateDisplay;

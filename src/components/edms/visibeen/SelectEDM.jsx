@@ -33,13 +33,13 @@ const SelectEDM = () => {
     setSelected(idx);
     setTimeout(() => {
       // Navigate to different EDM pages based on selection
-      const edmRoutes = ['/products-edms', '/festival-edms', '/special-days-edms'];
-      navigate(edmRoutes[idx] || '/products-edms');
+      const edmRoutes = ['../products-edms', '../festival-edms', '../special-days-edms'];
+      navigate(edmRoutes[idx] || '../products-edms');
     }, 200);
   };
 
   return (
-    <DashboardLayout>
+    
       <div className="container">
         <div className="welcome-box">
           <div className="welcome-logo">
@@ -65,7 +65,7 @@ const SelectEDM = () => {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+  
   );
 };
 

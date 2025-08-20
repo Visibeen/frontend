@@ -1,7 +1,7 @@
 // components/Layout.jsx
 import React from 'react';
 import Sidebar from './Sidebar';
-import Footer from './Footer'; 
+import Footer from './Footer';
 import logo from '../../assets/VisibeenLogo.png';
 import './Layout.css'; // New CSS for full-width layout
 

@@ -1,7 +1,7 @@
 
 // components/Layout.jsx
 import React from 'react';
-import Footer from './Footer'; 
+import Footer from './Footer';
 import logo from '../../assets/VisibeenLogo.png';
 import './Layout.css'; // New CSS for full-width layout
 
@@ -13,7 +13,7 @@ const ContactUsLayout = ({ children }) => {
       </header>
 
       <div className="main-section">
-        
+
         <main className="main-content">
           {children}
         </main>

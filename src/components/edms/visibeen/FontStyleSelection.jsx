@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount } from './AccountContext';
-import DashboardLayout from '../../Layouts/DashboardLayout';
 import './FontStyleSelection.css';
 import logo from '../visibeen/VISIBEN.svg';
 
@@ -31,7 +30,7 @@ const FontStyleSelection = () => {
   };
 
   return (
-    <DashboardLayout>
+    
       <main className="main-container">
          {/* <section className="welcome-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <img src={logo} alt="VISIBEEN Logo" className="main-logo" style={{ height: 48, marginBottom: 12 }} />
@@ -56,7 +55,6 @@ const FontStyleSelection = () => {
           <button className="font-style-btn" onClick={handleGenerate}>Generate</button>
         </section>
       </main>
-    </DashboardLayout>
   );
 };
 

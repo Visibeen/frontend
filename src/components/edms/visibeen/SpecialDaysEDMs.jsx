@@ -31,13 +31,13 @@ const SpecialDaysEDMs = () => {
     setSelectedTemplate(template.label);
     setDropdownOpen(false);
     // Navigate to special days photo EDMs page with the selected special day
-    navigate('/special-days-photo-edms', { 
+    navigate('../special-days-photo-edms', { 
       state: { selectedSpecialDay: template.label } 
     });
   };
 
   return (
-    <DashboardLayout>
+   
       <div className="main-content">
         <div className="main-title">
           <div className="products-title">Special Days EDMs</div>
@@ -57,7 +57,7 @@ const SpecialDaysEDMs = () => {
         </div>
         <div className="spacer"></div>
       </div>
-    </DashboardLayout>
+   
   );
 };
 

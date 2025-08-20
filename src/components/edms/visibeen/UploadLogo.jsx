@@ -35,7 +35,7 @@ const UploadLogo = () => {
 
   const handleSkip = () => {
     skipLogo(); // Mark that logo was skipped
-    navigate('/select-design');
+    navigate('../select-design');
   };
 
   const handleUpload = async () => {
@@ -44,7 +44,7 @@ const UploadLogo = () => {
     setIsUploading(true);
     try {
       await uploadLogo(selectedFile);
-      navigate('/select-design');
+      navigate('../select-design');
     } catch (error) {
       console.error('Error uploading logo:', error);
       alert('Error uploading logo. Please try again.');
@@ -54,7 +54,7 @@ const UploadLogo = () => {
   };
 
   const handlePurchaseLogo = () => {
-    navigate('/purchase-logo');
+    navigate('../purchase-logo');
   };
 
   const handleBrowseClick = () => {
@@ -73,7 +73,7 @@ const UploadLogo = () => {
   };
 
   return (
-  <DashboardLayout>
+ 
     <div className="upload-card">
       <div className="upload-title">Upload Logo</div>
       <div className="upload-desc">Upload your business logo to appear on all your marketing materials</div>
@@ -134,7 +134,7 @@ const UploadLogo = () => {
           Don't have a Logo? <a href="#" onClick={handlePurchaseLogo}>Click here to purchase your logo</a>
       </div>
     </div>
-  </DashboardLayout>
+  
   );
 };
 
