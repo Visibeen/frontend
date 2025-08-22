@@ -722,34 +722,34 @@ const getMetricsData = (performanceData) => {
   if (!performanceData) {
     // Fallback mock data if API fails
     return [
-      { label: 'Local Views', value: '2,300', change: '+35% vs last month', color: '#34A853' },
-      { label: 'Calls from GBP', value: '221', change: '+15% vs last month', color: '#34A853' },
-      { label: 'Direction Requests', value: '12', change: '+5% vs last month', color: '#EF232A' },
-      { label: 'Website Clicks', value: '2,300', change: '+5% vs last month', color: '#34A853' }
+      { label: 'Local Views (Last 30 days)', value: '2,300', change: '+35% vs last month', color: '#34A853' },
+      { label: 'Calls from GBP (Last 30 days)', value: '221', change: '+15% vs last month', color: '#34A853' },
+      { label: 'Direction Requests (Last 30 days)', value: '12', change: '+5% vs last month', color: '#EF232A' },
+      { label: 'Website Clicks (Last 30 days)', value: '2,300', change: '+5% vs last month', color: '#34A853' }
     ];
   }
 
   return [
     {
-      label: 'Local Views',
+      label: 'Local Views (Last 30 days)',
       value: formatNumber(performanceData.localViews),
       change: `${performanceData.localViewsChange >= 0 ? '+' : ''}${performanceData.localViewsChange}% vs last period`,
       color: performanceData.localViewsChange >= 0 ? '#34A853' : '#EF232A'
     },
     {
-      label: 'Calls from GBP',
+      label: 'Calls from GBP (Last 30 days)',
       value: formatNumber(performanceData.callClicks),
       change: `${performanceData.callClicksChange >= 0 ? '+' : ''}${performanceData.callClicksChange}% vs last period`,
       color: performanceData.callClicksChange >= 0 ? '#34A853' : '#EF232A'
     },
     {
-      label: 'Direction Requests',
+      label: 'Direction Requests (Last 30 days)',
       value: formatNumber(performanceData.directionRequests),
       change: `${performanceData.directionRequestsChange >= 0 ? '+' : ''}${performanceData.directionRequestsChange}% vs last period`,
       color: performanceData.directionRequestsChange >= 0 ? '#34A853' : '#EF232A'
     },
     {
-      label: 'Website Clicks',
+      label: 'Website Clicks (Last 30 days)',
       value: formatNumber(performanceData.websiteClicks),
       change: `${performanceData.websiteClicksChange >= 0 ? '+' : ''}${performanceData.websiteClicksChange}% vs last period`,
       color: performanceData.websiteClicksChange >= 0 ? '#34A853' : '#EF232A'
@@ -821,17 +821,8 @@ const BusinessProfile = () => {
         setLoading(true);
         setError('');
 
-        // Get stored access token from localStorage or session
-        const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
-
-        if (!accessToken) {
-          setError('No access token found. Please reconnect your Google account.');
-          setLoading(false);
-          return;
-        }
-
-        // First get accounts directly from Google API
-        const accounts = await GMBService.getAccounts(accessToken);
+        // First get accounts directly from Google API (token managed by GMBService)
+        const accounts = await GMBService.getAccounts();
 
         if (accounts.length === 0) {
           setError('No GMB accounts found');
@@ -847,7 +838,7 @@ const BusinessProfile = () => {
         const accountId = targetAccount.name.split('/')[1];
 
         // Fetch locations for this account directly from Google API
-        const locations = await GMBService.getLocations(accessToken, targetAccount.name);
+        const locations = await GMBService.getLocations(undefined, targetAccount.name);
 
         if (locations.length === 0) {
           setError('No locations found for this account');
@@ -900,7 +891,7 @@ const BusinessProfile = () => {
 
         // Fetch reviews data for this location directly
         try {
-          const reviews = await GMBService.getReviews(accessToken, targetAccount.name, targetLocation.name);
+          const reviews = await GMBService.getReviews(undefined, targetAccount.name, targetLocation.name);
           setReviewsData({ reviews });
           console.log('Reviews data fetched successfully:', { count: reviews.length });
         } catch (reviewsError) {
@@ -911,7 +902,7 @@ const BusinessProfile = () => {
         // Fetch media (photos) for this location directly
         try {
           console.log('Fetching media for account/location:', accountId, actualLocationId);
-          let items = await GMBService.getMedia(accessToken, accountId, actualLocationId);
+          let items = await GMBService.getMedia(undefined, accountId, actualLocationId);
           // Filter photos and items with at least one usable URL
           items = items.filter(i => (i.mediaFormat === 'PHOTO' || !i.mediaFormat) && (i.googleUrl || i.thumbnailUrl || i.sourceUrl));
           // Sort by createTime desc if present
@@ -930,7 +921,7 @@ const BusinessProfile = () => {
         // Fetch performance metrics for this location
         try {
           console.log('Fetching performance metrics for location:', actualLocationId);
-          const metrics = await GMBService.getPerformanceMetrics(accessToken, actualLocationId);
+          const metrics = await GMBService.getPerformanceMetrics(undefined, actualLocationId);
           console.log('Performance metrics fetched successfully:', metrics);
           setPerformanceData(metrics);
         } catch (performanceErr) {
@@ -1104,6 +1095,62 @@ const BusinessProfile = () => {
 
   const handleViewAllSocialFeed = () => {
     setShowAllSocialFeed(!showAllSocialFeed);
+  };
+
+  const handleCompetitorAnalysis = () => {
+    try {
+      const placeId = locationData?.metadata?.placeId || locationData?.placeId || null;
+      const latlng = locationData?.latlng || null;
+      const explicitLatLng = (locationData?.latlng?.latitude != null && locationData?.latlng?.longitude != null)
+        ? { lat: Number(locationData.latlng.latitude), lng: Number(locationData.latlng.longitude) }
+        : null;
+      const selectedLocationId = locationData?.name ? locationData.name.split('/').pop() : undefined;
+
+      const acctPayload = {
+        id: currentAccount?.name?.split('/').pop(),
+        accountName: currentAccount?.accountName,
+        verificationState: currentAccount?.verificationState,
+        name: currentAccount?.name,
+      };
+
+      const businessPayload = {
+        title: businessTitle,
+        businessName: businessTitle,
+        address: businessAddress,
+        formattedAddress: businessAddress,
+        locationId: selectedLocationId,
+        placeId: placeId,
+        place_id: placeId,
+        latlng,
+        name: locationData?.name,
+      };
+
+      const locationPayload = {
+        ...locationData,
+        placeId: placeId,
+      };
+
+      console.log('[BusinessProfile] Navigating to ProfileStrengthResults with:', {
+        placeId,
+        explicitLatLng,
+        selectedLocationId,
+        account: acctPayload?.id,
+        businessTitle
+      });
+
+      navigate('/profile-strength-results', {
+        state: {
+          account: acctPayload,
+          business: businessPayload,
+          locationData: locationPayload,
+          selectedLocation: locationPayload,
+          explicitLatLng,
+          keywords: [],
+        },
+      });
+    } catch (e) {
+      console.warn('Failed to navigate to Profile Strength Results:', e);
+    }
   };
 
   return (
@@ -1418,7 +1465,7 @@ const BusinessProfile = () => {
               <ActionButtonsContainer>
                 <BoostButton>Boost Your Profile</BoostButton>
                 <ScoreButton>Get Consolidated Score</ScoreButton>
-                <CompetitorButton>Competitor Analysis</CompetitorButton>
+                <CompetitorButton onClick={handleCompetitorAnalysis}>Competitor Analysis</CompetitorButton>
               </ActionButtonsContainer>
             </ProfileStrengthCard>
           </MainGrid>
@@ -1444,6 +1491,7 @@ const BusinessProfile = () => {
           <PerformanceGrid>
             <PerformanceCard>
               <SectionTitle>Performance</SectionTitle>
+              <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>Last 30 days</Typography>
               <MetricsGrid>
                 {(showPerformanceDetails ? metricsData : metricsData.slice(0, 2)).map((metric, index) => (
                   <MetricCard key={index} sx={{ backgroundColor: metric.color }}>

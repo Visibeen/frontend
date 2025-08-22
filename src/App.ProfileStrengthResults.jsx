@@ -1,10 +1,8 @@
 import React from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
-import CssBaseline from '@mui/material/CssBaseline';
-import CreatePostPage from './components/CreatePost/CreatePostPage';
+import ProfileStrengthResults from './components/ProfileStrengthResults/ProfileStrengthResults';
 import theme from './theme';
 
 const createEmotionCache = () => {
@@ -16,17 +14,14 @@ const createEmotionCache = () => {
 
 const emotionCache = createEmotionCache();
 
-function App() {
+const App = () => {
   return (
     <CacheProvider value={emotionCache}>
       <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Router>
-          <CreatePostPage />
-        </Router>
+        <ProfileStrengthResults />
       </ThemeProvider>
     </CacheProvider>
   );
-}
+};
 
 export default App;

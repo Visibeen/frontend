@@ -17,10 +17,13 @@ import ContactUs from './components/gmb_accounts/ContactUs';
 import CreateAccount from './components/gmb_accounts/Create_Account/CreateAccount';
 import CreatePostForm from './components/Create_Post/CreatePostForm';
 import CreatePost from './components/CreatePost/CreatePost';
+import Reputation from './components/Reputation/Reputation';
 import ReferEarn from './components/Refer&Earn';
 import MyAccount from './components/MyAccount';
 import FontStyleSelection from './components/Create_Post/FontStyleSelection';
 import GMBDataFetcher from './components/gmb_accounts/GMBDataFetcher';
+import ProfileStrengthAnalysis from './components/ProfileStrengthAnalysis/ProfileStrengthAnalysis';
+import ProfileStrengthResults from './components/ProfileStrengthResults/ProfileStrengthResults';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet/dist/leaflet.css';
 
@@ -52,11 +55,13 @@ function App() {
         <Route path="/contact-us" element={<ContactUs />} />
         <Route path="/create-account" element={<CreateAccount />} />
         <Route path="/create-post" element={<CreatePostForm />} />
-        <Route path="/reputation" element={<CreatePost />} />
+        <Route path="/reputation" element={<Reputation />} />
         <Route path="/font-style" element={<FontStyleSelection />} />
         <Route path="/refer-earn" element={<ReferEarn />} />
         <Route path="/my-account" element={<MyAccount />}  />
         <Route path="/gmb-data" element={<GMBDataFetcher />} />
+        <Route path="/profile-strength-analysis" element={<ProfileStrengthAnalysis />} />
+        <Route path="/profile-strength-results" element={<ProfileStrengthResults />} />
       </Routes>
     </Router>
   );

@@ -25,6 +25,12 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
       borderWidth: '0.2px',
       borderColor: '#A0A0AA'
     },
+    '&:hover fieldset': {
+      borderColor: '#A0A0AA'
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#A0A0AA'
+    },
     '& textarea': {
       fontFamily: 'Inter, sans-serif',
       fontSize: '14px',

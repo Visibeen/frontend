@@ -9,6 +9,7 @@ import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth, provider } from '../../firebase';
 import { setSession } from '../../utils/authUtils';
 import api from '../../services/api';
+import tokenManager from '../../auth/TokenManager';
 
 const RightPanelContainer = styled(Box)(({ theme }) => ({
   width: '50%',
@@ -21,7 +22,6 @@ const RightPanelContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(5),
   position: 'relative'
 }));
-
 
 const ContentContainer = styled(Stack)(({ theme }) => ({
   alignItems: 'center',
@@ -99,6 +99,9 @@ const RightPanel = () => {
         sessionStorage.setItem('googleAccessToken', googleAccessToken);
         localStorage.setItem('googleAccessToken', googleAccessToken);
       } catch (_) {}
+      if (googleAccessToken) {
+        tokenManager.set('google', { access_token: googleAccessToken, token_type: 'Bearer' });
+      }
 
       // Call backend API
       const data = await api.post('/customer/auth/google-login', {
@@ -113,8 +116,6 @@ const RightPanel = () => {
         firebase_uid: firebaseUser?.uid || undefined,
         providerId: (firebaseUser?.providerData && firebaseUser.providerData[0]?.providerId) || 'google.com',
         emailVerified: !!firebaseUser?.emailVerified
-      }, {
-        Authorization: `Bearer ${googleAccessToken}`
       });
 
       // Store user data in session

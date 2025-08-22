@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, provider, signInWithPopup } from '../../firebase';
 import { GoogleAuthProvider } from 'firebase/auth';
 import { getSession } from '../../utils/authUtils';
+import tokenManager from '../../auth/TokenManager';
 import api from '../../services/api';
 import logo from '../../assets/VisibeenLogo.png';
 import logo1 from '../../assets/googleLogo.jpg';
@@ -57,6 +58,15 @@ function GoogleConnect() {
                 console.log('No GMB accounts found or API error:', gmbData.error);
             }
 
+            // Persist token via TokenManager (plus legacy storage)
+            try {
+                sessionStorage.setItem('googleAccessToken', googleAccessToken);
+                localStorage.setItem('googleAccessToken', googleAccessToken);
+            } catch (_) {}
+            if (googleAccessToken) {
+                tokenManager.set('google', { access_token: googleAccessToken, token_type: 'Bearer' });
+            }
+
             // Link Google account to current user with GMB verification
             const data = await api.post('/customer/auth/link-google', {
                 googleEmail: result.user.email,
@@ -64,10 +74,24 @@ function GoogleConnect() {
                 googleDisplayName: result.user.displayName,
                 hasGMBAccess: hasGMBAccess,
                 gmbAccounts: hasGMBAccess ? gmbData.accounts : []
-            }, {
-                Authorization: `Bearer ${currentUser.token}`
             });
             console.log('Backend response:', data);
+
+            // Save any refresh token/expires info returned by backend
+            const maybeTokens = data?.tokens || data?.data || data;
+            if (maybeTokens) {
+                const access_token = maybeTokens.access_token || maybeTokens.googleAccessToken || googleAccessToken;
+                const refresh_token = maybeTokens.refresh_token || maybeTokens.googleRefreshToken;
+                const expires_in = maybeTokens.expires_in;
+                const expires_at = maybeTokens.expires_at;
+                tokenManager.set('google', {
+                    access_token,
+                    refresh_token,
+                    token_type: 'Bearer',
+                    expires_in,
+                    expires_at
+                });
+            }
 
             if (data) {
                 // Navigate based on actual GMB access

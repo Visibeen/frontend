@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, provider, signInWithPopup } from '../firebase';
 import { GoogleAuthProvider } from 'firebase/auth';
 import { getSession } from '../utils/authUtils';
+import tokenManager from '../auth/TokenManager';
 import api from './api';
 import logo from '../../assets/VisibeenLogo.png';
 import logo1 from '../../assets/googleLogo.jpg';
@@ -36,14 +37,11 @@ function GoogleConnect() {
             const googleAccessToken = credential?.accessToken || '';
             
             console.log('Google OAuth token received:', !!googleAccessToken);
-            // Persist token for subsequent backend proxy requests
+            // Persist token for subsequent requests (TokenManager + legacy storage)
             if (googleAccessToken) {
-                try {
-                    localStorage.setItem('googleAccessToken', googleAccessToken);
-                } catch (_) {}
-                try {
-                    sessionStorage.setItem('googleAccessToken', googleAccessToken);
-                } catch (_) {}
+                tokenManager.set('google', { access_token: googleAccessToken, token_type: 'Bearer' });
+                try { localStorage.setItem('googleAccessToken', googleAccessToken); } catch (_) {}
+                try { sessionStorage.setItem('googleAccessToken', googleAccessToken); } catch (_) {}
             }
 
             // Verify GMB access by calling Google My Business API
@@ -73,10 +71,27 @@ function GoogleConnect() {
                 googleDisplayName: result.user.displayName,
                 hasGMBAccess: hasGMBAccess,
                 gmbAccounts: hasGMBAccess ? gmbData.accounts : []
-            }, {
-                Authorization: `Bearer ${currentUser.token}`
             });
             console.log('Backend response:', data);
+
+            // If backend returns long-lived tokens (e.g., refresh_token), store them
+            if (data) {
+                const maybe = data.googleTokens || data.tokens || data;
+                const rt = maybe.refresh_token || maybe.refreshToken;
+                const at = maybe.access_token || maybe.accessToken || googleAccessToken;
+                const exp = maybe.expires_at || (maybe.expires_in ? Math.floor(Date.now()/1000) + Number(maybe.expires_in) : undefined);
+                if (at || rt) {
+                    tokenManager.set('google', {
+                        access_token: at,
+                        refresh_token: rt,
+                        expires_at: exp,
+                        token_type: 'Bearer'
+                    });
+                    if (rt) {
+                        try { localStorage.setItem('googleRefreshToken', rt); } catch (_) {}
+                    }
+                }
+            }
 
             if (data) {
                 // Navigate based on actual GMB access
