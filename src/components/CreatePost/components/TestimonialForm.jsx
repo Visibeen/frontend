@@ -4,33 +4,40 @@ import { Box, Stack, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import UserProfile from './UserProfile';
 import FormFields from './FormFields';
+import PostService from '../../../services/PostService';
 
 const FormContainer = styled(Box)(({ theme }) => ({
   backgroundColor: '#ffffff',
   borderRadius: '12px',
   padding: '40px',
   display: 'flex',
-  gap: '40px',
-  alignItems: 'flex-start',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: '32px',
   maxWidth: '1015px',
   width: '100%'
 }));
 
 const FormContent = styled(Stack)(({ theme }) => ({
-  flex: 1,
-  gap: '40px'
+  width: '100%',
+  alignItems: 'center',
+  gap: '32px'
 }));
 
 const ActionButtons = styled(Stack)(({ theme }) => ({
   flexDirection: 'row',
   gap: '20px',
-  justifyContent: 'flex-end'
+  justifyContent: 'center',
+  width: '540px',
+  alignSelf: 'center'
 }));
 
 const CancelButton = styled(Button)(({ theme }) => ({
   fontFamily: 'Inter, sans-serif',
   fontSize: '14px',
   fontWeight: 600,
+  width: '150px',
+  height: '45px',
   textTransform: 'capitalize',
   color: '#EF232A',
   backgroundColor: 'transparent',
@@ -45,6 +52,8 @@ const NextButton = styled(Button)(({ theme }) => ({
   fontFamily: 'Inter, sans-serif',
   fontSize: '14px',
   fontWeight: 600,
+  width: '150px',
+  height: '45px',
   textTransform: 'capitalize',
   color: '#ffffff',
   backgroundColor: '#0B91D6',
@@ -62,6 +71,7 @@ const TestimonialForm = () => {
     testimonialText: 'I ordered cake for my wife . And it\'s very delicious Owner are very helpful and very polite.And cake was very very tastyThanks lot',
     backgroundColor: '#EF232A'
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleFormChange = (field, value) => {
     setFormData(prev => ({
@@ -75,26 +85,39 @@ const TestimonialForm = () => {
     console.log('Cancel clicked');
   };
 
-  const handleNext = () => {
-    // Navigate to font style selection page
-    navigate('/font-style');
+  const handleNext = async () => {
+    try {
+      setSubmitting(true);
+      // POST to create post API
+      await PostService.createPost({
+        name: formData.name,
+        testimonialText: formData.testimonialText,
+        backgroundColor: formData.backgroundColor
+      });
+      navigate('/font-style');
+    } catch (err) {
+      console.error('Failed to create post', err);
+      alert('Failed to create post. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <FormContainer>
-      <UserProfile />
-      
       <FormContent>
+        <UserProfile />
+
         <FormFields 
           formData={formData}
           onFormChange={handleFormChange}
         />
-        
+
         <ActionButtons>
-          <CancelButton onClick={handleCancel}>
+          <CancelButton onClick={handleCancel} disabled={submitting}>
             Cancel
           </CancelButton>
-          <NextButton onClick={handleNext}>
+          <NextButton onClick={handleNext} disabled={submitting}>
             Next
           </NextButton>
         </ActionButtons>

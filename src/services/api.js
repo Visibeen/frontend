@@ -1,3 +1,5 @@
+import { getSession } from '../utils/authUtils';
+import { refreshIfPossible } from '../auth/backendRefresher';
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://52.44.140.230:8089/api/v1';
 
 class ApiService {
@@ -7,18 +9,21 @@ class ApiService {
 
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
+        const session = getSession();
+        const bearer = session?.token ? `Bearer ${session.token}` : undefined;
         const config = {
             ...options,
             headers: {
                 'Content-Type': 'application/json',
+                ...(bearer && { Authorization: bearer }),
                 ...(options.headers || {}),
             },
         };
 
         try {
-            const response = await fetch(url, config);
+            let response = await fetch(url, config);
 
-            const rawText = await response.text();
+            let rawText = await response.text();
             let parsed;
             try {
                 parsed = rawText ? JSON.parse(rawText) : null;
@@ -27,6 +32,26 @@ class ApiService {
             }
 
             if (!response.ok) {
+                // If unauthorized, attempt refresh once and retry
+                if (response.status === 401) {
+                    const refreshed = await refreshIfPossible(this.baseURL);
+                    if (refreshed?.token) {
+                        const retryHeaders = {
+                            ...config.headers,
+                            Authorization: `Bearer ${refreshed.token}`
+                        };
+                        response = await fetch(url, { ...config, headers: retryHeaders });
+                        rawText = await response.text();
+                        try {
+                            parsed = rawText ? JSON.parse(rawText) : null;
+                        } catch (_) {
+                            parsed = null;
+                        }
+                        if (response.ok) {
+                            return parsed;
+                        }
+                    }
+                }
                 const message = parsed?.message || parsed?.error || rawText || `HTTP error! status: ${response.status}`;
                 const err = new Error(message);
                 err.status = response.status;

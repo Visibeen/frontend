@@ -95,6 +95,22 @@ const CheckNowLink = styled(Typography)(({ theme }) => ({
   }
 }));
 
+const CheckNowButton = styled(Button)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '12px',
+  fontWeight: 600,
+  textTransform: 'none',
+  padding: '6px 2px',
+  width: '100px',
+height: '30px',
+  borderRadius: '6px',
+  color: '#ffffff',
+  backgroundColor: '#0B91D6',
+  '&:hover': {
+    backgroundColor: '#0a7db7'
+  }
+}));
+
 const BusinessTable = ({ businesses = [] }) => {
   const navigate = useNavigate();
 
@@ -104,12 +120,21 @@ const BusinessTable = ({ businesses = [] }) => {
     navigate(`/business-profile?id=${locationId}`);
   };
 
+  const handleCheckNow = (business) => {
+    // Navigate to profile strength analysis page with businesses and selection
+    navigate('/profile-strength-analysis', { state: { businesses, selected: business } });
+  };
+
   const getOptimizationDisplay = (business) => {
     if (business.status?.toLowerCase() === 'suspended') {
       return <CheckNowLink>Check now</CheckNowLink>;
     }
     if (business.status?.toLowerCase() === 'unverified') {
-      return <OptimizationScore>Pending</OptimizationScore>;
+      return (
+        <CheckNowButton onClick={() => handleCheckNow(business)}>
+          Check Now
+        </CheckNowButton>
+      );
     }
     return <OptimizationScore>{business.optimizationScore || business.score || 'N/A'}</OptimizationScore>;
   };

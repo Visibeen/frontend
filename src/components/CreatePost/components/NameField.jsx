@@ -22,8 +22,13 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     borderRadius: '8px',
     backgroundColor: 'transparent',
     '& fieldset': {
-      borderWidth: '0.2px',
-      borderColor: '#A0A0AA'
+      border: 'none'
+    },
+    '&:hover fieldset': {
+      border: 'none'
+    },
+    '&.Mui-focused fieldset': {
+      border: 'none'
     },
     '& input': {
       fontFamily: 'Inter, sans-serif',

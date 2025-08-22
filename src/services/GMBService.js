@@ -6,6 +6,9 @@
 
 import { auth, provider, signInWithPopup } from '../firebase';
 import { GoogleAuthProvider } from 'firebase/auth';
+import oauthConfig from '../config/oauth';
+import tokenManager from '../auth/TokenManager';
+import { registerGoogleRefresher } from '../auth/googleRefresher';
 
 class GMBService {
   constructor() {
@@ -13,6 +16,66 @@ class GMBService {
     this.clientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET;
     this.projectId = process.env.REACT_APP_GMB_PROJECT_ID;
     this.apiKey = process.env.REACT_APP_GMB_API_KEY;
+    // Register refresher once
+    registerGoogleRefresher();
+  }
+
+  /**
+   * Get Business Profile attributes for a specific location
+   * Uses Business Information API v1: locations/{locationId}/attributes
+   * @param {string} locationNameOrId - e.g., 'locations/1234567890' or just the numeric ID
+   * @param {string} accessToken - optional Google OAuth access token
+   * @returns {Promise<Array>} Array of attribute objects
+   */
+  async getLocationAttributes(locationNameOrId, accessToken) {
+    try {
+      if (!locationNameOrId) throw new Error('locationNameOrId is required');
+      const locName = String(locationNameOrId).includes('locations/')
+        ? String(locationNameOrId)
+        : `locations/${locationNameOrId}`;
+
+      const url = `https://mybusinessbusinessinformation.googleapis.com/v1/${locName}/attributes`;
+      const response = await this._googleFetch(url, { method: 'GET' }, accessToken);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to fetch location attributes');
+      }
+      const data = await response.json();
+      // Response shape: { attributes: [ { attributeId, valueType, values, ... } ] }
+      return Array.isArray(data?.attributes) ? data.attributes : [];
+    } catch (error) {
+      console.error('Error fetching location attributes:', error);
+      return [];
+    }
+  }
+
+  // Internal: get a valid access token, optionally using provided token
+  async _getAccessToken(providedToken) {
+    if (providedToken) return providedToken;
+    return await tokenManager.getValidAccessToken('google');
+  }
+
+  // Internal: fetch helper that attaches token and retries once on 401 after refresh
+  async _googleFetch(url, options = {}, accessToken) {
+    const token = await this._getAccessToken(accessToken);
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'X-Goog-User-Project': this.projectId,
+      ...(options.headers || {}),
+    };
+
+    let res = await fetch(url, { ...options, headers });
+    if (res.status === 401) {
+      // try refresh
+      const newToken = await tokenManager.getValidAccessToken('google');
+      const retryHeaders = {
+        ...headers,
+        Authorization: `Bearer ${newToken}`,
+      };
+      res = await fetch(url, { ...options, headers: retryHeaders });
+    }
+    return res;
   }
 
   /**
@@ -29,13 +92,11 @@ class GMBService {
         throw new Error('Invalid accountId or locationId');
       }
 
-      const response = await fetch(`https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Goog-User-Project': this.projectId
-        }
-      });
+      const response = await this._googleFetch(
+        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media`,
+        { method: 'GET' },
+        accessToken
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -57,9 +118,7 @@ class GMBService {
   async getGoogleToken() {
     try {
       // Add required GMB scopes to the provider
-      provider.addScope('https://www.googleapis.com/auth/business.manage');
-      provider.addScope('https://www.googleapis.com/auth/userinfo.email');
-      provider.addScope('https://www.googleapis.com/auth/userinfo.profile');
+      oauthConfig.google.scopes.forEach((s) => provider.addScope(s));
       
       // Request access token directly from Google
       provider.setCustomParameters({
@@ -73,6 +132,10 @@ class GMBService {
       // Get the OAuth access token (not Firebase ID token)
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const googleAccessToken = credential?.accessToken || '';
+      // Store basic token (may not include refresh token in client-only flow)
+      if (googleAccessToken) {
+        tokenManager.set('google', { access_token: googleAccessToken, token_type: 'Bearer' });
+      }
       
       console.log('Google OAuth token received:', !!googleAccessToken);
       return googleAccessToken;
@@ -89,13 +152,11 @@ class GMBService {
    */
   async getAccounts(accessToken) {
     try {
-      const response = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Goog-User-Project': this.projectId
-        }
-      });
+      const response = await this._googleFetch(
+        `https://mybusinessaccountmanagement.googleapis.com/v1/accounts`,
+        { method: 'GET' },
+        accessToken
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -119,24 +180,34 @@ class GMBService {
   async getLocations(accessToken, accountName) {
     try {
       const readMask = [
+        'storeCode',
+        'regularHours',
         'name',
+        'languageCode',
         'title',
+        'phoneNumbers',
+        'categories',
         'storefrontAddress',
         'websiteUri',
-        'phoneNumbers',
-        'languageCode',
-        'metadata'
+        'specialHours',
+        'serviceArea',
+        'labels',
+        'adWordsLocationExtensions',
+        'latlng',
+        'openInfo',
+        'metadata',
+        'profile',
+        'relationshipData',
+        'moreHours'
       ].join(',');
 
       const url = `https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations?readMask=${encodeURIComponent(readMask)}&pageSize=100`;
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Goog-User-Project': this.projectId
-        }
-      });
+      const response = await this._googleFetch(
+        url,
+        { method: 'GET' },
+        accessToken
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -168,13 +239,11 @@ class GMBService {
         throw new Error('Invalid account or location identifiers');
       }
 
-      const response = await fetch(`https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/reviews`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Goog-User-Project': this.projectId
-        }
-      });
+      const response = await this._googleFetch(
+        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/reviews`,
+        { method: 'GET' },
+        accessToken
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -202,18 +271,20 @@ class GMBService {
         throw new Error('Location ID is required');
       }
 
-      // Default to current month if no date range provided
+      // Default to last 30 days (inclusive) if no date range provided
       const now = new Date();
+      const start = new Date(now);
+      start.setDate(now.getDate() - 29);
       const defaultDateRange = dateRange || {
         startDate: {
-          year: now.getFullYear(),
-          month: now.getMonth() + 1,
-          day: 1
+          year: start.getFullYear(),
+          month: start.getMonth() + 1,
+          day: start.getDate()
         },
         endDate: {
           year: now.getFullYear(),
           month: now.getMonth() + 1,
-          day: new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+          day: now.getDate()
         }
       };
 
@@ -236,13 +307,11 @@ class GMBService {
 
       const url = `https://businessprofileperformance.googleapis.com/v1/locations/${locationId}:fetchMultiDailyMetricsTimeSeries?${params.toString()}`;
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Goog-User-Project': this.projectId
-        }
-      });
+      const response = await this._googleFetch(
+        url,
+        { method: 'GET' },
+        accessToken
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -265,47 +334,59 @@ class GMBService {
   processPerformanceData(rawData) {
     try {
       const processedMetrics = {};
-      
-      if (rawData.multiDailyMetricTimeSeries) {
-        rawData.multiDailyMetricTimeSeries.forEach(series => {
-          const metricType = series.dailyMetric;
-          let totalValue = 0;
-          let previousValue = 0;
-          
-          if (series.dailyMetricTimeSeries && series.dailyMetricTimeSeries.timeSeries) {
-            const timeSeries = series.dailyMetricTimeSeries.timeSeries;
-            
-            // Calculate total for current period
-            totalValue = timeSeries.datedValues?.reduce((sum, item) => {
-              return sum + (parseInt(item.value) || 0);
-            }, 0) || 0;
 
-            // For change calculation, compare with previous period (simplified)
-            const currentPeriodLength = timeSeries.datedValues?.length || 0;
-            if (currentPeriodLength > 15) {
-              const firstHalf = timeSeries.datedValues.slice(0, Math.floor(currentPeriodLength / 2));
-              const secondHalf = timeSeries.datedValues.slice(Math.floor(currentPeriodLength / 2));
-              
-              previousValue = firstHalf.reduce((sum, item) => sum + (parseInt(item.value) || 0), 0);
-              const currentValue = secondHalf.reduce((sum, item) => sum + (parseInt(item.value) || 0), 0);
-              
-              totalValue = currentValue;
-            }
+      const accumulateFromTimeSeries = (metricKey, timeSeries) => {
+        let totalValue = 0;
+        let previousValue = 0;
+
+        const dated = timeSeries?.datedValues || [];
+        // Sum, treating missing values as 0; values may be strings
+        const toNum = (v) => {
+          const n = parseInt(v, 10);
+          return Number.isNaN(n) ? 0 : n;
+        };
+        const totalAll = dated.reduce((sum, item) => sum + toNum(item.value), 0);
+
+        // Change: compare second half vs first half when we have a decent window
+        if (dated.length > 15) {
+          const mid = Math.floor(dated.length / 2);
+          const firstHalf = dated.slice(0, mid).reduce((s, it) => s + toNum(it.value), 0);
+          const secondHalf = dated.slice(mid).reduce((s, it) => s + toNum(it.value), 0);
+          previousValue = firstHalf;
+          totalValue = secondHalf;
+        } else {
+          totalValue = totalAll;
+        }
+
+        let changePercent = 0;
+        if (previousValue > 0) {
+          changePercent = Math.round(((totalValue - previousValue) / previousValue) * 100);
+        } else if (totalValue > 0) {
+          changePercent = 100;
+        }
+
+        processedMetrics[metricKey] = {
+          value: totalValue,
+          change: changePercent,
+          changeText: `${changePercent >= 0 ? '+' : ''}${changePercent}% vs last period`
+        };
+      };
+
+      if (Array.isArray(rawData?.multiDailyMetricTimeSeries)) {
+        rawData.multiDailyMetricTimeSeries.forEach((entry) => {
+          // Shape A: entry has dailyMetric + dailyMetricTimeSeries.timeSeries
+          if (entry?.dailyMetric && entry?.dailyMetricTimeSeries?.timeSeries) {
+            accumulateFromTimeSeries(entry.dailyMetric, entry.dailyMetricTimeSeries.timeSeries);
+            return;
           }
-
-          // Calculate percentage change
-          let changePercent = 0;
-          if (previousValue > 0) {
-            changePercent = Math.round(((totalValue - previousValue) / previousValue) * 100);
-          } else if (totalValue > 0) {
-            changePercent = 100; // New metric with no previous data
+          // Shape B: entry has dailyMetricTimeSeries as an array of { dailyMetric, timeSeries }
+          if (Array.isArray(entry?.dailyMetricTimeSeries)) {
+            entry.dailyMetricTimeSeries.forEach((s) => {
+              if (s?.dailyMetric && s?.timeSeries) {
+                accumulateFromTimeSeries(s.dailyMetric, s.timeSeries);
+              }
+            });
           }
-
-          processedMetrics[metricType] = {
-            value: totalValue,
-            change: changePercent,
-            changeText: `${changePercent >= 0 ? '+' : ''}${changePercent}% vs last period`
-          };
         });
       }
 

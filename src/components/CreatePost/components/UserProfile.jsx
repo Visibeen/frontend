@@ -1,13 +1,12 @@
 import React from 'react';
-import { Box, Typography, Avatar } from '@mui/material';
+import { Box, Typography, Avatar, Rating } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import StarRatingIcon from '../../icons/StarRatingIcon';
 
 const ProfileContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  gap: '6px',
+  gap: '12px',
   minWidth: '200px',
   flexShrink: 0
 }));
@@ -36,7 +35,7 @@ const UserProfile = () => {
   return (
     <ProfileContainer>
       <UserAvatar 
-        src="/images/user-avatar.jpg"
+        src="https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
         alt="Karen Abshire"
       />
       
@@ -45,7 +44,20 @@ const UserProfile = () => {
       </UserName>
       
       <RatingContainer>
-        <StarRatingIcon width={500} height={24} color="#FFD700" />
+        <Rating 
+          value={3.5} 
+          precision={0.5}
+          readOnly 
+          size="small"
+          sx={{
+            '& .MuiRating-iconFilled': {
+              color: '#FFD700'
+            },
+            '& .MuiRating-iconEmpty': {
+              color: '#E0E0E0'
+            }
+          }}
+        />
       </RatingContainer>
     </ProfileContainer>
   );

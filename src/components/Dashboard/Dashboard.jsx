@@ -4,12 +4,15 @@ import { Box, Typography, Button, CircularProgress, Alert } from '@mui/material'
 import { styled } from '@mui/material/styles';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import GMBService from '../../services/GMBService';
+import tokenManager from '../../auth/TokenManager';
+
 import PageHeader from './components/PageHeader';
 import BusinessTable from './components/BusinessTable';
 
 // .env-driven config
 const envUseMockGmb = (process.env.REACT_APP_USE_MOCK_GMB || 'false') === 'true';
 const envGoogleAccessToken = process.env.REACT_APP_GOOGLE_ACCESS_TOKEN || '';
+
 const envBusinessName = process.env.REACT_APP_BUSINESS_NAME || 'E2E Networks Limited';
 const envGoogleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 const envGoogleClientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET || '';
@@ -81,24 +84,28 @@ const Dashboard = () => {
         const params = new URLSearchParams(location.search);
         const tokenFromUrl = params.get('token');
         if (tokenFromUrl) {
-          sessionStorage.setItem('googleAccessToken', tokenFromUrl);
+          try {
+            sessionStorage.setItem('googleAccessToken', tokenFromUrl);
+            localStorage.setItem('googleAccessToken', tokenFromUrl);
+          } catch (_) {}
+          tokenManager.set('google', { access_token: tokenFromUrl, token_type: 'Bearer' });
+        }
+        // If an env token is provided, seed TokenManager for convenience
+        if (envGoogleAccessToken) {
+          tokenManager.set('google', { access_token: envGoogleAccessToken, token_type: 'Bearer' });
         }
 
-        // Prefer .env token if provided
-        const accessToken = envGoogleAccessToken || sessionStorage.getItem('googleAccessToken') || localStorage.getItem('googleAccessToken');
-        
         // Check if we should use live API or fallback to mock
-        if (!envUseLiveApi || !accessToken) {
+        if (!envUseLiveApi) {
           if (envDebugMode) {
-            console.log('Using mock data - Live API disabled or no access token');
+            console.log('Using mock data - Live API disabled');
             console.log('Environment config:', {
               useLiveApi: envUseLiveApi,
-              hasAccessToken: !!accessToken,
               useMockGmb: envUseMockGmb,
               businessName: envBusinessName
             });
           }
-          
+
           // Set mock data for demo purposes - using realistic verification states
           const mockBusinesses = [
             {
@@ -106,7 +113,7 @@ const Dashboard = () => {
               name: envBusinessName,
               address: '23 Maplewood Lane,IL 62704,USA',
               status: 'unverified', // More realistic default
-              optimizationScore: '300/500',
+              optimizationScore: '300/300',
               locationId: '1',
               verificationState: 'UNVERIFIED'
             },
@@ -129,7 +136,7 @@ const Dashboard = () => {
               verificationState: 'VERIFIED'
             }
           ];
-          
+
           if (envUseMockGmb) {
             setBusinesses(mockBusinesses);
           } else {
@@ -141,26 +148,10 @@ const Dashboard = () => {
 
         if (envDebugMode) {
           console.log('Using live GMB API with configuration:', {
-            hasAccessToken: !!accessToken,
             hasClientId: !!envGoogleClientId,
             hasProjectId: !!envGmbProjectId,
             useLiveApi: envUseLiveApi
           });
-          
-          // Decode and show access token info (if it's a JWT)
-          if (accessToken && accessToken.split('.').length === 3) {
-            try {
-              const tokenPayload = JSON.parse(atob(accessToken.split('.')[1]));
-              console.log('Access Token Info:', {
-                iss: tokenPayload.iss,
-                scope: tokenPayload.scope,
-                aud: tokenPayload.aud,
-                exp: new Date(tokenPayload.exp * 1000).toISOString()
-              });
-            } catch (e) {
-              console.log('Could not decode token payload');
-            }
-          }
         }
 
         // Validate required configuration
@@ -168,8 +159,9 @@ const Dashboard = () => {
           throw new Error('GMB Project ID not configured. Please set REACT_APP_GMB_PROJECT_ID in your .env file.');
         }
 
-        // 1) Get accounts directly via GMBService (frontend-only)
-        const accounts = await GMBService.getAccounts(accessToken);
+        // 1) Get accounts via GMBService; TokenManager will inject/refresh token
+        const accounts = await GMBService.getAccounts();
+
         if (accounts.length === 0) {
           if (envDebugMode) {
             console.log('No GMB accounts found');
@@ -184,147 +176,82 @@ const Dashboard = () => {
           console.log('First account details:', accounts[0]);
         }
 
-        // Validate account name format
-        const firstAccount = accounts[0];
-        if (!firstAccount.name || !firstAccount.name.startsWith('accounts/')) {
-          throw new Error(`Invalid account format: ${firstAccount.name}. Expected format: accounts/{accountId}`);
+        // 2) Fetch locations for ALL accounts and show them as profiles on the dashboard
+        const accessToken = tokenManager.get('google')?.access_token;
+        const allLocations = [];
+        for (const acct of accounts) {
+          try {
+            if (!acct?.name) continue;
+            if (envDebugMode) console.log('Fetching locations for account:', acct.name);
+            const locs = await GMBService.getLocations(accessToken, acct.name);
+            if (Array.isArray(locs) && locs.length) {
+              // Attach account context to each location
+              locs.forEach(l => allLocations.push({ account: acct, loc: l }));
+            }
+          } catch (e) {
+            console.warn('Failed to fetch locations for account', acct?.name, e?.message || e);
+          }
         }
 
-        // 2) Fetch locations for first account as an example
-        const accountName = firstAccount.name; // e.g., accounts/112694470912208112675
         if (envDebugMode) {
-          console.log('Fetching locations for account:', accountName);
-          console.log('Full account object:', accounts[0]);
+          console.log('Total locations found across accounts:', allLocations.length);
         }
-        
-        // Since we don't need location data, let's use the account information directly
-        if (envDebugMode) {
-          console.log('Skipping locations API call - using account data directly');
+
+        if (allLocations.length === 0) {
+          // Fallback: present accounts as rows if no locations are returned
+          const fallback = accounts.map((account) => {
+            let mappedStatus = 'unverified';
+            const verificationState = account.verificationState;
+            if (verificationState === 'VERIFIED') mappedStatus = 'verified';
+            else if (verificationState === 'PENDING_VERIFICATION' || verificationState === 'PENDING') mappedStatus = 'pending_verification';
+            else if (verificationState === 'SUSPENDED') mappedStatus = 'suspended';
+            return {
+              id: account.name?.split('/').pop(),
+              name: account.accountName || envBusinessName,
+              address: 'Account level - no location data',
+              status: mappedStatus,
+              optimizationScore: account.vettedState || 'N/A',
+              locationId: account.name?.split('/').pop(),
+              accountType: account.type || 'UNKNOWN',
+              verificationState: account.verificationState || 'UNKNOWN',
+              vettedState: account.vettedState || 'UNKNOWN'
+            };
+          });
+          setBusinesses(fallback);
+          setLoading(false);
+          return;
         }
-        
-        // Convert accounts to business format without calling locations API
-        const normalized = accounts.map((account) => {
-          // Map GMB verification states to our status format
-          let mappedStatus = 'unverified'; // Default to unverified
-          const verificationState = account.verificationState;
-          
-          if (verificationState === 'VERIFIED') {
-            mappedStatus = 'verified';
-          } else if (verificationState === 'PENDING_VERIFICATION' || verificationState === 'PENDING') {
-            mappedStatus = 'pending_verification';
-          } else if (verificationState === 'SUSPENDED') {
-            mappedStatus = 'suspended';
-          } else if (verificationState === 'UNVERIFIED' || !verificationState) {
-            mappedStatus = 'unverified';
-          }
-          
+
+        // Normalize locations to BusinessTable shape
+        const normalized = allLocations.map(({ account, loc }) => {
+          const id = loc.name?.split('/').pop();
+          const address = loc.storefrontAddress?.addressLines?.join(', ') ||
+                          loc.storefrontAddress?.locality ||
+                          loc.storefrontAddress?.administrativeArea ||
+                          'Address not available';
+          const ver = loc.metadata?.verification?.status || account?.verificationState || 'UNKNOWN';
+          let mappedStatus = 'unverified';
+          if (ver === 'VERIFIED') mappedStatus = 'verified';
+          else if (ver === 'PENDING_VERIFICATION' || ver === 'PENDING') mappedStatus = 'pending_verification';
+          else if (ver === 'SUSPENDED') mappedStatus = 'suspended';
           return {
-            id: account.name?.split('/').pop(),
-            name: account.accountName || envBusinessName,
-            address: 'Account level - no location data',
+            id,
+            name: loc.title || account?.accountName || envBusinessName,
+            address,
             status: mappedStatus,
-            optimizationScore: account.vettedState || 'N/A',
-            locationId: account.name?.split('/').pop(),
-            accountType: account.type || 'UNKNOWN',
-            verificationState: account.verificationState || 'UNKNOWN',
-            vettedState: account.vettedState || 'UNKNOWN'
+            optimizationScore: 'N/A',
+            locationId: id,
+            accountType: account?.type || 'UNKNOWN',
+            verificationState: ver,
+            vettedState: account?.vettedState || 'UNKNOWN'
           };
         });
-        
-        if (envDebugMode) {
-          console.log('Converted accounts to business format:', normalized);
-        }
-        
+
+        // If user has three profiles, they will appear; otherwise show all found
         setBusinesses(normalized);
         setLoading(false);
         return;
         
-        // Comment out the locations API call since we don't need it
-        /*
-        const locRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations`, {
-          headers: { 
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-        });
-        
-        if (envDebugMode) {
-          console.log('Locations API response status:', locRes.status);
-          console.log('Locations API URL:', `https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations`);
-        }
-        
-        const locJson = await locRes.json();
-        if (!locRes.ok) {
-          if (envDebugMode) {
-            console.error('Locations API Error Details:', {
-              status: locRes.status,
-              error: locJson?.error,
-              accountName: accountName,
-              fullUrl: `https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations`
-            });
-          }
-          
-          // Try alternative API endpoint if the first one fails
-          if (locRes.status === 400 && locJson?.error?.code === 400) {
-            if (envDebugMode) {
-              console.log('Trying alternative GMB API endpoint...');
-            }
-            
-            // Try the older GMB API endpoint
-            const altLocRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations`, {
-              headers: { 
-                Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-              },
-            });
-            
-            if (envDebugMode) {
-              console.log('Alternative API response status:', altLocRes.status);
-            }
-            
-            if (altLocRes.ok) {
-              const altLocJson = await altLocRes.json();
-              const locations = altLocJson.locations || [];
-              if (envDebugMode) {
-                console.log('Found GMB locations via alternative API:', locations.length);
-              }
-              
-              // Normalize to existing table fields
-              const normalized = locations.map((loc) => ({
-                id: loc.name?.split('/').pop(),
-                name: loc.title || envBusinessName,
-                address: loc.storefrontAddress?.addressLines?.join(', ') || 'Address not available',
-                status: loc.metadata?.verification?.status || 'verified',
-                optimizationScore: 'N/A',
-                locationId: loc.name?.split('/').pop(),
-              }));
-              
-              setBusinesses(normalized);
-              setLoading(false);
-              return;
-            }
-          }
-          
-          throw new Error(locJson?.error?.message || 'Failed to fetch locations');
-        }
-
-        const locations = locJson.locations || [];
-        if (envDebugMode) {
-          console.log('Found GMB locations:', locations.length);
-        }
-        
-        // Normalize to existing table fields
-        const normalized = locations.map((loc) => ({
-          id: loc.name?.split('/').pop(),
-          name: loc.title || envBusinessName,
-          address: loc.storefrontAddress?.addressLines?.join(', ') || 'Address not available',
-          status: loc.metadata?.verification?.status || 'verified',
-          optimizationScore: 'N/A',
-          locationId: loc.name?.split('/').pop(),
-        }));
-
-        setBusinesses(normalized);
-        */
       } catch (err) {
         console.error('Error fetching businesses:', err);
         setError(err.message);
@@ -378,8 +305,8 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <PageHeader 
-        title="GMB Accounts" 
-        subtitle="Google My Business accounts and their verification status. No location data required." 
+        title="Businesses" 
+        subtitle="All Google Business Profile locations across your connected accounts." 
       />
       
       {/* Configuration Status (only shown in debug mode) */}
