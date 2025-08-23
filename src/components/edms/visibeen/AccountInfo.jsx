@@ -8,7 +8,6 @@ import './AccountInfo.css';
 const AccountInfo = () => {
   const navigate = useNavigate();
   const { accountInfo, updateAccountInfo } = useAccount();
-
   const [form, setForm] = useState({
     name: accountInfo.name,
     business_name: accountInfo.business_name,
@@ -30,7 +29,7 @@ const AccountInfo = () => {
   const handleSaveAndNext = async (e) => {
     e.preventDefault();
     updateAccountInfo(form);
-    const user = JSON.parse(localStorage.getItem('currentUser'));
+    const user = (localStorage.getItem('authToken'));
     const payload = {
       user_id: user?.id,
       name: form.name,
@@ -41,7 +40,6 @@ const AccountInfo = () => {
       alternative_contact_number: form.alternative_contact_number,
       website: form.website,
     };
-
     try {
       setLoading(true);
       const token = localStorage.getItem('authToken');
