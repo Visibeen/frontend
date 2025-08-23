@@ -271,6 +271,12 @@ class GMBService {
         throw new Error('Location ID is required');
       }
 
+      // Ensure we have a valid access token with proper scopes
+      const token = await this._getAccessToken(accessToken);
+      if (!token) {
+        throw new Error('No valid access token available. Please re-authenticate with Google My Business.');
+      }
+
       // Default to last 30 days (inclusive) if no date range provided
       const now = new Date();
       const start = new Date(now);
@@ -307,18 +313,42 @@ class GMBService {
 
       const url = `https://businessprofileperformance.googleapis.com/v1/locations/${locationId}:fetchMultiDailyMetricsTimeSeries?${params.toString()}`;
 
+      console.log(`[GMB Service] Fetching performance metrics from: ${url}`);
+
       const response = await this._googleFetch(
         url,
         { method: 'GET' },
-        accessToken
+        token
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to fetch performance metrics');
+        const errorData = await response.json().catch(() => ({}));
+        
+        // Handle specific permission errors
+        if (response.status === 403) {
+          const errorMessage = errorData.error?.message || 'Permission denied';
+          
+          if (errorMessage.includes('caller does not have permission')) {
+            throw new Error('Your Google account does not have permission to access Business Profile Performance data. Please ensure:\n' +
+              '• You are the owner or manager of this business\n' +
+              '• The business has performance data available\n' +
+              '• You have re-authenticated with the correct Google account\n' +
+              '• The Business Profile Performance API is enabled for your project');
+          }
+          
+          throw new Error(`Permission denied: ${errorMessage}`);
+        }
+        
+        if (response.status === 404) {
+          throw new Error(`Business location not found. Please verify the location ID: ${locationId}`);
+        }
+        
+        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
       }
 
       const data = await response.json();
+      console.log(`[GMB Service] Successfully fetched performance data:`, data);
+      
       return this.processPerformanceData(data);
     } catch (error) {
       console.error('Error fetching performance metrics:', error);

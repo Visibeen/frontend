@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Stack, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Chip } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import React, { useRef, useState, useEffect } from 'react';
+import { Box, Stack, Typography, Button, TextField, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress, CircularProgress } from '@mui/material';
+import { styled, keyframes } from '@mui/material/styles';
 import { useLocation } from 'react-router-dom';
 import DashboardLayout from '../Layouts/DashboardLayout';
-import GMBService from '../../services/GMBService';
 import EditIcon from '../icons/EditIcon';
+import GMBService from '../../services/GMBService';
+import CompetitorScraper from '../../services/CompetitorScraper';
+import GMBProductScraper from '../../services/GMBProductScraper';
 
 const MainContent = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -194,6 +196,143 @@ const ViewHeatMapButton = styled(Button)(({ theme }) => ({
   }
 }));
 
+// Futuristic Loading UI Components
+const pulse = keyframes`
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+`;
+
+const slideIn = keyframes`
+  0% { transform: translateX(-20px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+`;
+
+const LoadingOverlay = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(11, 145, 214, 0.95)',
+  backdropFilter: 'blur(10px)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 1000,
+  borderRadius: '12px'
+}));
+
+const LoadingContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: '32px',
+  maxWidth: '500px',
+  width: '100%',
+  padding: '40px'
+}));
+
+const LoadingTitle = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '28px',
+  fontWeight: 700,
+  color: '#ffffff',
+  textAlign: 'center',
+  marginBottom: '8px'
+}));
+
+const LoadingSubtitle = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '16px',
+  fontWeight: 400,
+  color: 'rgba(255, 255, 255, 0.8)',
+  textAlign: 'center'
+}));
+
+const ProgressSection = styled(Box)(({ theme }) => ({
+  width: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '20px'
+}));
+
+const ProgressBar = styled(LinearProgress)(({ theme }) => ({
+  height: '8px',
+  borderRadius: '4px',
+  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  '& .MuiLinearProgress-bar': {
+    borderRadius: '4px',
+    background: 'linear-gradient(90deg, #34A853 0%, #0B91D6 50%, #EA4335 100%)',
+    backgroundSize: '200% 100%',
+    animation: `${pulse} 2s ease-in-out infinite`
+  }
+}));
+
+const CurrentStepText = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '18px',
+  fontWeight: 600,
+  color: '#ffffff',
+  textAlign: 'center',
+  animation: `${slideIn} 0.5s ease-out`
+}));
+
+const ProgressPercentage = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '24px',
+  fontWeight: 700,
+  color: '#ffffff',
+  textAlign: 'center'
+}));
+
+const StepsContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '12px',
+  width: '100%',
+  maxHeight: '200px',
+  overflowY: 'auto',
+  padding: '16px',
+  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  borderRadius: '12px',
+  backdropFilter: 'blur(5px)'
+}));
+
+const StepItem = styled(Box)(({ theme, completed }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  padding: '8px 12px',
+  borderRadius: '8px',
+  backgroundColor: completed ? 'rgba(52, 168, 83, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+  border: completed ? '1px solid rgba(52, 168, 83, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+  transition: 'all 0.3s ease',
+  animation: completed ? `${slideIn} 0.5s ease-out` : 'none'
+}));
+
+const StepIcon = styled(Box)(({ theme, completed }) => ({
+  width: '20px',
+  height: '20px',
+  borderRadius: '50%',
+  backgroundColor: completed ? '#34A853' : 'rgba(255, 255, 255, 0.2)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '12px',
+  color: '#ffffff',
+  fontWeight: 'bold'
+}));
+
+const StepText = styled(Typography)(({ theme, completed }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '14px',
+  fontWeight: completed ? 600 : 400,
+  color: completed ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
+  flex: 1
+}));
+
 const legendItems = [
   { color: '#30302E', label: 'Direct' },
   { color: '#FBBC05', label: 'Links' },
@@ -228,15 +367,47 @@ const ProfileStrengthResults = () => {
   }
   const resolvedAccountName = account.name || business.name || business.businessName || '';
   const [freshAddress, setFreshAddress] = useState('');
-  const [targetLocation, setTargetLocation] = useState(null);
+  const [targetLocation, setTargetLocation] = useState(business || state.locationData || state.selectedLocation || null);
   const [profileScore, setProfileScore] = useState(0);
   const [keywordsState, setKeywordsState] = useState(selectedKeywords);
   const [editKwOpen, setEditKwOpen] = useState(false);
   const [manualKw, setManualKw] = useState('');
+  // Additional datasets to mirror Business Profile page
+  const [reviewsData, setReviewsData] = useState(null);
+  const [mediaItems, setMediaItems] = useState([]);
+  const [performanceData, setPerformanceData] = useState(null);
+  
+  // Loading states for attractive UI
+  const [isCalculating, setIsCalculating] = useState(true);
+  const [currentStep, setCurrentStep] = useState('');
+  const [completedSteps, setCompletedSteps] = useState([]);
+  const [stepProgress, setStepProgress] = useState(0);
+  
+  // Competitor analysis data
+  const [competitorData, setCompetitorData] = useState([]);
+  const [competitorStats, setCompetitorStats] = useState(null);
+  const [myBusinessProducts, setMyBusinessProducts] = useState(null);
+
+  // Ensure target location is always set with available data
+  useEffect(() => {
+    if (!targetLocation && (business || state.locationData || state.selectedLocation)) {
+      const fallbackLocation = business || state.locationData || state.selectedLocation;
+      console.log('[ProfileStrengthResults] Setting fallback target location:', fallbackLocation);
+      setTargetLocation(fallbackLocation);
+    }
+  }, [business, state.locationData, state.selectedLocation, targetLocation]);
 
   useEffect(() => {
     const fetchFreshAddress = async () => {
       try {
+        console.log('[ProfileStrengthResults] Starting data fetch with state:', {
+          account,
+          business,
+          selectedKeywords,
+          resolvedAddress,
+          state
+        });
+
         // Derive account id/name from multiple sources
         let accId = account?.id;
         if (!accId) accId = business?.accountId || business?.accountName;
@@ -259,9 +430,53 @@ const ProfileStrengthResults = () => {
         }
         // derive location id from possible fields
         const locId = account?.locationId || business?.locationId || business?.id || (business?.name ? String(business.name).split('/').pop() : '');
+        
+        console.log('[ProfileStrengthResults] Derived IDs:', { accId, locId });
+        
         if (!accId) {
-          console.debug('[Results] No account id derived; skipping fresh address fetch');
-          return;
+          console.warn('[Results] No account id derived initially. Attempting discovery via accounts → locations...');
+          try {
+            const accountsList = await GMBService.getAccounts();
+            console.debug('[Results] Accounts fetched for discovery:', Array.isArray(accountsList) ? accountsList.length : 0);
+            let discoveredAccId = undefined;
+            if (Array.isArray(accountsList)) {
+              for (const acc of accountsList) {
+                const accName = acc?.name; // 'accounts/<id>'
+                const accIdCandidate = typeof accName === 'string' && accName.includes('accounts/') ? accName.split('/')[1] : undefined;
+                if (!accIdCandidate) continue;
+                try {
+                  const locs = await GMBService.getLocations(undefined, accName);
+                  const byId = (loc) => (loc?.name && (loc.name.includes(String(locId)) || String(loc.name).split('/').pop() === String(locId)));
+                  const byTitle = (loc) => {
+                    const selName = business?.title || business?.businessName || business?.name || '';
+                    return selName && loc?.title && String(loc.title).toLowerCase() === String(selName).toLowerCase();
+                  };
+                  const match = Array.isArray(locs) ? (locs.find(byId) || locs.find(byTitle)) : null;
+                  if (match) {
+                    discoveredAccId = accIdCandidate;
+                    console.debug('[Results] Discovered accountId via location match:', discoveredAccId, 'location:', match?.name);
+                    // Prefer to use discovered accId and continue normal flow to keep logic unified
+                    accId = discoveredAccId;
+                    break;
+                  }
+                } catch (locErr) {
+                  console.warn('[Results] Failed to list locations for', accName, locErr?.message || locErr);
+                }
+              }
+            }
+          } catch (discErr) {
+            console.warn('[Results] Account discovery failed:', discErr?.message || discErr);
+          }
+
+          if (!accId) {
+            console.warn('[Results] Could not determine account id after discovery. Falling back to passed business payload.');
+            // Still try to set target location from business data for scoring
+            if (business) {
+              console.log('[Results] Setting target location from business data for scoring');
+              setTargetLocation(business);
+            }
+            return;
+          }
         }
         const accountName = String(accId).includes('accounts/') ? String(accId) : `accounts/${accId}`;
         console.debug('[Results] Fetching locations for', accountName, 'target locId:', locId);
@@ -295,6 +510,61 @@ const ProfileStrengthResults = () => {
             }
           } catch (e) {
             console.warn('[Results] Failed to fetch attributes:', e?.message || e);
+          }
+
+          // Fetch additional datasets to mirror BusinessProfile page
+          try {
+            const accountId = (accountName && accountName.includes('accounts/')) ? accountName.split('/')[1] : undefined;
+            const locationName = target?.name || '';
+            const locationIdFromName = locationName ? String(locationName).split('/').pop() : undefined;
+
+            // Reviews (uses accountName and full location name)
+            try {
+              if (accountName && locationName) {
+                const reviews = await GMBService.getReviews(undefined, accountName, locationName);
+                setReviewsData({ reviews });
+                console.debug('[Results] Reviews fetched:', Array.isArray(reviews) ? reviews.length : 0);
+              }
+            } catch (reviewsErr) {
+              console.warn('[Results] Error fetching reviews:', reviewsErr);
+              setReviewsData({ reviews: [] });
+            }
+
+            // Media (photos) requires accountId and locationId
+            try {
+              if (accountId && locationIdFromName) {
+                let items = await GMBService.getMedia(undefined, accountId, locationIdFromName);
+                items = Array.isArray(items) ? items : [];
+                // Filter to photos with a usable URL
+                items = items.filter(i => (i.mediaFormat === 'PHOTO' || !i.mediaFormat) && (i.googleUrl || i.thumbnailUrl || i.sourceUrl));
+                // Sort by createTime desc
+                items.sort((a, b) => {
+                  const ta = a.createTime ? Date.parse(a.createTime) : 0;
+                  const tb = b.createTime ? Date.parse(b.createTime) : 0;
+                  return tb - ta;
+                });
+                setMediaItems(items);
+                console.debug('[Results] Media items fetched:', items.length);
+              }
+            } catch (mediaErr) {
+              console.warn('[Results] Error fetching media:', mediaErr);
+              setMediaItems([]);
+            }
+
+            // Performance metrics (locationId only)
+            try {
+              if (locationIdFromName) {
+                const metrics = await GMBService.getPerformanceMetrics(undefined, locationIdFromName);
+                setPerformanceData(metrics);
+                console.debug('[Results] Performance metrics fetched');
+              }
+            } catch (perfErr) {
+              console.warn('[Results] Error fetching performance metrics:', perfErr);
+              setPerformanceData(null);
+            }
+
+          } catch (extraErr) {
+            console.warn('[Results] Error during extra datasets fetch:', extraErr);
           }
         }
         if (!target?.latlng?.latitude || !target?.latlng?.longitude) {
@@ -357,10 +627,24 @@ const ProfileStrengthResults = () => {
   useEffect(() => {
     let isMounted = true;
     const computeScore = async () => {
+      if (!isMounted) return;
+      setIsCalculating(true);
+      setCurrentStep('Initializing analysis...');
+      setStepProgress(0);
+      await new Promise(resolve => setTimeout(resolve, 800)); // Brief pause for UX
       let score = 0;
       let verPts = 0, namePts = 0, addrPts = 0, phonePts = 0;
+      
+      const updateProgress = (step, progress, completed = []) => {
+        if (!isMounted) return;
+        setCurrentStep(step);
+        setStepProgress(progress);
+        setCompletedSteps(prev => [...new Set([...prev, ...completed])]);
+      };
 
       // 1) Verification status
+      updateProgress('Checking verification status...', 10);
+      await new Promise(resolve => setTimeout(resolve, 600));
       const verificationState = (account?.verificationState || '').toUpperCase();
       const isVerified = verificationState === 'VERIFIED' || targetLocation?.metadata?.verified === true;
       const isSoftSuspended = (
@@ -372,6 +656,8 @@ const ProfileStrengthResults = () => {
       else if (isSoftSuspended) verPts = -60;
       else if (isUnverified) verPts = -100; // not specified; assuming 0
       score += verPts;
+      updateProgress('Analyzing business name...', 20, ['Verification Status']);
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // 2) Business name contains city
       const businessTitle = targetLocation?.title || business?.title || business?.businessName || '';
@@ -382,6 +668,8 @@ const ProfileStrengthResults = () => {
         namePts = 10;
       }
       score += namePts;
+      updateProgress('Evaluating address completeness...', 35, ['Business Name Analysis']);
+      await new Promise(resolve => setTimeout(resolve, 600));
 
       // 3) Address scoring
       const addr = displayAddress;
@@ -398,11 +686,15 @@ const ProfileStrengthResults = () => {
         addrPts = 2;
       }
       score += addrPts;
+      updateProgress('Checking contact information...', 45, ['Address Analysis']);
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       // 4) Phone number
       const hasPhone = !!(targetLocation?.phoneNumbers?.primaryPhone || targetLocation?.phoneNumbers?.additionalPhones?.length);
       phonePts = hasPhone ? 100 : 0;
       score += phonePts;
+      updateProgress('Analyzing business description...', 55, ['Contact Information']);
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // 5) Description length
       let descPts = 0;
@@ -416,24 +708,32 @@ const ProfileStrengthResults = () => {
         descPts = 0; // between 401 and 699, or empty
       }
       score += descPts;
+      updateProgress('Checking website presence...', 65, ['Description Analysis']);
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       // 6) Website link presence
       let websitePts = 0;
       const hasWebsite = !!targetLocation?.websiteUri;
       websitePts = hasWebsite ? 5 : 0;
       score += websitePts;
+      updateProgress('Evaluating business hours...', 72, ['Website Analysis']);
+      await new Promise(resolve => setTimeout(resolve, 450));
 
       // 7) Business hours (timings)
       let hoursPts = 0;
       const hasHours = !!(targetLocation?.regularHours?.periods?.length || targetLocation?.moreHours?.length);
       hoursPts = hasHours ? 5 : 0;
       score += hoursPts;
+      updateProgress('Checking business labels...', 78, ['Business Hours']);
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       // 8) Labels
       let labelPts = 0;
       const hasLabels = Array.isArray(targetLocation?.labels) && targetLocation.labels.length > 0;
       labelPts = hasLabels ? 10 : 0;
       score += labelPts;
+      updateProgress('Analyzing business categories...', 85, ['Labels Analysis']);
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // 8.0) Categories scoring: +25 for primary, +5 for first additional, +5 for second additional
       let catBasePts = 0;
@@ -1002,16 +1302,108 @@ const ProfileStrengthResults = () => {
           const compAvg = compTotals.length ? (compTotals.reduce((s, n) => s + n, 0) / compTotals.length) : 0;
           console.log('Competitor stats:', { totalFetched: resultsAll.length, competitorCount: competitors.length, compAvg });
 
+          // Scrape user's own business products first
+          updateProgress('Analyzing your business products...', 92, ['My Business Products']);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          try {
+            if (targetLocation) {
+              const myBusinessData = {
+                name: targetLocation.name || targetLocation.businessName,
+                place_id: targetLocation.place_id,
+                website: targetLocation.website,
+                address: targetLocation.address || targetLocation.formatted_address
+              };
+
+              console.log('[Profile Strength] Scraping products for user business:', myBusinessData);
+              const myProductsResult = await GMBProductScraper.getMyBusinessProducts(myBusinessData);
+              
+              setMyBusinessProducts(myProductsResult);
+              
+              if (myProductsResult.scrapingSuccess) {
+                console.log(`[Profile Strength] Found ${myProductsResult.productCount} products for your business!`);
+                console.log(`[Profile Strength] Your products: ${myProductsResult.products.slice(0, 3).map(p => p.name).join(', ')}${myProductsResult.productCount > 3 ? '...' : ''}`);
+                
+                // Award points for having products
+                const productPoints = Math.min(myProductsResult.productCount * 3, 30); // Max 30 points for products
+                score += productPoints;
+                console.log(`[Profile Strength] Added ${productPoints} points for having ${myProductsResult.productCount} products`);
+              } else {
+                console.log('[Profile Strength] No products found for your business');
+              }
+            }
+          } catch (error) {
+            console.error('[Profile Strength] Error scraping user business products:', error);
+          }
+
+          // Enhanced competitor analysis with product scraping
+          updateProgress('Analyzing competitor products...', 96, ['Competitor Analysis']);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          try {
+            const topCompetitors = competitors.slice(0, 5).map(comp => ({
+              name: comp.name,
+              place_id: comp.place_id,
+              website: comp.website,
+              types: comp.types,
+              rating: comp.rating,
+              user_ratings_total: comp.user_ratings_total
+            }));
+
+            if (topCompetitors.length > 0) {
+              console.log('[GMB Scraper] Starting enhanced competitor product analysis...');
+              
+              // Use the new GMB Product Scraper for more accurate results
+              const gmbResults = await GMBProductScraper.getCompetitorProductCounts(topCompetitors);
+              const stats = CompetitorScraper.getSummaryStats(gmbResults);
+              
+              setCompetitorData(gmbResults);
+              setCompetitorStats(stats);
+              
+              console.log('[GMB Scraper] Enhanced competitor analysis complete:', stats);
+              
+              // Adjust scoring based on product count comparison
+              if (stats.averageProductCount > 0) {
+                // Estimate current business product count (you can enhance this)
+                const myEstimatedProducts = CompetitorScraper.estimateFromBusinessTypes(
+                  targetLocation?.categories?.primaryCategory ? [targetLocation.categories.primaryCategory] : ['establishment']
+                );
+                
+                const productRatio = myEstimatedProducts / stats.averageProductCount;
+                const productBonus = productRatio > 1 ? Math.min(15, productRatio * 5) : 0;
+                
+                reviewsPts += Math.round(productBonus);
+                score += Math.round(productBonus);
+                
+                console.log('[Scraper] Product comparison bonus:', {
+                  myProducts: myEstimatedProducts,
+                  avgCompetitorProducts: stats.averageProductCount,
+                  ratio: productRatio,
+                  bonus: productBonus
+                });
+              }
+            }
+          } catch (scrapingError) {
+            console.warn('[Scraper] Competitor product analysis failed:', scrapingError);
+          }
+
           try {
             const compRows = competitors.map((p) => {
               const plat = p.geometry?.location?.lat;
               const plng = p.geometry?.location?.lng;
               const dist = (plat != null && plng != null) ? Math.round(haversine({ lat, lng }, { lat: plat, lng: plng })) : null;
+              
+              // Find matching competitor data from scraping results
+              const scrapedData = competitorData.find(comp => 
+                comp.name && p.name && comp.name.toLowerCase().includes(p.name.toLowerCase().split(' ')[0].toLowerCase())
+              );
+              
               return {
                 name: p.name || '(no name)',
                 rating: p.rating ?? null,
                 user_ratings_total: p.user_ratings_total ?? 0,
                 distance_m: dist,
+                products: scrapedData ? scrapedData.productCount : 'pending...'
               };
             });
             if (compRows.length) {
@@ -1036,7 +1428,7 @@ const ProfileStrengthResults = () => {
       try {
         console.groupCollapsed('[Profile Strength] Scoring Breakdown');
         console.log('Account verificationState:', account?.verificationState);
-        console.log('Target location:', targetLocation?.name || '(none)');
+        console.log('Target location:', targetLocation?.name || targetLocation?.title || '(none)');
         console.log('Title:', businessTitle);
         console.log('City:', city);
         console.log('Address used:', addr);
@@ -1064,7 +1456,15 @@ const ProfileStrengthResults = () => {
         console.groupEnd();
       } catch (_) {}
 
-      if (isMounted) setProfileScore(score);
+      updateProgress('Finalizing analysis...', 98, ['Competitor Analysis']);
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      if (isMounted) {
+        setProfileScore(score);
+        updateProgress('Analysis complete!', 100, ['Final Score Calculation']);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setIsCalculating(false);
+      }
     };
 
     computeScore();
@@ -1095,10 +1495,55 @@ const ProfileStrengthResults = () => {
     setEditKwOpen(false);
   };
 
+  // Define all analysis steps for the loading UI
+  const analysisSteps = [
+    'Verification Status',
+    'Business Name Analysis', 
+    'Address Analysis',
+    'Contact Information',
+    'Description Analysis',
+    'Website Analysis',
+    'Business Hours',
+    'Labels Analysis',
+    'Categories & Services',
+    'Competitor Analysis',
+    'Final Score Calculation'
+  ];
+
   return (
     <DashboardLayout>
       <MainContent>
-        <ContentSection>
+        <ContentSection style={{ position: 'relative' }}>
+          {isCalculating && (
+            <LoadingOverlay>
+              <LoadingContainer>
+                <LoadingTitle>Analyzing Your Profile Strength</LoadingTitle>
+                <LoadingSubtitle>
+                  Our AI is performing a comprehensive analysis of your business profile
+                </LoadingSubtitle>
+                
+                <ProgressSection>
+                  <ProgressPercentage>{stepProgress}%</ProgressPercentage>
+                  <ProgressBar variant="determinate" value={stepProgress} />
+                  <CurrentStepText key={currentStep}>{currentStep}</CurrentStepText>
+                </ProgressSection>
+
+                <StepsContainer>
+                  {analysisSteps.map((step, index) => (
+                    <StepItem key={step} completed={completedSteps.includes(step)}>
+                      <StepIcon completed={completedSteps.includes(step)}>
+                        {completedSteps.includes(step) ? '✓' : index + 1}
+                      </StepIcon>
+                      <StepText completed={completedSteps.includes(step)}>
+                        {step}
+                      </StepText>
+                    </StepItem>
+                  ))}
+                </StepsContainer>
+              </LoadingContainer>
+            </LoadingOverlay>
+          )}
+
           <HeaderSection>
             <MainTitle>Profile Strength</MainTitle>
             <Description>
@@ -1134,7 +1579,7 @@ const ProfileStrengthResults = () => {
           <ResultsSection>
             <ScoreSection>
               <ScoreLabel>Profile Strength Score</ScoreLabel>
-              <ScoreValue>{profileScore} / 300</ScoreValue>
+              <ScoreValue>{profileScore} / 500</ScoreValue>
             </ScoreSection>
 
             <ChartContainer>
@@ -1164,6 +1609,143 @@ const ProfileStrengthResults = () => {
           <ViewHeatMapButton onClick={handleViewHeatMap}>
             View Heat Map
           </ViewHeatMapButton>
+
+          {/* My Business Products Results */}
+          {myBusinessProducts && (
+            <Box sx={{ mt: 4, p: 3, backgroundColor: '#f0f8ff', borderRadius: '12px', border: '2px solid #0B91D6' }}>
+              <Typography variant="h6" sx={{ mb: 2, color: '#0B91D6', fontWeight: 600 }}>
+                Your Business Products
+              </Typography>
+              
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 2 }}>
+                <Box sx={{ p: 2, backgroundColor: '#fff', borderRadius: '8px', textAlign: 'center' }}>
+                  <Typography variant="h4" sx={{ color: myBusinessProducts.scrapingSuccess ? '#34A853' : '#EA4335', fontWeight: 700 }}>
+                    {myBusinessProducts.productCount}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Products Found
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ p: 2, backgroundColor: '#fff', borderRadius: '8px', textAlign: 'center' }}>
+                  <Typography variant="body1" sx={{ color: '#0B91D6', fontWeight: 600 }}>
+                    {myBusinessProducts.scrapingSuccess ? '✅ Success' : '❌ Failed'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Scraping Status
+                  </Typography>
+                </Box>
+              </Box>
+
+              {myBusinessProducts.scrapingSuccess && myBusinessProducts.products.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Sample Products:
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {myBusinessProducts.products.slice(0, 5).map(p => p.name).join(', ')}
+                    {myBusinessProducts.products.length > 5 ? '...' : ''}
+                  </Typography>
+                </Box>
+              )}
+
+              {myBusinessProducts.scrapingMethods && myBusinessProducts.scrapingMethods.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Scraping Methods Used:
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {myBusinessProducts.scrapingMethods.join(', ')}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+
+          {/* Competitor Analysis Results */}
+          {competitorStats && competitorData.length > 0 && (
+            <Box sx={{ mt: 4, p: 3, backgroundColor: '#f8f9fa', borderRadius: '12px', border: '1px solid #e9ecef' }}>
+              <Typography variant="h6" sx={{ mb: 2, color: '#0B91D6', fontWeight: 600 }}>
+                Competitor Analysis Results
+              </Typography>
+              
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 3 }}>
+                <Box sx={{ p: 2, backgroundColor: '#fff', borderRadius: '8px', textAlign: 'center' }}>
+                  <Typography variant="h4" sx={{ color: '#34A853', fontWeight: 700 }}>
+                    {competitorStats.successfulScrapes}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Competitors Analyzed
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ p: 2, backgroundColor: '#fff', borderRadius: '8px', textAlign: 'center' }}>
+                  <Typography variant="h4" sx={{ color: '#0B91D6', fontWeight: 700 }}>
+                    {competitorStats.averageProductCount}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Avg Products/Services
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ p: 2, backgroundColor: '#fff', borderRadius: '8px', textAlign: 'center' }}>
+                  <Typography variant="h4" sx={{ color: '#EA4335', fontWeight: 700 }}>
+                    {competitorStats.maxProductCount}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Top Competitor
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+                Individual Competitor Data:
+              </Typography>
+              
+              <Box sx={{ maxHeight: '200px', overflowY: 'auto' }}>
+                {competitorData.map((comp, index) => (
+                  <Box key={index} sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    p: 2, 
+                    mb: 1, 
+                    backgroundColor: '#fff', 
+                    borderRadius: '6px',
+                    border: '1px solid #e9ecef'
+                  }}>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {comp.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Source: {comp.source.replace('_', ' ')}
+                      </Typography>
+                      {comp.products && comp.products.length > 0 && (
+                        <Typography variant="caption" sx={{ 
+                          display: 'block', 
+                          mt: 0.5, 
+                          color: '#666',
+                          fontSize: '11px'
+                        }}>
+                          Products: {comp.products.slice(0, 3).join(', ')}
+                          {comp.products.length > 3 && '...'}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Box sx={{ textAlign: 'right' }}>
+                      <Typography variant="h6" sx={{ color: comp.productCount > 0 ? '#34A853' : '#666' }}>
+                        {comp.productCount}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        products
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
         </ContentSection>
       </MainContent>
 
