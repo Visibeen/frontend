@@ -234,19 +234,105 @@ const ProfileStrengthAnalysis = () => {
     // If we have the raw GMB location, format like BusinessProfile.jsx
     const raw = selectedBiz?.raw || location.state?.selected || null;
     let address = selectedBiz?.address || raw?.address || raw?.formattedAddress || '';
-    if (!address && raw?.storefrontAddress) {
+    // Always prefer storefrontAddress when available to build a complete address
+    if (raw?.storefrontAddress) {
       const sa = raw.storefrontAddress;
       const parts = [];
       if (Array.isArray(sa.addressLines) && sa.addressLines.length) parts.push(sa.addressLines.join(', '));
       if (sa.locality) parts.push(sa.locality);
       const tail = [sa.administrativeArea, sa.postalCode].filter(Boolean).join(' ');
       if (tail) parts.push(tail);
-      address = parts.join(', ').trim();
+      const full = parts.join(', ').trim();
+      if (full) address = full;
     }
 
+    // Build a robust account object: ensure id is always an Account ID (not a Location ID)
+    const parseAccountIdFromName = (name) => {
+      if (typeof name !== 'string') return undefined;
+      // Expected shapes: "accounts/<accId>/locations/<locId>" or just "accounts/<accId>"
+      const parts = name.split('/');
+      const idx = parts.indexOf('accounts');
+      if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
+      return undefined;
+    };
+
+    const selectedRawName = raw?.name || location.state?.selected?.name;
+    const derivedAccId = selectedBiz?.accountId 
+      || parseAccountIdFromName(selectedRawName)
+      || parseAccountIdFromName(location.state?.selected?.name);
+
     const account = selectedBiz
-      ? { id: selectedBiz.accountId || selectedBiz.id, name: selectedBiz.name, locationId: selectedBiz.locationId }
-      : { id: location.state?.selected?.accountId || location.state?.selected?.id, name: selectedAccount, locationId: location.state?.selected?.locationId || location.state?.selected?.id };
+      ? {
+          id: derivedAccId, // strictly an Account ID
+          name: selectedBiz.name,
+          locationId: selectedBiz.locationId,
+          verificationState: raw?.verificationState || raw?.verification_status,
+          accountName: derivedAccId ? `accounts/${derivedAccId}` : undefined
+        }
+      : {
+          id: (location.state?.selected?.accountId) || parseAccountIdFromName(location.state?.selected?.name),
+          name: selectedAccount,
+          locationId: location.state?.selected?.locationId || location.state?.selected?.id,
+          verificationState: location.state?.selected?.verificationState || location.state?.selected?.verification_status,
+          accountName: ((location.state?.selected?.accountId) || parseAccountIdFromName(location.state?.selected?.name))
+            ? `accounts/${(location.state?.selected?.accountId) || parseAccountIdFromName(location.state?.selected?.name)}`
+            : undefined
+        };
+
+    // Ensure business object has all required fields for scoring
+    const businessPayload = {
+      ...raw,
+      title: raw?.title || raw?.name || raw?.businessName || selectedBiz?.name,
+      businessName: raw?.businessName || raw?.name || raw?.title || selectedBiz?.name,
+      address: address,
+      formattedAddress: address,
+      locationId: selectedBiz?.locationId || raw?.locationId || raw?.id,
+      accountId: selectedBiz?.accountId || raw?.accountId,
+      accountName: selectedBiz?.accountId || raw?.accountName,
+      name: raw?.name || (raw?.id ? `locations/${raw.id}` : (selectedBiz?.locationId ? `locations/${selectedBiz.locationId}` : undefined)),
+      id: raw?.id || selectedBiz?.locationId,
+      // Ensure storefrontAddress is properly structured for city extraction
+      storefrontAddress: raw?.storefrontAddress || {
+        addressLines: address ? [address.split(',')[0]] : [],
+        locality: raw?.storefrontAddress?.locality || extractCityFromAddress(address),
+        administrativeArea: raw?.storefrontAddress?.administrativeArea || extractStateFromAddress(address),
+        postalCode: raw?.storefrontAddress?.postalCode || extractPostalCodeFromAddress(address)
+      }
+    };
+
+    // Helper functions to extract address components
+    function extractCityFromAddress(addr) {
+      if (!addr) return '';
+      const parts = addr.split(',').map(p => p.trim());
+      // For "SCO 7 Hermitage Centralis, VIP Road, Zirakpur, Punjab 140603"
+      // Find the part that comes before the state/postal code part
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const part = parts[i];
+        // If this part contains digits (postal code), skip it
+        if (/\d/.test(part)) continue;
+        // If this part looks like a state (contains common state names), skip it
+        if (/punjab|haryana|delhi|maharashtra|gujarat|rajasthan|karnataka|tamil nadu|kerala|andhra pradesh|telangana|west bengal|bihar|uttar pradesh|madhya pradesh|odisha|jharkhand|chhattisgarh|uttarakhand|himachal pradesh|jammu|kashmir|goa|manipur|meghalaya|tripura|arunachal pradesh|mizoram|nagaland|sikkim/i.test(part)) continue;
+        // This should be the city
+        return part;
+      }
+      // Fallback: if we have at least 3 parts, take the third-to-last
+      return parts.length >= 3 ? parts[parts.length - 3] : (parts.length >= 2 ? parts[parts.length - 2] : '');
+    }
+
+    function extractStateFromAddress(addr) {
+      if (!addr) return '';
+      const parts = addr.split(',').map(p => p.trim());
+      const lastPart = parts[parts.length - 1] || '';
+      // Extract state from "State PostalCode" format
+      const stateMatch = lastPart.match(/^([A-Za-z\s]+)\s+\d+/);
+      return stateMatch ? stateMatch[1].trim() : '';
+    }
+
+    function extractPostalCodeFromAddress(addr) {
+      if (!addr) return '';
+      const postalMatch = addr.match(/\b\d{6}\b/); // 6-digit postal code
+      return postalMatch ? postalMatch[0] : '';
+    }
 
     // Navigate to profile strength results page with state
     navigate('/profile-strength-results', {
@@ -254,8 +340,10 @@ const ProfileStrengthAnalysis = () => {
         account,
         keywords,
         address,
-        business: raw,
-        businesses: passedBusinesses
+        business: businessPayload,
+        businesses: passedBusinesses,
+        locationData: raw,
+        selectedLocation: raw
       }
     });
   };

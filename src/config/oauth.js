@@ -10,6 +10,7 @@ const oauthConfig = {
     tokenEndpoint: 'https://oauth2.googleapis.com/token',
     scopes: [
       'https://www.googleapis.com/auth/business.manage',
+      'https://www.googleapis.com/auth/businessprofileperformance',
       'https://www.googleapis.com/auth/userinfo.email',
       'https://www.googleapis.com/auth/userinfo.profile',
     ],
