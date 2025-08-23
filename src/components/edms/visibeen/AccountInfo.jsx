@@ -42,13 +42,13 @@ const AccountInfo = () => {
     };
     try {
       setLoading(true);
-      const token = localStorage.getItem('authToken');
+      const token = JSON.parse(localStorage.getItem('userData'));
       const response = await axios.post(
         'http://52.44.140.230:8089/api/v1/customer/edms/create-edms',
         payload,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `${token?.token}`,
             'Content-Type': 'application/json'
           }
         }

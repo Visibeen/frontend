@@ -156,7 +156,7 @@ const LoginForm = ({ onGoogleLogin }) => {
       }
 
       // Persist via both legacy keys and centralized session util
-      localStorage.setItem('authToken', userData.token);
+      localStorage.setItem('authToken', JSON.stringify(userData.token));
       localStorage.setItem('userData', JSON.stringify(userData));
       setSession(userData);
 

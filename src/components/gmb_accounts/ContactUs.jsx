@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Stack, 
-  Typography, 
-  TextField, 
-  Button, 
-  Select, 
-  MenuItem, 
+import axios from 'axios';
+import {
+  Box,
+  Stack,
+  Typography,
+  TextField,
+  Button,
+  Select,
+  MenuItem,
   FormControl,
-  InputLabel,
   Paper,
   Container
 } from '@mui/material';
@@ -16,10 +16,8 @@ import { styled } from '@mui/material/styles';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import PageHeader from '../Dashboard/components/PageHeader';
 import CalendarIcon from '../icons/CalendarIcon';
-import SendArrowIcon from '../icons/SendArrowIcon';
 
-// Styled Components
-
+// Styled Components (same as before)
 const FormContainer = styled(Paper)(({ theme }) => ({
   backgroundColor: '#FFFFFF',
   borderRadius: '12px',
@@ -30,24 +28,15 @@ const FormContainer = styled(Paper)(({ theme }) => ({
   boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)'
 }));
 
-const FormStack = styled(Stack)(({ theme }) => ({
-  gap: '24px'
-}));
-
+const FormStack = styled(Stack)(({ theme }) => ({ gap: '24px' }));
 const FieldLabel = styled(Typography)(({ theme }) => ({
   fontFamily: 'Inter, sans-serif',
   fontSize: '10px',
   fontWeight: 400,
   marginBottom: '8px'
 }));
-
-const RequiredLabel = styled(FieldLabel)(({ theme }) => ({
-  color: '#EF232A'
-}));
-
-const OptionalLabel = styled(FieldLabel)(({ theme }) => ({
-  color: '#121927'
-}));
+const RequiredLabel = styled(FieldLabel)(({ theme }) => ({ color: '#EF232A' }));
+const OptionalLabel = styled(FieldLabel)(({ theme }) => ({ color: '#121927' }));
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
@@ -99,10 +88,7 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   }
 }));
 
-const TimePickerContainer = styled(Box)(({ theme }) => ({
-  position: 'relative'
-}));
-
+const TimePickerContainer = styled(Box)(({ theme }) => ({ position: 'relative' }));
 const TimePickerField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: '8px',
@@ -186,12 +172,12 @@ const SubmitButton = styled(Button)(({ theme }) => ({
 const ContactUs = () => {
   const [formData, setFormData] = useState({
     name: '',
-    businessName: '',
-    businessCategory: '',
+    business_category: '',
+    business_name: '',
     email: '',
-    contactNumber: '',
-    callTime: '',
-    message: ''
+    phone_number: '',
+    date_and_time: '',
+    message: '',
   });
 
   const handleInputChange = (e) => {
@@ -202,19 +188,32 @@ const ContactUs = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Handle form submission logic here
+    try {
+      const token = JSON.parse(localStorage.getItem('userData'));
+      const response = await axios.post(
+        'http://52.44.140.230:8089/api/v1/customer/contact-us/create-contact',
+        formData,
+        {
+          headers: {
+            Authorization: `${token?.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      console.log('Form submitted successfully:', response.data);
+    } catch (error) {
+      console.error('Submission error:', error.response?.data || error.message);
+    }
   };
 
   return (
     <DashboardLayout>
-      <PageHeader 
-        title="Contact Us" 
-        subtitle="Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development." 
+      <PageHeader
+        title="Contact Us"
+        subtitle="Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development."
       />
-      
       <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'center' }}>
         <FormContainer>
           <form onSubmit={handleSubmit}>
@@ -238,10 +237,10 @@ const ContactUs = () => {
                 <RequiredLabel>Business Name*</RequiredLabel>
                 <StyledTextField
                   fullWidth
-                  name="businessName"
-                  value={formData.businessName}
+                  name="business_name"
+                  value={formData.business_name}
                   onChange={handleInputChange}
-                  placeholder="Enter name"
+                  placeholder="Enter business name"
                   variant="outlined"
                   required
                 />
@@ -252,8 +251,8 @@ const ContactUs = () => {
                 <RequiredLabel>Business Category*</RequiredLabel>
                 <FormControl fullWidth>
                   <StyledSelect
-                    name="businessCategory"
-                    value={formData.businessCategory}
+                    name="business_category"
+                    value={formData.business_category}
                     onChange={handleInputChange}
                     displayEmpty
                     required
@@ -292,8 +291,8 @@ const ContactUs = () => {
                 <OptionalLabel>Contact Number*</OptionalLabel>
                 <StyledTextField
                   fullWidth
-                  name="contactNumber"
-                  value={formData.contactNumber}
+                  name="phone_number"
+                  value={formData.phone_number}
                   onChange={handleInputChange}
                   placeholder="Enter contact number"
                   variant="outlined"
@@ -307,8 +306,8 @@ const ContactUs = () => {
                 <TimePickerContainer>
                   <TimePickerField
                     fullWidth
-                    name="callTime"
-                    value={formData.callTime}
+                    name="date_and_time"
+                    value={formData.date_and_time}
                     onChange={handleInputChange}
                     placeholder="Select Time"
                     variant="outlined"
@@ -337,11 +336,7 @@ const ContactUs = () => {
               </Box>
 
               {/* Submit Button */}
-              <SubmitButton
-                type="submit"
-                fullWidth
-                variant="contained"
-              >
+              <SubmitButton type="submit" fullWidth variant="contained">
                 Send Message
               </SubmitButton>
             </FormStack>
