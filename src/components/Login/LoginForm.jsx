@@ -154,14 +154,16 @@ const LoginForm = ({ onGoogleLogin }) => {
       if (userData.user) {
         userData = userData.user;
       }
-      
+
+      // Persist via both legacy keys and centralized session util
+      localStorage.setItem('authToken', userData.token);
+      localStorage.setItem('userData', JSON.stringify(userData));
       setSession(userData);
-      
-      // Navigate to dashboard
+
       setTimeout(() => {
         navigate('/dashboard');
       }, 100);
-      
+
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {
@@ -182,7 +184,7 @@ const LoginForm = ({ onGoogleLogin }) => {
             error={email !== '' && !validateEmail(email)}
           />
         </Box>
-        
+
         <Box>
           <PasswordLabel>Password*</PasswordLabel>
           <StyledTextField
@@ -203,7 +205,7 @@ const LoginForm = ({ onGoogleLogin }) => {
           />
           <RememberMeText>Remember me</RememberMeText>
         </RememberMeContainer>
-        
+
         <ForgotPasswordLink onClick={() => navigate('/forgot-password')}>
           Forgot Password?
         </ForgotPasswordLink>
@@ -215,7 +217,7 @@ const LoginForm = ({ onGoogleLogin }) => {
         </Typography>
       )}
 
-      <LoginButton 
+      <LoginButton
         onClick={handleLogin}
         disabled={!isFormValid() || loading}
       >
