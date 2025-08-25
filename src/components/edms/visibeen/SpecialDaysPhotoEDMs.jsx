@@ -72,7 +72,7 @@ const SpecialDaysPhotoEDMs = () => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const dropdownRef = useRef(null);
   const shareRef = useRef(null);
-
+  
   // Update mainImg when template changes
   useEffect(() => {
     setMainImg(templateData[currentTemplate][1]);

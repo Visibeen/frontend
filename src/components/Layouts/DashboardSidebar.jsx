@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Box, Stack, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
@@ -72,6 +72,13 @@ const SectionDivider = styled(Box)(({ theme }) => ({
 }));
 
 const DashboardSidebar = () => {
+  const [myAccountOpen, setMyAccountOpen] = useState(false);
+
+  const toggleMyAccount = (e) => {
+    e.preventDefault(); // Prevent default NavLink behavior
+    setMyAccountOpen(!myAccountOpen);
+  };
+
   return (
     <SidebarContainer>
       <NavSection>
@@ -127,10 +134,28 @@ const DashboardSidebar = () => {
           <NavText className="nav-text">Refer & Earn</NavText>
         </NavItem>
         
-        <NavItem to="/my-account" className={({ isActive }) => isActive ? 'active' : ''}>
-          <MyAccountIcon className="nav-icon" width={16} height={16} color="currentColor" />
-          <NavText className="nav-text">My Account</NavText>
-        </NavItem>
+        <div onClick={toggleMyAccount} style={{ cursor: 'pointer' }}>
+          <NavItem as="div" to="/my-account" className={({ isActive }) => isActive ? 'active' : ''}>
+            <MyAccountIcon className="nav-icon" width={16} height={16} color="currentColor" />
+            <NavText className="nav-text">My Account</NavText>
+            <Box sx={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+              {myAccountOpen ? '\u25B2' : '\u25BC'} {/* Up or Down arrow */}
+            </Box>
+          </NavItem>
+        </div>
+        {myAccountOpen && (
+          <Stack sx={{ pl: 4, gap: '8px' }}>
+            <NavItem to="/my-account/account-information" className={({ isActive }) => isActive ? 'active' : ''}>
+              <NavText className="nav-text">Account Information</NavText>
+            </NavItem>
+            <NavItem to="/my-account/gst-information" className={({ isActive }) => isActive ? 'active' : ''}>
+              <NavText className="nav-text">GST Information</NavText>
+            </NavItem>
+            <NavItem to="/my-account/cro-information" className={({ isActive }) => isActive ? 'active' : ''}>
+              <NavText className="nav-text">CRO Information</NavText>
+            </NavItem>
+          </Stack>
+        )}
       </NavSection>
     </SidebarContainer>
   );

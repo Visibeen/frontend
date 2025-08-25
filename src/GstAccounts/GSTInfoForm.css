@@ -1,0 +1,83 @@
+.gst-info-form-container {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  padding: 40px 32px 32px 32px;
+  max-width: 520px;
+  margin: 0 auto;
+  margin-top: 32px;
+}
+.gst-info-form-container h2 {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.gst-info-form-container p {
+  text-align: center;
+  color: #444;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+.gst-info-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.gst-info-form label {
+  font-size: 14px;
+  color: #222;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gst-info-form input, .gst-info-form select {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 15px;
+  background: #f8f8f8;
+}
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+.form-row label {
+  flex: 1;
+}
+.form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+.cancel-btn {
+  background: #fff;
+  color: #ef232a;
+  border: 1px solid #ef232a;
+  border-radius: 4px;
+  padding: 8px 24px;
+  font-size: 15px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+.cancel-btn:hover {
+  background: #ef232a;
+  color: #fff;
+}
+.update-btn {
+  background: #009fe3;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 24px;
+  font-size: 15px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+.update-btn:hover {
+  background: #007bbd;
+} 
