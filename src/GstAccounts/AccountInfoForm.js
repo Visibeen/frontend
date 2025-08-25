@@ -1,14 +1,14 @@
 import React, { useState, useRef } from 'react';
 import './AccountInfoForm.css';
-
+import axios from 'axios';
 const initialFormState = {
-  businessName: 'Medical shop',
-  industryType: 'Dental clinic',
-  startDate: '2025-01-02',
-  endDate: '2025-01-02',
-  email: 'xyz@gmail.com',
-  address: 'Office Floor, Bestech, Sector 66, Sahibzada Ajit Singh Nagar, Punjab 160066',
-  website: 'www.visibeen.com',
+  business_name: '',
+  industry_type: '',
+  start_date: '',
+  end_date: '',
+  email: '',
+  address: '',
+  website: '',
 };
 
 const AccountInfoForm = () => {
@@ -20,6 +20,7 @@ const AccountInfoForm = () => {
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+
 
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
@@ -35,8 +36,41 @@ const AccountInfoForm = () => {
     }
   };
 
-  const handleCancel = (e) => {
+  const handleCancel = async (e) => {
     e.preventDefault();
+    const user = (localStorage.getItem('authToken'));
+    const payload = {
+      user_id: user?.id,
+      business_name: form.business_name,
+      industry_type: form.industry_type,
+      start_date: form.start_date,
+      end_date: form.end_date,
+      email: form.email,
+      address: form.address,
+      website: form.website
+    }
+    try {
+      const token = JSON.parse(localStorage.getItem('userData'));
+      const response = await axios.post(
+        'http://52.44.140.230:8089/api/v1/customer/accounts/create-account',
+        payload,
+        {
+          headers: {
+            Authorization: `${token?.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+      console.log('API Response:', response.data);
+      // navigate('../upload-logo');
+    } catch (error) {
+      if (error.response) {
+        console.error("Server responded with:", error.response.data);
+      } else {
+        console.error("Error:", error.message);
+      }
+      alert('Something went wrong while submitting the form. Please try again.');
+    }
     setForm(initialFormState);
     setLogo(null);
     setLogoPreview(null);
@@ -64,11 +98,11 @@ const AccountInfoForm = () => {
             <img src={logoPreview} alt="Logo Preview" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
           ) : (
             <>
-               LOGO<br /><span style={{fontSize:'12px',color:'#009fe3'}}> </span>
+              LOGO<br /><span style={{ fontSize: '12px', color: '#009fe3' }}> </span>
             </>
           )}
         </div>
-        <label className="update-logo-btn" style={{cursor:'pointer'}}>
+        <label className="update-logo-btn" style={{ cursor: 'pointer' }}>
           Update Logo
           <input
             type="file"
@@ -80,14 +114,14 @@ const AccountInfoForm = () => {
         </label>
       </div>
       <form className="account-info-form" onSubmit={handleSubmit}>
-        <label>Business Name*<input name="businessName" value={form.businessName} onChange={handleChange} /></label>
-        <label>Industry Type*<input name="industryType" value={form.industryType} onChange={handleChange} /></label>
+        <label>Business Name*<input name="businessName" value={form.business_name} onChange={handleChange} /></label>
+        <label>Industry Type*<input name="industryType" value={form.industry_type} onChange={handleChange} /></label>
         <div className="form-row">
           <label>Start Date*
-            <input name="startDate" type="date" value={form.startDate} onChange={handleChange} />
+            <input name="startDate" type="date" value={form.start_date} onChange={handleChange} />
           </label>
           <label>End Date*
-            <input name="endDate" type="date" value={form.endDate} onChange={handleChange} />
+            <input name="endDate" type="date" value={form.end_date} onChange={handleChange} />
           </label>
         </div>
         <label>Email ID*<input name="email" value={form.email} onChange={handleChange} /></label>
