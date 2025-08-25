@@ -28,7 +28,10 @@ import DashboardLayout from './components/Layouts/DashboardLayout';
 import GMBDataFetcher from './components/gmb_accounts/GMBDataFetcher';
 import ProfileStrengthAnalysis from './components/ProfileStrengthAnalysis/ProfileStrengthAnalysis';
 import ProfileStrengthResults from './components/ProfileStrengthResults/ProfileStrengthResults';
+import ProfileStrengthPage from './components/ProfileStrength/ProfileStrengthPage';
 import 'leaflet/dist/leaflet.css';
+import HeatmapPage from './components/Heatmap/HeatmapPage';
+import HeatmapResultsPage from './components/HeatmapResults/HeatmapResultsPage';
 
 
 
@@ -69,6 +72,9 @@ function App() {
         <Route path="/free-website" element={<FreeWebsite />} />
         <Route path="/profile-strength-analysis" element={<ProfileStrengthAnalysis />} />
         <Route path="/profile-strength-results" element={<ProfileStrengthResults />} />
+        <Route path="/profile-strength" element={<ProfileStrengthPage />} />
+        <Route path="/heatmap" element={<HeatmapPage />} />
+        <Route path="/heatmap-results" element={<HeatmapResultsPage />} />
       </Routes>
     </Router>
   );

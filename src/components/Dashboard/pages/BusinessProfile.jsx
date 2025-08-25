@@ -55,6 +55,16 @@ const HeaderSubtitle = styled(Typography)(({ theme }) => ({
   margin: 0
 }));
 
+const HeaderLink = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '12px',
+  fontWeight: 600,
+  color: '#0B91D6',
+  cursor: 'pointer',
+  textDecoration: 'underline',
+  width: 'fit-content'
+}));
+
 const SwitchAccountButton = styled(Button)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
@@ -999,6 +1009,16 @@ const BusinessProfile = () => {
   // Determine verification status: prefer account's verification state, fallback to location metadata
   const isVerified = (currentAccount?.verificationState === 'VERIFIED') || (locationData?.metadata?.verified === true);
 
+  // Build Heatmap link handler now that we have businessTitle and locationData
+  const currentPlaceId = locationData?.metadata?.placeId || locationData?.placeId || '';
+  const goToHeatmap = () => {
+    const qs = new URLSearchParams();
+    if (businessTitle) qs.set('businessName', businessTitle);
+    if (currentPlaceId) qs.set('placeId', currentPlaceId);
+    if (businessAddress) qs.set('address', businessAddress);
+    navigate(`/profile-strength?${qs.toString()}`);
+  };
+
   // Calculate real reviews data
   const reviews = reviewsData?.reviews || [];
   // Map Google's enum star ratings (e.g., 'FIVE') to numeric values
@@ -1162,6 +1182,7 @@ const BusinessProfile = () => {
             <HeaderLeft>
               <HeaderTitle>Your Business Profile</HeaderTitle>
               <HeaderSubtitle>Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.</HeaderSubtitle>
+              <HeaderLink onClick={goToHeatmap}>Open Heatmap</HeaderLink>
             </HeaderLeft>
             <SwitchAccountButton
               onClick={(event) => {
