@@ -166,7 +166,13 @@ function GoogleConnect() {
                             fontSize: '16px',
                             cursor: 'pointer',
                             marginTop: '10px'
-                        }}
+                        }}     
+
+
+
+
+
+
                     >
                         Skip for Now
                     </button>

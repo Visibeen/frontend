@@ -7,10 +7,8 @@ import VerifyOtp from './components/Login/VerifyOtp';
 import Dashboard from './components/Dashboard/Dashboard';
 import ProfilePage from './components/Dashboard/pages/Profile';
 import BusinessProfile from './components/Dashboard/pages/BusinessProfile';
-import Layout from './components/Layouts/Layout';
 import ResetPassword from './components/Login/ResetPassword';
 import EDMsFlow from './components/edms/EDMsFlow';
-import ProtectedRoute from './components/ProtectedRoute';
 import AccountNotFound from './components/gmb_accounts/AccountNotFound';
 import GoogleConnect from './components/Services/GoogleConnect';
 import ContactUs from './components/gmb_accounts/ContactUs';
@@ -21,12 +19,15 @@ import Reputation from './components/Reputation/Reputation';
 import ReferEarn from './components/Refer&Earn';
 import MyAccount from './components/MyAccount';
 import FontStyleSelection from './components/Create_Post/FontStyleSelection';
+import FreeWebsite from './components/FreeWebsite/FreeWebsite';
+import GSTInfoForm from './GstAccounts/GSTInfoForm';
+import CROInfoForm from './GstAccounts/CROInfoForm';
+import AccountInfoForm from './GstAccounts/AccountInfoForm';
+import DashboardLayout from './components/Layouts/DashboardLayout';
 import GMBDataFetcher from './components/gmb_accounts/GMBDataFetcher';
 import ProfileStrengthAnalysis from './components/ProfileStrengthAnalysis/ProfileStrengthAnalysis';
 import ProfileStrengthResults from './components/ProfileStrengthResults/ProfileStrengthResults';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet/dist/leaflet.css';
-import FreeWebsite from './components/FreeWebsite/FreeWebsite';
 
 
 
@@ -59,7 +60,10 @@ function App() {
         <Route path="/reputation" element={<Reputation />} />
         <Route path="/font-style" element={<FontStyleSelection />} />
         <Route path="/refer-earn" element={<ReferEarn />} />
-        <Route path="/my-account" element={<MyAccount />}  />
+        <Route path="/my-account/*" element={<MyAccount />}  />
+        <Route path="/my-account/account-information" element={<DashboardLayout><AccountInfoForm /></DashboardLayout>} />
+        <Route path="/my-account/gst-information" element={<DashboardLayout><GSTInfoForm /></DashboardLayout>} />
+        <Route path="/my-account/cro-information" element={<DashboardLayout><CROInfoForm /></DashboardLayout>} />
         <Route path="/gmb-data" element={<GMBDataFetcher />} />
         <Route path="/free-website" element={<FreeWebsite />} />
         <Route path="/profile-strength-analysis" element={<ProfileStrengthAnalysis />} />
