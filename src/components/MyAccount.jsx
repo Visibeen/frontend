@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import { Box, Typography, Button, Stack } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import DashboardLayout from './Layouts/DashboardLayout';
@@ -97,15 +98,13 @@ export default function MyAccountPage() {
     website: 'www.visibeen.com'
   });
 
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState(null);
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
-  };
-
-  const handleCancel = () => {
-    console.log('Cancel clicked');
   };
 
   const handleUpdate = () => {
@@ -116,8 +115,31 @@ export default function MyAccountPage() {
     console.log('Logo upload clicked');
   };
 
+  const handleLogoFileSelected = (file) => {
+    // Create a preview URL for the selected image
+    const url = URL.createObjectURL(file);
+    setLogoPreviewUrl((prev) => {
+      // Revoke previous to avoid leaks
+      if (prev) URL.revokeObjectURL(prev);
+      return url;
+    });
+    // Optionally, you can store the file in state or upload here
+    // e.g., setFormData((p) => ({ ...p, logoFile: file }))
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+    };
+  }, [logoPreviewUrl]);
+
   const handleEdit = (field) => {
     console.log('Edit clicked for:', field);
+  };
+
+  const handleCancel = () => {
+    console.log('Cancel clicked');
   };
 
   const handleCalendarClick = (field) => {
@@ -136,7 +158,11 @@ export default function MyAccountPage() {
           Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing
         </SectionDescription>
 
-        <LogoUploadSection onLogoClick={handleLogoClick} />
+        <LogoUploadSection 
+          onLogoClick={handleLogoClick}
+          onFileSelected={handleLogoFileSelected}
+          logoSrc={logoPreviewUrl}
+        />
 
         <FormCard>
           <FormContainer>

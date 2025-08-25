@@ -167,13 +167,24 @@ const BusinessTable = ({ businesses = [] }) => {
                 {(() => {
                   const vs = (business.verificationState || business.verification_status || '').toUpperCase();
                   let derived = business.status;
+                  // Consider boolean flags and nested hints
+                  const boolVerified = (
+                    business.verified === true ||
+                    business?.locationState?.isVerified === true ||
+                    business?.metadata?.verified === true
+                  );
                   if (!derived) {
-                    if (vs === 'VERIFIED') derived = 'verified';
-                    else if (vs === 'PENDING_VERIFICATION' || vs === 'PENDING') derived = 'pending_verification';
+                    if (boolVerified || vs === 'VERIFIED') derived = 'verified';
+                    else if (
+                      vs === 'PENDING_VERIFICATION' ||
+                      vs === 'PENDING' ||
+                      vs === 'VERIFICATION_PENDING' ||
+                      vs === 'NEEDS_VERIFICATION'
+                    ) derived = 'pending_verification';
                     else if (vs === 'SUSPENDED') derived = 'suspended';
                     else if (vs) derived = 'unverified';
                   }
-                  return <StatusBadge status={(derived || 'unverified')} />;
+                  return <StatusBadge status={(derived || (boolVerified ? 'verified' : 'unverified'))} />;
                 })()}
               </TableCell>
               <TableCell>
