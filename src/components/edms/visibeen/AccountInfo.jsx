@@ -9,13 +9,13 @@ const AccountInfo = () => {
   const navigate = useNavigate();
   const { accountInfo, updateAccountInfo } = useAccount();
   const [form, setForm] = useState({
-    name: accountInfo.name,
-    business_name: accountInfo.business_name,
-    address: accountInfo.address,
-    email: accountInfo.email,
-    contact_number: accountInfo.contact_number,
-    alternative_contact_number: accountInfo.alternative_contact_number,
-    website: accountInfo.website,
+    name: accountInfo.name || '',
+    business_name: accountInfo.business_name || '',
+    address: accountInfo.address || '',
+    email: accountInfo.email || '',
+    contact_number: accountInfo.contact_number || '',
+    alternative_contact_number: accountInfo.alternative_contact_number || '',
+    website: accountInfo.website || '',
   });
 
   const [loading, setLoading] = useState(false);

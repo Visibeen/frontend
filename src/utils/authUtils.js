@@ -4,10 +4,15 @@ export const setSession = (user) => {
     console.warn('Invalid user passed to setSession:', user);
     return;
   }
-  // Store in both localStorage and sessionStorage for consistency
+  
   localStorage.setItem('user', JSON.stringify(user));
   sessionStorage.setItem('user', JSON.stringify(user));
-  console.log('Session set:', user);
+  
+  // Add this: Store token separately for backend compatibility
+  if (user.token) {
+    localStorage.setItem('authToken', user.token);
+    sessionStorage.setItem('authToken', user.token);
+  }
 };
 
 
