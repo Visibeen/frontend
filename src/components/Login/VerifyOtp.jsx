@@ -9,15 +9,18 @@ function VerifyOtp() {
   /* 1️⃣  Get the email saved in ForgotPassword.jsx*/
   const email = sessionStorage.getItem('resetEmail');
   console.log('✅ Email from sessionStorage:', email);
+  
+  // Ensure email is a string, not an object
+  const emailString = typeof email === 'string' ? email : email?.email || '';
 
   /* 2️⃣  If the page was refreshed and email is gone,
          send the user back to start the flow again*/
   useEffect(() => {
-    if (!email) {
+    if (!emailString) {
       alert('Session expired. Please begin the reset process again.');
       navigate('/forgot-password');
     }
-  }, [email, navigate]);
+  }, [emailString, navigate]);
 
 
     // 3️⃣  Verify the OTP
@@ -31,7 +34,7 @@ function VerifyOtp() {
       const res  = await fetch('http://localhost:8089/api/auth/verify-otp', {
         method : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ email, otp })
+        body   : JSON.stringify({ email: emailString, otp })
       });
 
       const data = await res.json();
@@ -39,7 +42,7 @@ function VerifyOtp() {
 
       if (data.success) {
         /* Success → go to Reset Password */
-        navigate('/reset-password');
+        navigate('/login');
       } else {
         alert(data.message || 'Invalid OTP');
       }

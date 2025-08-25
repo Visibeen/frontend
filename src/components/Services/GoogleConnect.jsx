@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, provider } from '../../firebase';
+import { auth, provider, signInWithPopup } from '../../firebase';
+import { GoogleAuthProvider } from 'firebase/auth';
 import { getSession } from '../../utils/authUtils';
+import tokenManager from '../../auth/TokenManager';
+import api from '../../services/api';
 import logo from '../../assets/VisibeenLogo.png';
 import logo1 from '../../assets/googleLogo.jpg';
 
@@ -27,11 +30,11 @@ function GoogleConnect() {
                 'prompt': 'consent'
             });
 
-            const result = await auth.signInWithPopup(provider);
+            const result = await signInWithPopup(auth, provider);
             
             // Get the OAuth access token (not Firebase ID token)
-            const credential = result.credential;
-            const googleAccessToken = credential.accessToken;
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            const googleAccessToken = credential?.accessToken || '';
             
             console.log('Google OAuth token received:', !!googleAccessToken);
 
@@ -39,7 +42,8 @@ function GoogleConnect() {
             const gmbResponse = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts`, {
                 headers: {
                     'Authorization': `Bearer ${googleAccessToken}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-Goog-User-Project': process.env.REACT_APP_GMB_PROJECT_ID
                 }
             });
 
@@ -54,26 +58,42 @@ function GoogleConnect() {
                 console.log('No GMB accounts found or API error:', gmbData.error);
             }
 
-            // Link Google account to current user with GMB verification
-            const res = await fetch('http://localhost:8089/api/v1/customer/auth/link-google', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentUser.token}`
-                },
-                body: JSON.stringify({
-                    googleEmail: result.user.email,
-                    googleAccessToken: googleAccessToken,
-                    googleDisplayName: result.user.displayName,
-                    hasGMBAccess: hasGMBAccess,
-                    gmbAccounts: hasGMBAccess ? gmbData.accounts : []
-                }),
-            });
+            // Persist token via TokenManager (plus legacy storage)
+            try {
+                sessionStorage.setItem('googleAccessToken', googleAccessToken);
+                localStorage.setItem('googleAccessToken', googleAccessToken);
+            } catch (_) {}
+            if (googleAccessToken) {
+                tokenManager.set('google', { access_token: googleAccessToken, token_type: 'Bearer' });
+            }
 
-            const data = await res.json();
+            // Link Google account to current user with GMB verification
+            const data = await api.post('/customer/auth/link-google', {
+                googleEmail: result.user.email,
+                googleAccessToken: googleAccessToken,
+                googleDisplayName: result.user.displayName,
+                hasGMBAccess: hasGMBAccess,
+                gmbAccounts: hasGMBAccess ? gmbData.accounts : []
+            });
             console.log('Backend response:', data);
 
-            if (res.ok) {
+            // Save any refresh token/expires info returned by backend
+            const maybeTokens = data?.tokens || data?.data || data;
+            if (maybeTokens) {
+                const access_token = maybeTokens.access_token || maybeTokens.googleAccessToken || googleAccessToken;
+                const refresh_token = maybeTokens.refresh_token || maybeTokens.googleRefreshToken;
+                const expires_in = maybeTokens.expires_in;
+                const expires_at = maybeTokens.expires_at;
+                tokenManager.set('google', {
+                    access_token,
+                    refresh_token,
+                    token_type: 'Bearer',
+                    expires_in,
+                    expires_at
+                });
+            }
+
+            if (data) {
                 // Navigate based on actual GMB access
                 if (hasGMBAccess) {
                     console.log('User has GMB access, redirecting to dashboard');
@@ -82,8 +102,6 @@ function GoogleConnect() {
                     console.log('User does not have GMB access, redirecting to account not found');
                     navigate('/account-not-found');
                 }
-            } else {
-                setError(data.message || 'Failed to connect Google account');
             }
         } catch (error) {
             if (error.code === 'auth/popup-closed-by-user') {

@@ -1,4 +1,6 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8089/api/v1';
+import { getSession } from '../utils/authUtils';
+import { refreshIfPossible } from '../auth/backendRefresher';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://52.44.140.230:8089/api/v1';
 
 class ApiService {
     constructor() {
@@ -7,22 +9,63 @@ class ApiService {
 
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
+        const session = getSession();
+        // Prefer an explicitly provided Authorization header in options.headers
+        const explicitAuth = options.headers && options.headers.Authorization;
+        // Derive bearer from session or localStorage fallback
+        const sessionToken = session?.token || session?.access_token;
+        const storedToken = (!sessionToken && typeof window !== 'undefined') ? localStorage.getItem('authToken') : undefined;
+        const derivedBearer = sessionToken || storedToken;
+        const bearer = explicitAuth || (derivedBearer ? `Bearer ${derivedBearer}` : undefined);
         const config = {
+            ...options,
             headers: {
                 'Content-Type': 'application/json',
-                ...options.headers,
+                ...(bearer && { Authorization: bearer }),
+                ...(options.headers || {}),
             },
-            ...options,
         };
 
         try {
-            const response = await fetch(url, config);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            let response = await fetch(url, config);
+
+            let rawText = await response.text();
+            let parsed;
+            try {
+                parsed = rawText ? JSON.parse(rawText) : null;
+            } catch (_) {
+                parsed = null;
             }
-            
-            return await response.json();
+
+            if (!response.ok) {
+                // If unauthorized, attempt refresh once and retry
+                if (response.status === 401) {
+                    const refreshed = await refreshIfPossible(this.baseURL);
+                    if (refreshed?.token) {
+                        const retryHeaders = {
+                            ...config.headers,
+                            Authorization: `Bearer ${refreshed.token}`
+                        };
+                        response = await fetch(url, { ...config, headers: retryHeaders });
+                        rawText = await response.text();
+                        try {
+                            parsed = rawText ? JSON.parse(rawText) : null;
+                        } catch (_) {
+                            parsed = null;
+                        }
+                        if (response.ok) {
+                            return parsed;
+                        }
+                    }
+                }
+                const message = parsed?.message || parsed?.error || rawText || `HTTP error! status: ${response.status}`;
+                const err = new Error(message);
+                err.status = response.status;
+                err.body = parsed || rawText;
+                throw err;
+            }
+
+            return parsed;
         } catch (error) {
             console.error('API request failed:', error);
             throw error;

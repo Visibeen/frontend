@@ -1,0 +1,58 @@
+.image-with-account-info {
+  position: relative;
+  display: inline-block;
+  margin: 10px;
+}
+
+.account-info-canvas {
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.account-info-canvas:hover {
+  transform: scale(1.02);
+}
+
+.download-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 150, 230, 0.9);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.download-btn:hover {
+  background: rgba(0, 150, 230, 1);
+}
+
+.download-btn i {
+  font-size: 14px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .image-with-account-info {
+    margin: 5px;
+  }
+  
+  .download-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  
+  .download-btn i {
+    font-size: 12px;
+  }
+} 

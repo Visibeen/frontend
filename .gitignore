@@ -12,6 +12,9 @@
 /build
 
 # misc
+.env.*
+*.env
+.env
 .DS_Store
 .env.local
 .env.development.local
@@ -21,3 +24,51 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# ======================================
+# Node.js & Frontend Project .gitignore
+# ======================================
+
+# Dependencies
+node_modules/
+
+# Build outputs (React, Vite, Next.js, CRA, etc.)
+dist/
+build/
+.next/
+out/
+.cache/
+.temp/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files (ignore all env files)
+.env
+.env.*
+*.env
+
+# Local development settings
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage / test
+coverage/
+*.lcov
+
+# Storybook build
+storybook-static/
+
+# Misc
+*.log
+*.pid
+*.seed
+*.pid.lock

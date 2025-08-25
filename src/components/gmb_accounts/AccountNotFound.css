@@ -1,0 +1,282 @@
+/* Modal overlay and container */
+.anf-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  backdrop-filter: blur(2px);
+}
+
+.anf-modal {
+  width: 680px;
+  max-width: calc(100% - 32px);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  animation: anf-pop 160ms ease-out;
+}
+
+.anf-modal-header {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  z-index: 1;
+}
+
+.back-button {
+  background: transparent;
+  border: none;
+  color: #1f2937;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 150ms ease;
+}
+
+.back-button:hover {
+  background: #f3f4f6;
+}
+
+/* Search input */
+.anf-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 20px 0 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fafafa;
+  transition: box-shadow 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.anf-search-icon {
+  font-size: 16px;
+  color: #9ca3af;
+}
+
+.anf-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #111827;
+}
+
+.anf-search-box:focus-within {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+  background: #ffffff;
+}
+
+.anf-search-box.is-searching {
+  background: linear-gradient(90deg, #fafafa, #ffffff, #fafafa);
+  background-size: 200% 100%;
+  animation: anf-sheen 900ms ease-in-out infinite;
+}
+
+.anf-modal-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding: 12px 20px 0 20px;
+}
+
+.anf-btn {
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.anf-btn-primary {
+  background: #2563eb;
+  color: #ffffff;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.anf-btn-outline {
+  background: #fff;
+  color: #2563eb;
+  border: 1px solid #93c5fd;
+}
+
+.anf-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.anf-btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
+  transform: translateY(-1px);
+}
+
+.anf-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.2);
+}
+
+/* Results */
+.search-results {
+  padding: 16px 20px 20px 20px;
+  max-height: 52vh;
+  overflow: auto;
+}
+
+.anf-results-title {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.result-item {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  cursor: pointer;
+}
+
+.result-checkbox {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid #cbd5e1;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.result-checkbox:checked {
+  border-color: #2563eb;
+  background: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.result-checkbox:checked::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%);
+  background: #fff;
+}
+
+.result-texts {
+  display: flex;
+  flex-direction: column;
+}
+
+.result-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.result-sub {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.empty-state {
+  padding: 16px 20px 24px 20px;
+  color: #6b7280;
+}
+
+/* Root CTA and layout bits on ANF page (kept minimal to avoid conflicts) */
+.anf-btn.anf-btn-primary {
+  background: #2563eb;
+}
+
+/* Content areas for the stepper modal */
+.modal-container .modal-content {
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.progress-container {
+  height: 6px;
+  background: #eef2ff;
+  margin: 8px 20px 0 20px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #60a5fa, #2563eb);
+  transition: width 220ms ease;
+}
+
+.content-container {
+  padding: 16px 20px 24px 20px;
+}
+
+.buttons-container {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.button-primary, .button-secondary {
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: #3b82f6;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.button-primary:hover, .button-secondary:hover {
+  transform: translateY(-1px);
+  color: #e5e7eb;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+}
+
+.step-content {
+  margin: 0 0 8px 0;
+}
+
+.step-description {
+  margin: 0;
+  color: #6b7280;
+}
+
+/* Animations */
+@keyframes anf-pop {
+  0% { transform: scale(0.98); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes anf-sheen {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+

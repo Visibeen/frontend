@@ -5,21 +5,29 @@ import Login from './components/Login/Login';
 import ForgotPassword from './components/Login/ForgotPassword';
 import VerifyOtp from './components/Login/VerifyOtp';
 import Dashboard from './components/Dashboard/Dashboard';
+import Homepage from './components/Homepage/Homepage';
 import ProfilePage from './components/Dashboard/pages/Profile';
-import Layout from './components/Layouts/Layout';
+import BusinessProfile from './components/Dashboard/pages/BusinessProfile';
 import ResetPassword from './components/Login/ResetPassword';
-import GetEDMs from './components/Dashboard/pages/GetEDMs/GetEDMsForm';
-import UploadLogo from './components/Dashboard/pages/GetEDMs/UploadLogo';
-import ProtectedRoute from './components/ProtectedRoute';
+import EDMsFlow from './components/edms/EDMsFlow';
 import AccountNotFound from './components/gmb_accounts/AccountNotFound';
 import GoogleConnect from './components/Services/GoogleConnect';
 import ContactUs from './components/gmb_accounts/ContactUs';
 import CreateAccount from './components/gmb_accounts/Create_Account/CreateAccount';
 import CreatePostForm from './components/Create_Post/CreatePostForm';
+import CreatePost from './components/CreatePost/CreatePost';
+import Reputation from './components/Reputation/Reputation';
 import ReferEarn from './components/Refer&Earn';
 import MyAccount from './components/MyAccount';
 import FontStyleSelection from './components/Create_Post/FontStyleSelection';
-import 'leaflet/dist/leaflet.css';
+import FreeWebsite from './components/FreeWebsite/FreeWebsite';
+import GSTInfoForm from './GstAccounts/GSTInfoForm';
+import CROInfoForm from './GstAccounts/CROInfoForm';
+import AccountInfoForm from './GstAccounts/AccountInfoForm';
+import DashboardLayout from './components/Layouts/DashboardLayout';
+import GMBDataFetcher from './components/gmb_accounts/GMBDataFetcher';
+import ProfileStrengthAnalysis from './components/ProfileStrengthAnalysis/ProfileStrengthAnalysis';
+import ProfileStrengthResults from './components/ProfileStrengthResults/ProfileStrengthResults';
 import 'leaflet/dist/leaflet.css';
 
 
@@ -34,24 +42,33 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Homepage />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/connect-google" element={<GoogleConnect />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/verify-otp" element={<VerifyOtp />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard/></Layout> </ProtectedRoute>} />
+        {/* <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} /> */}
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile/:locationId" element={<ProfilePage />} />
+        <Route path="/business-profile" element={<BusinessProfile />} />
         <Route path="*" element={<div>Page Not Found</div>} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/get-edms" element={<GetEDMs />} />
-        <Route path="/upload-logo" element={<UploadLogo />} />
+        <Route path="/get-edms/*" element={<EDMsFlow />} />
         <Route path="/account-not-found" element={<AccountNotFound />} />
         <Route path="/contact-us" element={<ContactUs />} />
         <Route path="/create-account" element={<CreateAccount />} />
         <Route path="/create-post" element={<CreatePostForm />} />
+        <Route path="/reputation" element={<Reputation />} />
         <Route path="/font-style" element={<FontStyleSelection />} />
         <Route path="/refer-earn" element={<ReferEarn />} />
-        <Route path="/my-account" element={<MyAccount />}  />
+        <Route path="/my-account/*" element={<MyAccount />}  />
+        <Route path="/my-account/account-information" element={<DashboardLayout><AccountInfoForm /></DashboardLayout>} />
+        <Route path="/my-account/gst-information" element={<DashboardLayout><GSTInfoForm /></DashboardLayout>} />
+        <Route path="/my-account/cro-information" element={<DashboardLayout><CROInfoForm /></DashboardLayout>} />
+        <Route path="/gmb-data" element={<GMBDataFetcher />} />
+        <Route path="/free-website" element={<FreeWebsite />} />
+        <Route path="/profile-strength-analysis" element={<ProfileStrengthAnalysis />} />
+        <Route path="/profile-strength-results" element={<ProfileStrengthResults />} />
       </Routes>
     </Router>
   );

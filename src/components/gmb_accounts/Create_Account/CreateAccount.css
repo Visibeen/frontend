@@ -1,0 +1,139 @@
+/* Updated styles for timing table */
+.card {
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    margin-top: -90px;
+    margin-bottom: 24px;
+}
+
+
+.title {
+    font-size: 24px;
+    color: #333333;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: #666666;
+    margin-bottom: 20px;
+}
+
+.form-section {
+    margin-bottom: 20px;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.radio-content {
+    margin-left: 8px;
+}
+
+.radio-title {
+    font-weight: bold;
+}
+
+.radio-description {
+    color: #999999;
+    font-size: 12px;
+}
+
+.business-hours-table {
+    margin-top: 20px;
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+}
+
+.day-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.day-name {
+    width: 20%;
+    margin-left: -30px;
+    font-weight: bold;
+}
+
+.day-checkbox-container {
+    width: 20%;
+    margin-left: 20px;
+}
+
+.time-inputs-container {
+    width: 50%;
+    display: flex;
+    opacity: 0.5;
+}
+
+.time-group {
+    margin-right: 10px;
+}
+
+.time-input {
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.add-hours-btn {
+    background: none;
+    border: none;
+    margin-bottom: -25px;
+    color: #1e88e5;
+    cursor: pointer;
+}
+
+.extra-hours {
+    margin-top: 20px;
+}
+
+.extra-hours-title {
+    font-weight: bold;
+}
+
+.hour-tags {
+    display: flex;
+    gap: 5px;
+}
+
+.hour-tag {
+    background: none;
+    border: 1px solid #ddd;
+    padding: 6px 12px;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+    font-weight: bold;
+    color: #333;
+}
+
+.hour-tag:hover {
+    background-color: #eee;
+    color: #000;
+}
+
+.save-btn {
+    background-color: #1e88e5;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 24px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 20px;
+}

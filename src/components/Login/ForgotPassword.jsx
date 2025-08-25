@@ -1,63 +1,65 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import logo from '../../assets/VisibeenLogo.png';
+import React from 'react';
+import { Box } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import LeftPanel from './LeftPanel';
+import AuthRightPanelLayout from './AuthRightPanelLayout';
+import ForgotPasswordForm from './ForgotPasswordForm';
+import DecorativeBackgroundIcon from './DecorativeBackgroundIcon';
 
+const PageContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  height: '100vh',
+  width: '100%',
+  overflow: 'hidden',
+  backgroundColor: '#F8F8F8',
+  '@media (max-width: 768px)': {
+    flexDirection: 'column'
+  }
+}));
+
+const RightPanelWithBackground = styled(Box)(({ theme }) => ({
+  width: '50%',
+  minHeight: '100vh',
+  backgroundColor: '#ffffff',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: theme.spacing(5),
+  position: 'relative'
+}));
+
+const BackgroundDecoration = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  zIndex: 0,
+  opacity: 0.07
+}));
+
+const ContentWrapper = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  zIndex: 1
+}));
 
 function ForgotPassword() {
-  const [email, setEmail] = useState('');
-  const navigate = useNavigate();
-
-  const handleSendOtp = async () => {
-    const res = await fetch('http://localhost:8089/api/auth/forgot-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      // ✅ This line is MISSING or not working
-      sessionStorage.setItem('resetEmail', email);
-      console.log("✅ Email saved in sessionStorage:", email);
-
-      alert('OTP sent to your email.');
-      navigate('/verify-otp');
-    } else {
-      alert(data.message || "OTP not sent");
-    }
-  };
-
-
   return (
-    <div className="main-container">
-      <div className="left-side">
-        <img src={logo} alt="logo" id='img' />
-        <div className="left-content">
-          <h2>Think Unlimited</h2>
-          <p>Join over <b>62,000+ Digital marketing and business<br></br></b> owners around the world</p>
-        </div>
-
-        <div className="services-test">Services test</div>
-      </div>
-
-      <div className="right-side">
-        <div className="login-container">
-          <h2>Enter Phone Number</h2>
-          <p class="form-subtitle">Get OTP on registered phone number to login your account</p>
-
-          {/* {error && <p style={{ color: 'red' }}>{error}</p>} */}
-          <div className="form-group">
-            <input type="text" placeholder="Enter Email address:" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <button className="login-btn" onClick={handleSendOtp}>Send OTP</button>
-          <div class="otp-info">
-            We sent a 6-digit code to +91XXXXXX45
-          </div>
-          <p className="register-link">Remember password? <Link to="/">Login</Link></p>
-        </div>
-      </div>
-    </div>
+    <PageContainer>
+      <LeftPanel />
+      <RightPanelWithBackground>
+        <BackgroundDecoration>
+          <DecorativeBackgroundIcon width={225} height={168} color="#121927" />
+        </BackgroundDecoration>
+        <ContentWrapper>
+          <AuthRightPanelLayout 
+            heading="Forgot Password" 
+            subtext="Restore your password with few easy step!"
+          >
+            <ForgotPasswordForm />
+          </AuthRightPanelLayout>
+        </ContentWrapper>
+      </RightPanelWithBackground>
+    </PageContainer>
   );
 }
 

@@ -1,0 +1,227 @@
+.header {
+  background: #0093dd;
+  color: #fff;
+  padding: 0;
+}
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 30px;
+  height: 60px;
+}
+.logo {
+  height: 36px;
+}
+.nav {
+  display: flex;
+  gap: 30px;
+}
+.nav a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  position: relative;
+}
+.dropdown {
+  position: relative;
+}
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 30px;
+  left: 0;
+  background: #0093dd;
+  min-width: 140px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 1;
+}
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+.dropdown-content a {
+  display: block;
+  padding: 10px 15px;
+  color: #fff;
+  text-decoration: none;
+}
+.dropdown-content a:hover {
+  background: #007bbd;
+}
+.main-section {
+  background: #fff;
+  margin: 40px auto 0 auto;
+  border-radius: 12px;
+  max-width: 50%;
+  width: 999px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  padding: 40px 0 0 0;
+}
+.center {
+  text-align: center;
+}
+.main-logo {
+  margin: 0 auto 2px auto;
+  display: block;
+  width: 150px;
+  height: 50px;
+}
+.welcome {
+  font-size: 16px;
+  color: #222;
+  margin-bottom: 8px;
+}
+.company {
+  font-size: 28px;
+  color: #0093dd;
+  font-weight: 600;
+  margin-bottom: 30px;
+}
+.purchase-section {
+  background: #fff;
+  margin: 40px auto;
+  border-radius: 12px;
+  max-width: 700px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  padding: 30px 0;
+}
+.purchase-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.purchase-desc {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 30px;
+}
+.form {
+  max-width: 500px;
+  margin: 0 auto;
+  background: #f8fafd;
+  border-radius: 10px;
+  padding: 30px 30px 20px 30px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+}
+.form-group {
+  margin-bottom: 18px;
+  text-align: left;
+}
+.form label {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 5px;
+  color: #222;
+}
+.form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  font-size: 15px;
+}
+.form input:focus {
+  border-color: #0093dd;
+  outline: none;
+}
+.form .required {
+  color: #e53935;
+  margin-left: 2px;
+}
+.form button {
+  width: 100%;
+  background: #0093dd;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+.form button:hover {
+  background: #007bbd;
+}
+.footer {
+  background: linear-gradient(90deg, #0B91D6 0%, #EF232A 100%);
+  color: #fff;
+  padding: 40px 0 0 0;
+  margin-top: 60px;
+}
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 0 30px;
+}
+.footer-logo {
+  height: 36px;
+  margin-bottom: 10px;
+}
+.footer-col {
+  flex: 1 1 180px;
+  margin-bottom: 30px;
+}
+.footer-col h4 {
+  font-size: 15px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.footer-col ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.footer-col ul li {
+  margin-bottom: 8px;
+}
+.footer-col ul li a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+}
+.footer-col ul li a:hover {
+  text-decoration: underline;
+}
+.footer-newsletter input[type="email"] {
+  padding: 8px 10px;
+  border: none;
+  border-radius: 4px 0 0 4px;
+  width: 160px;
+}
+.footer-newsletter button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  background: #fff;
+  color: #e52d27;
+  font-weight: 600;
+  cursor: pointer;
+}
+.footer-bottom {
+  border-top: 1px solid rgba(255,255,255,0.2);
+  margin-top: 20px;
+  padding: 18px 30px 10px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+.footer-social {
+  display: flex;
+  gap: 12px;
+}
+.footer-social a {
+  color: #fff;
+  font-size: 18px;
+}
+@media (max-width: 900px) {
+  .main-section, .purchase-section { width: 98%; }
+  .footer-content { flex-direction: column; }
+  .footer-col { margin-bottom: 20px; }
+} 
