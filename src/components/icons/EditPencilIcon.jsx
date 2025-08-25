@@ -1,0 +1,3 @@
+import * as React from "react";
+const Component = props => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17.166 17.099" {...props}><path xmlns="http://www.w3.org/2000/svg" stroke="#0B91D6" strokeLinecap="round" strokeLinejoin="round" strokeWidth={0.551} d="m11.026 2.498 2.932 3.069M9.07 16.823h7.819M1.253 12.73l-.977 4.093L4.185 15.8 15.508 3.945a2.1 2.1 0 0 0 .572-1.447c0-.543-.206-1.063-.572-1.447L15.34.875a1.9 1.9 0 0 0-1.382-.599c-.518 0-1.015.215-1.382.599z" /></svg>;
+export default Component;
