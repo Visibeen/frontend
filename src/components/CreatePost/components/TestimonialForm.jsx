@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Stack, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import axios from 'axios';
 import UserProfile from './UserProfile';
 import FormFields from './FormFields';
-import PostService from '../../../services/PostService';
 
 const FormContainer = styled(Box)(({ theme }) => ({
   backgroundColor: '#ffffff',
@@ -66,58 +66,67 @@ const NextButton = styled(Button)(({ theme }) => ({
 
 const TestimonialForm = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: 'John wick',
-    testimonialText: 'I ordered cake for my wife . And it\'s very delicious Owner are very helpful and very polite.And cake was very very tastyThanks lot',
-    backgroundColor: '#EF232A'
+  const [form, setForm] = useState({
+    name: '',
+    testimonial_text: ''
   });
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleFormChange = (field, value) => {
-    setFormData(prev => ({
+  const [loading, setLoading] = useState(false);
+  const handleChange = (field, value) => {
+    setForm((prev) => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleCancel = () => {
-    // Handle cancel action
-    console.log('Cancel clicked');
-  };
-
-  const handleNext = async () => {
+  const handleSaveAndNext = async (e) => {
+    e.preventDefault();
+    const user = localStorage.getItem('authToken')
+    const payload = {
+      user_id: user?.id,
+      name: form.name,
+      testimonial_text: form.testimonial_text
+    };
     try {
-      setSubmitting(true);
-      // POST to create post API
-      await PostService.createPost({
-        name: formData.name,
-        testimonialText: formData.testimonialText,
-        backgroundColor: formData.backgroundColor
-      });
-      navigate('/font-style');
-    } catch (err) {
-      console.error('Failed to create post', err);
-      alert('Failed to create post. Please try again.');
+      setLoading(true);
+      const token = JSON.parse(localStorage.getItem('userData'));
+      const response = await axios.post(
+        'http://52.44.140.230:8089/api/v1/customer/post/create-post',
+        payload,
+        {
+          headers: {
+            Authorization: `${token?.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('API Response:', response.data);
+      navigate('/upload-logo');
+    } catch (error) {
+      if (error.response) {
+        console.error('Server responded with:', error.response.data);
+      } else {
+        console.error('Error:', error.message);
+      }
+      alert('Something went wrong while submitting the form. Please try again.');
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
+  const handleCancel = () => {
+    navigate('/');
+  };
   return (
     <FormContainer>
       <FormContent>
         <UserProfile />
-
-        <FormFields 
-          formData={formData}
-          onFormChange={handleFormChange}
-        />
-
+        <FormFields formData={form} onFormChange={handleChange} />
         <ActionButtons>
-          <CancelButton onClick={handleCancel} disabled={submitting}>
+          <CancelButton onClick={handleCancel} disabled={loading}>
             Cancel
           </CancelButton>
-          <NextButton onClick={handleNext} disabled={submitting}>
+          <NextButton onClick={handleSaveAndNext} disabled={loading}>
             Next
           </NextButton>
         </ActionButtons>

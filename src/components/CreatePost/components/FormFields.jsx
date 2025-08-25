@@ -24,19 +24,46 @@ const FieldLabel = styled(Typography)(({ theme }) => ({
 
 const FormFields = ({ formData, onFormChange }) => {
   return (
-    <FieldsContainer>
-      <NameField 
-        value={formData.name}
-        onChange={(value) => onFormChange('name', value)}
-      />
-      
-      <TestimonialTextField 
-        value={formData.testimonialText}
-        onChange={(value) => onFormChange('testimonialText', value)}
-      />
-      
-    </FieldsContainer>
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div>
+        <label htmlFor="name">Name</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          value={formData.name}
+          onChange={(e) => onFormChange("name", e.target.value)}
+          placeholder="Enter your name"
+          style={{
+            width: "100%",
+            padding: "10px",
+            border: "1px solid #ccc",
+            borderRadius: "6px"
+          }}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="testimonial_text">Testimonial</label>
+        <textarea
+          id="testimonial_text"
+          name="testimonial_text"
+          value={formData.testimonial_text}
+          onChange={(e) => onFormChange("testimonial_text", e.target.value)}
+          placeholder="Write your testimonial..."
+          rows="4"
+          style={{
+            width: "100%",
+            padding: "10px",
+            border: "1px solid #ccc",
+            borderRadius: "6px",
+            resize: "vertical"
+          }}
+        />
+      </div>
+    </div>
   );
 };
+
 
 export default FormFields;
