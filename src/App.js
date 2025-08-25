@@ -5,6 +5,7 @@ import Login from './components/Login/Login';
 import ForgotPassword from './components/Login/ForgotPassword';
 import VerifyOtp from './components/Login/VerifyOtp';
 import Dashboard from './components/Dashboard/Dashboard';
+import Homepage from './components/Homepage/Homepage';
 import ProfilePage from './components/Dashboard/pages/Profile';
 import BusinessProfile from './components/Dashboard/pages/BusinessProfile';
 import ResetPassword from './components/Login/ResetPassword';
@@ -41,11 +42,11 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Homepage />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/connect-google" element={<GoogleConnect />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/verify-otp" element={<VerifyOtp />} />
         {/* <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} /> */}
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile/:locationId" element={<ProfilePage />} />

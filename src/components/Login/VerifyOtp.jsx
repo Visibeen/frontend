@@ -42,7 +42,7 @@ function VerifyOtp() {
 
       if (data.success) {
         /* Success → go to Reset Password */
-        navigate('/reset-password');
+        navigate('/login');
       } else {
         alert(data.message || 'Invalid OTP');
       }

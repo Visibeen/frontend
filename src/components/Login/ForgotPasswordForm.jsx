@@ -120,7 +120,7 @@ const ForgotPasswordForm = () => {
         
         // Navigate to verify OTP after showing success message
         setTimeout(() => {
-          navigate('/verify-otp');
+          navigate('');
         }, 2000);
       } else {
         alert(data.message || "OTP not sent");
@@ -158,7 +158,7 @@ const ForgotPasswordForm = () => {
 
       <LoginText>
         Remember password?{' '}
-        <LoginLink onClick={() => navigate('/')}>
+        <LoginLink onClick={() => navigate('/login')}>
           Login
         </LoginLink>
       </LoginText>

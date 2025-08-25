@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -27,16 +27,36 @@ const UpdateText = styled(Typography)(({ theme }) => ({
   }
 }));
 
-const LogoUploadSection = ({ onLogoClick }) => {
+const LogoUploadSection = ({ onLogoClick, onFileSelected, logoSrc }) => {
+  const fileInputRef = useRef(null);
+
+  const handleClick = () => {
+    if (onLogoClick) onLogoClick();
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (onFileSelected) onFileSelected(file);
+  };
+
   return (
     <LogoContainer>
       <LogoImage 
-        src="/assets/ibe-logo-update.svg" 
+        src={logoSrc || '/assets/ibe-logo-update.svg'} 
         alt="Business Logo"
       />
-      <UpdateText onClick={onLogoClick}>
+      <UpdateText onClick={handleClick}>
         Update Logo
       </UpdateText>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleChange}
+      />
     </LogoContainer>
   );
 };

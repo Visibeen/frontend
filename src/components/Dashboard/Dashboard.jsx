@@ -229,11 +229,31 @@ const Dashboard = () => {
                           loc.storefrontAddress?.locality ||
                           loc.storefrontAddress?.administrativeArea ||
                           'Address not available';
-          const ver = loc.metadata?.verification?.status || account?.verificationState || 'UNKNOWN';
+
+          // Derive verification from multiple possible sources
+          const rawVer = (
+            loc?.metadata?.verification?.status ||
+            loc?.locationState?.verificationStatus ||
+            (loc?.locationState?.isVerified ? 'VERIFIED' : '') ||
+            (loc?.metadata?.verified ? 'VERIFIED' : '') ||
+            account?.verificationState ||
+            'UNKNOWN'
+          );
+
+          const verUpper = String(rawVer).toUpperCase();
           let mappedStatus = 'unverified';
-          if (ver === 'VERIFIED') mappedStatus = 'verified';
-          else if (ver === 'PENDING_VERIFICATION' || ver === 'PENDING') mappedStatus = 'pending_verification';
-          else if (ver === 'SUSPENDED') mappedStatus = 'suspended';
+          if (verUpper === 'VERIFIED') mappedStatus = 'verified';
+          else if (
+            verUpper === 'PENDING_VERIFICATION' ||
+            verUpper === 'PENDING' ||
+            verUpper === 'VERIFICATION_PENDING' ||
+            verUpper === 'NEEDS_VERIFICATION'
+          ) {
+            mappedStatus = 'pending_verification';
+          } else if (verUpper === 'SUSPENDED') {
+            mappedStatus = 'suspended';
+          }
+
           return {
             id,
             name: loc.title || account?.accountName || envBusinessName,
@@ -242,8 +262,12 @@ const Dashboard = () => {
             optimizationScore: 'N/A',
             locationId: id,
             accountType: account?.type || 'UNKNOWN',
-            verificationState: ver,
-            vettedState: account?.vettedState || 'UNKNOWN'
+            verificationState: rawVer,
+            vettedState: account?.vettedState || 'UNKNOWN',
+            // expose hints for table just in case
+            verified: mappedStatus === 'verified',
+            locationState: loc?.locationState || null,
+            metadata: loc?.metadata || null,
           };
         });
 

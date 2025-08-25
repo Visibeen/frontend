@@ -1,133 +1,125 @@
-import React from 'react';
-import { Box, Typography, Card, CardContent, Button, Stack } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography, Stack } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import DashboardLayout from '../Layouts/DashboardLayout';
+import TemplateGrid from './TemplateGrid';
+import TemplatePreview from './TemplatePreview';
 
 const PageContainer = styled(Box)(({ theme }) => ({
-  maxWidth: '1200px',
-  margin: '0 auto'
+  display: 'flex',
+  alignItems: 'center',
+  flexDirection: 'column',
+  gap: '40px'
 }));
 
-const PageHeader = styled(Box)(({ theme }) => ({
-  marginBottom: '32px'
+const PageHeader = styled(Stack)(({ theme }) => ({
+  gap: '16px',
+  marginLeft: '-590px',
 }));
 
 const PageTitle = styled(Typography)(({ theme }) => ({
-  fontSize: '32px',
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '28px',
   fontWeight: 600,
-  color: '#121927',
-  marginBottom: '8px',
-  fontFamily: 'Inter, sans-serif'
+  color: '#0B91D6'
 }));
 
 const PageSubtitle = styled(Typography)(({ theme }) => ({
-  fontSize: '16px',
-  fontWeight: 400,
-  color: '#6b7280',
-  fontFamily: 'Inter, sans-serif'
-}));
-
-const FeatureCard = styled(Card)(({ theme }) => ({
-  borderRadius: '12px',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-  border: '1px solid #f0f0f0',
-  height: '100%'
-}));
-
-const FeatureTitle = styled(Typography)(({ theme }) => ({
-  fontSize: '20px',
-  fontWeight: 600,
-  color: '#121927',
-  marginBottom: '12px',
-  fontFamily: 'Inter, sans-serif'
-}));
-
-const FeatureDescription = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
   fontSize: '14px',
   fontWeight: 400,
-  color: '#6b7280',
-  lineHeight: 1.6,
-  marginBottom: '20px',
-  fontFamily: 'Inter, sans-serif'
+  color: '#30302E'
 }));
 
-const CreateButton = styled(Button)(({ theme }) => ({
-  backgroundColor: '#0B91D6',
-  color: '#ffffff',
+const SectionContainer = styled(Stack)(({ theme }) => ({
+  gap: '40px'
+}));
+
+const SectionHeader = styled(Stack)(({ theme }) => ({
+  gap: '6px',
+  textAlign: 'center'
+}));
+
+const SectionTitle = styled(Typography)(({ theme }) => ({
   fontFamily: 'Inter, sans-serif',
-  fontSize: '12px',
-  width: '200px',
-  height: '45px',
+  fontSize: '26px',
   fontWeight: 600,
-  textTransform: 'none',
-  padding: '12px 24px',
-  borderRadius: '8px',
-  '&:hover': {
-    backgroundColor: '#0277BD'
-  }
+  color: '#121927'
 }));
 
-const FeaturesGrid = styled(Box)(({ theme }) => ({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-  gap: '24px',
-  marginBottom: '40px'
-}));
-
-const CTASection = styled(Box)(({ theme }) => ({
-  textAlign: 'center',
-  padding: '40px',
-  backgroundColor: '#f8fafc',
-  borderRadius: '12px',
-  border: '1px solid #e2e8f0'
-}));
-
-const CTATitle = styled(Typography)(({ theme }) => ({
-  fontSize: '24px',
-  fontWeight: 600,
-  color: '#121927',
-  marginBottom: '12px',
-  fontFamily: 'Inter, sans-serif'
-}));
-
-const CTADescription = styled(Typography)(({ theme }) => ({
-  fontSize: '16px',
+const SectionSubtitle = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '14px',
   fontWeight: 400,
-  color: '#6b7280',
-  marginBottom: '24px',
-  fontFamily: 'Inter, sans-serif'
+  color: '#30302E'
 }));
 
 const FreeWebsite = () => {
-  const features = [
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [previewTemplate, setPreviewTemplate] = useState(null);
+
+  const templates = [
     {
-      title: 'Professional Templates',
-      description: 'Choose from a variety of professionally designed templates that are perfect for your business type and industry.'
+      id: 1,
+      name: 'Template 1',
+      image: '/images/template1.png',
+      category: 'Real Estate'
     },
     {
-      title: 'Mobile Responsive',
-      description: 'Your website will look great on all devices - desktop, tablet, and mobile phones with automatic responsive design.'
+      id: 2,
+      name: 'Template 2',
+      image: '/images/template2.png',
+      category: 'Business Services'
     },
     {
-      title: 'SEO Optimized',
-      description: 'Built-in SEO features help your website rank better in search engines and attract more customers.'
+      id: 3,
+      name: 'Template 3',
+      image: '/images/template3.png',
+      category: 'Office Space'
     },
     {
-      title: 'Easy to Update',
-      description: 'Simple drag-and-drop editor allows you to update content, images, and information without any technical skills.'
+      id: 4,
+      name: 'Template 4',
+      image: '/images/template4.png',
+      category: 'Web Development'
     },
     {
-      title: 'Custom Domain',
-      description: 'Get a professional custom domain name that matches your business name and builds trust with customers.'
+      id: 5,
+      name: 'Template 5',
+      image: '/images/template5.png',
+      category: 'Digital Marketing'
     },
     {
-      title: 'Analytics Dashboard',
-      description: 'Track your website performance with detailed analytics including visitor stats, popular pages, and more.'
+      id: 6,
+      name: 'Template 6',
+      image: '/images/template6.png',
+      category: 'Car Repair'
     }
   ];
 
-  const handleCreateWebsite = () => {
-    console.log('Create website clicked');
+  const handleTemplateSelect = (template) => {
+    setSelectedTemplate(selectedTemplate?.id === template.id ? null : template);
+  };
+
+  const handlePreview = (template) => {
+    setPreviewTemplate(template);
+  };
+
+  const handleLive = (template) => {
+    // Open live demo in new tab
+    window.open(`/live-demo/${template.id}`, '_blank');
+  };
+
+  const handleUseTemplate = (template) => {
+    // Handle template selection for website creation
+    console.log('Using template:', template);
+    setPreviewTemplate(null);
+    // Navigate to website builder or show success message
+  };
+
+  const handleViewLive = (template) => {
+    setPreviewTemplate(null);
+    handleLive(template);
   };
 
   return (
@@ -136,31 +128,34 @@ const FreeWebsite = () => {
         <PageHeader>
           <PageTitle>Free Website</PageTitle>
           <PageSubtitle>
-            Create a professional website for your business in minutes - completely free
+            Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.
           </PageSubtitle>
         </PageHeader>
 
-        <FeaturesGrid>
-          {features.map((feature, index) => (
-            <FeatureCard key={index}>
-              <CardContent sx={{ padding: '24px' }}>
-                <FeatureTitle>{feature.title}</FeatureTitle>
-                <FeatureDescription>{feature.description}</FeatureDescription>
-              </CardContent>
-            </FeatureCard>
-          ))}
-        </FeaturesGrid>
+        <SectionContainer>
+          <SectionHeader>
+            <SectionTitle>Select Templates</SectionTitle>
+            <SectionSubtitle>
+              Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing
+            </SectionSubtitle>
+          </SectionHeader>
 
-        <CTASection>
-          <CTATitle>Ready to Create Your Website?</CTATitle>
-          <CTADescription>
-            Join thousands of businesses who have already created their professional website with our free platform.
-          </CTADescription>
-          <CreateButton onClick={handleCreateWebsite}>
-            Create My Website Now
-          </CreateButton>
-        </CTASection>
+          <TemplateGrid
+            templates={templates}
+            selectedTemplate={selectedTemplate}
+            onTemplateSelect={handleTemplateSelect}
+            onPreview={handlePreview}
+            onLive={handleLive}
+          />
+        </SectionContainer>
       </PageContainer>
+
+      <TemplatePreview
+        template={previewTemplate}
+        onClose={() => setPreviewTemplate(null)}
+        onUseTemplate={handleUseTemplate}
+        onViewLive={handleViewLive}
+      />
     </DashboardLayout>
   );
 };
