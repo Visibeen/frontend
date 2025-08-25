@@ -10,7 +10,13 @@ class ApiService {
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
         const session = getSession();
-        const bearer = session?.token ? `Bearer ${session.token}` : undefined;
+        // Prefer an explicitly provided Authorization header in options.headers
+        const explicitAuth = options.headers && options.headers.Authorization;
+        // Derive bearer from session or localStorage fallback
+        const sessionToken = session?.token || session?.access_token;
+        const storedToken = (!sessionToken && typeof window !== 'undefined') ? localStorage.getItem('authToken') : undefined;
+        const derivedBearer = sessionToken || storedToken;
+        const bearer = explicitAuth || (derivedBearer ? `Bearer ${derivedBearer}` : undefined);
         const config = {
             ...options,
             headers: {

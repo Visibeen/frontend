@@ -26,6 +26,7 @@ import ProfileStrengthAnalysis from './components/ProfileStrengthAnalysis/Profil
 import ProfileStrengthResults from './components/ProfileStrengthResults/ProfileStrengthResults';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet/dist/leaflet.css';
+import FreeWebsite from './components/FreeWebsite/FreeWebsite';
 
 
 
@@ -60,6 +61,7 @@ function App() {
         <Route path="/refer-earn" element={<ReferEarn />} />
         <Route path="/my-account" element={<MyAccount />}  />
         <Route path="/gmb-data" element={<GMBDataFetcher />} />
+        <Route path="/free-website" element={<FreeWebsite />} />
         <Route path="/profile-strength-analysis" element={<ProfileStrengthAnalysis />} />
         <Route path="/profile-strength-results" element={<ProfileStrengthResults />} />
       </Routes>

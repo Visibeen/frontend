@@ -452,7 +452,7 @@ const ProductTemplateDisplay = () => {
           gap: '20px', 
           marginTop: '20px', 
           padding: '15px', 
-          backgroundColor: 'rgba(255,255,255,0.1)', 
+          backgroundColor: 'rgba(216, 205, 205, 0.1)', 
           borderRadius: '10px', 
           backdropFilter: 'blur(10px)' 
         }}> 
@@ -461,7 +461,9 @@ const ProductTemplateDisplay = () => {
             style={{ 
               padding: '10px 20px', 
               backgroundColor: '#9C27B0', 
-              color: 'white', 
+              color: 'white',
+              width: '200px',
+              height: '45px',
               border: 'none', 
               borderRadius: '5px', 
               cursor: 'pointer',  
@@ -474,27 +476,9 @@ const ProductTemplateDisplay = () => {
           > 
             🎨 Change Footer Color 
           </button> 
-          <div style={{ 
-            padding: '10px 20px',
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}>
-            <span>Current Color:</span>
-            <div style={{
-              width: '20px',
-              height: '20px',
-              backgroundColor: customFooterColor,
-              borderRadius: '3px',
-              border: '2px solid white'
-            }}></div>
-            <span>{customFooterColor}</span>
-          </div>
+         
+           
+          
         </div>
         
         {/* Color Picker Modal */}
@@ -545,22 +529,6 @@ const ProductTemplateDisplay = () => {
                 </div>
               </div>
               
-              {/* Custom Color Picker */}
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ margin: '0 0 10px 0' }}>Custom Color:</h4>
-                <input
-                  type="color"
-                  value={customFooterColor}
-                  onChange={(e) => handleColorChange(e.target.value)}
-                  style={{
-                    width: '100%',
-                    height: '50px',
-                    border: '2px solid #ddd',
-                    borderRadius: '5px',
-                    cursor: 'pointer'
-                  }}
-                />
-              </div>
               
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
