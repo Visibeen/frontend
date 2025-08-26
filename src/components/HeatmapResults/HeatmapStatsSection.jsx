@@ -9,7 +9,7 @@ import PieChartFilledIcon from '../icons/PieChartFilledIcon';
 import BlueCircleChartIcon from '../icons/BlueCircleChartIcon';
 
 const StatsContainer = styled(Stack)(({ theme }) => ({
-  direction: 'row',
+  flexDirection: 'row',
   gap: '13px',
   flexWrap: 'wrap'
 }));

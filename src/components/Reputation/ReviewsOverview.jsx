@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Box, Typography, Stack, Button, Dialog, DialogTitle, DialogContent, IconButton, Divider } from '@mui/material';
+import { Box, Typography, Stack, Button, Dialog, DialogTitle, DialogContent, IconButton, Divider, Rating } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { useNavigate } from 'react-router-dom';
 import CloseIcon from '@mui/icons-material/Close';
+import DynamicReviewsChart from './DynamicReviewsChart';
 
 const OverviewContainer = styled(Box)(({ theme }) => ({
   border: '0.6px solid #F6F0F0',
@@ -147,32 +149,127 @@ const CloseBtn = styled(IconButton)(({ theme }) => ({
   height: 32,
 }));
 
-const ReviewsOverview = () => {
+const ReviewsOverview = ({ reputationData }) => {
   const [reviewsOpen, setReviewsOpen] = useState(false);
-  const reviewsData = [
-    { rating: '5.0', count: '14k reviews' },
-    { rating: '4.0', count: '4k reviews' },
-    { rating: '3.0', count: '7k reviews' },
-    { rating: '2.0', count: '11k reviews' },
-    { rating: '1.0', count: '8k reviews' }
-  ];
-  const sampleReviews = [
-    {
-      author: 'John D.',
-      rating: 5,
-      text: 'Great service and quick response. Highly recommended!'
-    },
-    {
-      author: 'Priya S.',
-      rating: 4,
-      text: 'Good overall experience. Could improve waiting time.'
-    },
-    {
-      author: 'Aman K.',
-      rating: 3,
-      text: 'Average. Got the job done but not very personable.'
+  const navigate = useNavigate();
+  
+  // Use real data if available, otherwise fallback to mock data
+  const data = reputationData || {
+    yourBusiness: { rating: 4.8, reviewCount: 44 },
+    reviews: []
+  };
+  
+  // Generate rating distribution based on real data
+  const generateRatingDistribution = (avgRating, totalReviews, actualReviews = []) => {
+    const safeRating = Number(avgRating) || 4.2;
+    const safeTotal = Number(totalReviews) || 0;
+    
+    // If we have actual reviews, calculate real distribution
+    if (actualReviews && actualReviews.length > 0) {
+      const distribution = [];
+      for (let i = 5; i >= 1; i--) {
+        const count = actualReviews.filter(review => {
+          const rating = typeof review.starRating === 'string' ? 
+            ({ ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[review.starRating] || 0) : 
+            Number(review.starRating) || 0;
+          return Math.round(rating) === i;
+        }).length;
+        
+        distribution.push({
+          rating: `${i}.0`,
+          count: count > 1000 ? `${Math.floor(count/1000)}k reviews` : `${count} reviews`
+        });
+      }
+      return distribution;
     }
-  ];
+    
+    const distribution = [];
+    for (let i = 5; i >= 1; i--) {
+      let percentage;
+      if (i === Math.floor(safeRating)) {
+        percentage = 0.4; // 40% for the main rating
+      } else if (Math.abs(i - safeRating) === 1) {
+        percentage = 0.25; // 25% for adjacent ratings
+      } else {
+        percentage = Math.max(0.05, 0.1 / Math.max(1, Math.abs(i - safeRating))); // Decreasing for others
+      }
+      
+      const count = Math.max(0, Math.floor(safeTotal * percentage));
+      distribution.push({
+        rating: `${i}.0`,
+        count: count > 1000 ? `${Math.floor(count/1000)}k reviews` : `${count} reviews`
+      });
+    }
+    return distribution;
+  };
+  
+  // Handle new GMBService format - reviews might be in data.reviews.reviews
+  const reviewsArray = Array.isArray(data.reviews) ? data.reviews : (data.reviews?.reviews || []);
+  
+  const reviewsData = generateRatingDistribution(data.yourBusiness.rating, data.yourBusiness.reviewCount, reviewsArray);
+  
+  // Compute average rating once for star + number
+  const avgRatingValue = reviewsArray.length > 0 ?
+    Number((reviewsArray.reduce((sum, review) => {
+      const rating = typeof review.starRating === 'string' ? 
+        ({ ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[review.starRating] || 0) : 
+        Number(review.starRating) || 0;
+      return sum + rating;
+    }, 0) / reviewsArray.length).toFixed(1)) :
+    Number((Number(data.yourBusiness.rating) || 4.0).toFixed(1));
+
+  // Use real reviews if available, otherwise use sample data
+  const displayReviews = reviewsArray && reviewsArray.length > 0 
+    ? reviewsArray.slice(0, 5).map(review => ({
+        author: review.reviewer?.displayName || 'Anonymous',
+        rating: review.starRating || 5,
+        text: review.comment || 'No comment provided',
+        date: review.createTime ? new Date(review.createTime).toLocaleDateString() : 'Recent'
+      }))
+    : [
+        {
+          author: 'John D.',
+          rating: 5,
+          text: 'Great service and quick response. Highly recommended!',
+          date: 'Recent'
+        },
+        {
+          author: 'Priya S.',
+          rating: 4,
+          text: 'Good overall experience. Could improve waiting time.',
+          date: 'Recent'
+        },
+        {
+          author: 'Aman K.',
+          rating: 3,
+          text: 'Average. Got the job done but not very personable.',
+          date: 'Recent'
+        }
+      ];
+  
+  // Calculate recent review stats with safe number handling
+  const calculateRecentReviews = (reviews, days) => {
+    if (!Array.isArray(reviews) || reviews.length === 0) {
+      return days === 7 ? 2 : 8; // Default values
+    }
+    
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      
+      return reviews.filter(r => {
+        if (!r.createTime) return false;
+        const reviewDate = new Date(r.createTime);
+        return !isNaN(reviewDate.getTime()) && reviewDate >= cutoffDate;
+      }).length;
+    } catch (error) {
+      console.warn('Error calculating recent reviews:', error);
+      return days === 7 ? 2 : 8;
+    }
+  };
+  
+  const recentReviews7Days = calculateRecentReviews(data.reviews, 7);
+  const recentReviews30Days = calculateRecentReviews(data.reviews, 30);
 
   return (
     <OverviewContainer>
@@ -180,13 +277,21 @@ const ReviewsOverview = () => {
         <TopSection>
           <RatingSection>
             <RatingDisplay>
-              <RatingNumber>4.80</RatingNumber>
-              <StarRating src="/images/star-rating.svg" alt="4.8 star rating" />
+              <RatingNumber>{avgRatingValue.toFixed(1)}</RatingNumber>
+              <Rating 
+                value={avgRatingValue}
+                precision={0.1}
+                readOnly
+                sx={{
+                  color: '#FFC107',
+                  '& .MuiRating-iconEmpty': { color: '#E0E0E0' }
+                }}
+              />
             </RatingDisplay>
             <VerticalDivider />
           </RatingSection>
           
-          <ReviewsChart src="/images/reviews-bar-chart.svg" alt="Reviews distribution chart" />
+          <DynamicReviewsChart reputationData={reputationData} />
           
           <ReviewsList>
             {reviewsData.map((review, index) => (
@@ -200,18 +305,18 @@ const ReviewsOverview = () => {
 
         <BottomSection>
           <StatCard>
-            <StatNumber>12</StatNumber>
+            <StatNumber>{recentReviews7Days}</StatNumber>
             <StatLabel>Reviews In Last 7 Days</StatLabel>
           </StatCard>
           <StatDivider />
           <StatCard>
-            <StatNumber>12</StatNumber>
+            <StatNumber>{recentReviews30Days}</StatNumber>
             <StatLabel>Reviews In Last 30 Days</StatLabel>
           </StatCard>
         </BottomSection>
       </OverviewContent>
       
-      <ReadReviewButton sx={{ marginTop: '24px' }} onClick={() => setReviewsOpen(true)}>
+      <ReadReviewButton sx={{ marginTop: '24px' }} onClick={() => navigate('/reviews-management')}>
         Read Reviews
       </ReadReviewButton>
 
@@ -235,22 +340,27 @@ const ReviewsOverview = () => {
         </DialogTitle>
         <DialogContent sx={{ pt: 0, pb: 2 }}>
           <Stack gap={2}>
-            {sampleReviews.map((r, idx) => (
+            {displayReviews.map((r, idx) => (
               <Box key={idx}>
                 <Stack gap={0.5}>
                   <Stack direction="row" alignItems="center" justifyContent="space-between">
                     <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: 14, fontWeight: 600, color: '#121927' }}>
                       {r.author}
                     </Typography>
-                    <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500, color: '#0B91D6' }}>
-                      {r.rating}.0 ★
-                    </Typography>
+                    <Stack direction="row" alignItems="center" gap={1}>
+                      <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500, color: '#0B91D6' }}>
+                        {r.rating}.0 ★
+                      </Typography>
+                      <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#666' }}>
+                        {r.date}
+                      </Typography>
+                    </Stack>
                   </Stack>
                   <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#30302E' }}>
                     {r.text}
                   </Typography>
                 </Stack>
-                {idx < sampleReviews.length - 1 && <Divider sx={{ mt: 1.5 }} />}
+                {idx < displayReviews.length - 1 && <Divider sx={{ mt: 1.5 }} />}
               </Box>
             ))}
           </Stack>

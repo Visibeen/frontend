@@ -5,59 +5,119 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://52.44.140.230
 class ApiService {
     constructor() {
         this.baseURL = API_BASE_URL;
+        this.autoRefreshEnabled = true;
+        this.maxRetries = 1;
+    }
+
+    // Enable/disable automatic token refresh
+    setAutoRefresh(enabled) {
+        this.autoRefreshEnabled = enabled;
+    }
+
+    // Automatically extract token from multiple sources
+    getAutoToken() {
+        const session = getSession();
+        
+        if (!session) {
+            // Fallback to localStorage
+            return (typeof window !== 'undefined') 
+                ? localStorage.getItem('authToken') || localStorage.getItem('access_token')
+                : null;
+        }
+        
+        // Try multiple token field names for flexibility
+        const tokenSources = [
+            session.token,
+            session.access_token,
+            session.accessToken,
+            session.authToken,
+            session.bearer_token,
+            session.user?.token,
+            session.data?.token
+        ];
+        
+        const sessionToken = tokenSources.find(token => token);
+        
+        // Fallback to localStorage if no session token
+        if (!sessionToken && typeof window !== 'undefined') {
+            return localStorage.getItem('authToken') || localStorage.getItem('access_token');
+        }
+            
+        return sessionToken;
+    }
+
+    // Automatically prepare headers with token
+    prepareHeaders(customHeaders = {}) {
+        const token = this.getAutoToken();
+        const baseHeaders = {
+            'Content-Type': 'application/json',
+        };
+
+        // Add token in multiple header formats for maximum compatibility
+        if (token) {
+            return {
+                ...baseHeaders,
+                'Authorization': `Bearer ${token}`,
+                'x-access-token': token,
+                'token': token,
+                ...customHeaders
+            };
+        }
+
+        return {
+            ...baseHeaders,
+            ...customHeaders
+        };
     }
 
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
-        const session = getSession();
-        // Prefer an explicitly provided Authorization header in options.headers
-        const explicitAuth = options.headers && options.headers.Authorization;
-        // Derive bearer from session or localStorage fallback
-        const sessionToken = session?.token || session?.access_token;
-        const storedToken = (!sessionToken && typeof window !== 'undefined') ? localStorage.getItem('authToken') : undefined;
-        const derivedBearer = sessionToken || storedToken;
-        const bearer = explicitAuth || (derivedBearer ? `Bearer ${derivedBearer}` : undefined);
+        
+        // Skip auto token for explicitly unauthenticated requests
+        const skipAuth = options.noAuth === true;
+        
         const config = {
             ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...(bearer && { Authorization: bearer }),
-                ...(options.headers || {}),
-            },
+            headers: skipAuth 
+                ? { 'Content-Type': 'application/json', ...(options.headers || {}) }
+                : this.prepareHeaders(options.headers)
         };
 
         try {
             let response = await fetch(url, config);
-
             let rawText = await response.text();
             let parsed;
+            
             try {
                 parsed = rawText ? JSON.parse(rawText) : null;
             } catch (_) {
                 parsed = null;
             }
 
-            if (!response.ok) {
-                // If unauthorized, attempt refresh once and retry
-                if (response.status === 401) {
-                    const refreshed = await refreshIfPossible(this.baseURL);
-                    if (refreshed?.token) {
-                        const retryHeaders = {
-                            ...config.headers,
-                            Authorization: `Bearer ${refreshed.token}`
-                        };
-                        response = await fetch(url, { ...config, headers: retryHeaders });
-                        rawText = await response.text();
-                        try {
-                            parsed = rawText ? JSON.parse(rawText) : null;
-                        } catch (_) {
-                            parsed = null;
-                        }
-                        if (response.ok) {
-                            return parsed;
-                        }
+            // Auto refresh on 401 if enabled and not already skipping auth
+            if (!response.ok && response.status === 401 && this.autoRefreshEnabled && !skipAuth) {
+                const refreshed = await refreshIfPossible(this.baseURL);
+                if (refreshed?.token) {
+                    // Retry with new token using full header preparation
+                    const retryHeaders = this.prepareHeaders(options.headers);
+                    const retryConfig = { ...config, headers: retryHeaders };
+                    
+                    response = await fetch(url, retryConfig);
+                    rawText = await response.text();
+                    
+                    try {
+                        parsed = rawText ? JSON.parse(rawText) : null;
+                    } catch (_) {
+                        parsed = null;
+                    }
+                    
+                    if (response.ok) {
+                        return parsed;
                     }
                 }
+            }
+
+            if (!response.ok) {
                 const message = parsed?.message || parsed?.error || rawText || `HTTP error! status: ${response.status}`;
                 const err = new Error(message);
                 err.status = response.status;

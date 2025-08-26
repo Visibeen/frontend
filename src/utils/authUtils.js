@@ -37,4 +37,121 @@ export const getSession = () => {
 export const clearSession = () => {
   localStorage.removeItem('user');
   sessionStorage.removeItem('user');
+  // Clear token storage as well
+  localStorage.removeItem('authToken');
+  sessionStorage.removeItem('authToken');
+  localStorage.removeItem('access_token');
+  sessionStorage.removeItem('access_token');
 };
+
+// Auto token extraction with multiple fallbacks
+export function getAutoToken() {
+    const session = getSession();
+    
+    if (!session) {
+        // Fallback to localStorage tokens
+        return (typeof window !== 'undefined') 
+            ? localStorage.getItem('authToken') || localStorage.getItem('access_token')
+            : null;
+    }
+    
+    // Try multiple token field names
+    const tokenFields = [
+        'token',
+        'access_token',
+        'accessToken', 
+        'authToken',
+        'bearer_token'
+    ];
+    
+    // Direct session level
+    for (const field of tokenFields) {
+        if (session[field]) return session[field];
+    }
+    
+    // Nested in user object
+    if (session.user) {
+        for (const field of tokenFields) {
+            if (session.user[field]) return session.user[field];
+        }
+    }
+    
+    // Nested in data object
+    if (session.data) {
+        for (const field of tokenFields) {
+            if (session.data[field]) return session.data[field];
+        }
+    }
+    
+    // Final fallback to localStorage
+    return (typeof window !== 'undefined') 
+        ? localStorage.getItem('authToken') || localStorage.getItem('access_token')
+        : null;
+}
+
+// Auto setup session with token normalization
+export function setAutoSession(authResponse) {
+    if (!authResponse || typeof authResponse !== 'object') {
+        console.warn('Invalid auth response passed to setAutoSession:', authResponse);
+        return null;
+    }
+    
+    let session = { ...authResponse };
+    
+    // Normalize token field names
+    if (authResponse.access_token && !authResponse.token) {
+        session.token = authResponse.access_token;
+    }
+    if (authResponse.accessToken && !authResponse.token) {
+        session.token = authResponse.accessToken;
+    }
+    if (authResponse.authToken && !authResponse.token) {
+        session.token = authResponse.authToken;
+    }
+    
+    // Set expiry if not present but expires_in is available
+    if (authResponse.expires_in && !authResponse.expires_at) {
+        session.expires_at = new Date(Date.now() + (authResponse.expires_in * 1000)).toISOString();
+    }
+    
+    // Normalize refresh token
+    if (authResponse.refreshToken && !authResponse.refresh_token) {
+        session.refresh_token = authResponse.refreshToken;
+    }
+    
+    console.log('🔐 Setting auto session with normalized tokens');
+    setSession(session);
+    return session;
+}
+
+// Session validation utility
+export function isSessionValid() {
+    const session = getSession();
+    const token = getAutoToken();
+    
+    return {
+        hasSession: !!session,
+        hasToken: !!token,
+        hasRefreshToken: !!(session?.refresh_token || session?.refreshToken),
+        isValid: !!(session && token)
+    };
+}
+
+// Debug session information
+export function getSessionDebugInfo() {
+    const session = getSession();
+    const autoToken = getAutoToken();
+    const validation = isSessionValid();
+    
+    return {
+        session,
+        autoToken: autoToken ? `${autoToken.substring(0, 10)}...` : 'No token',
+        validation,
+        localStorage: {
+            authToken: typeof window !== 'undefined' && localStorage.getItem('authToken') 
+                ? `${localStorage.getItem('authToken').substring(0, 10)}...` : 'No token',
+            accessToken: typeof window !== 'undefined' && localStorage.getItem('access_token') 
+                ? `${localStorage.getItem('access_token').substring(0, 10)}...` : 'No token'
+        }
+    };
+}

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Box, Stack, Typography, TextField, Button, FormControlLabel, Checkbox, Link } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import { setSession } from '../../utils/authUtils';
+import { setAutoSession } from '../../utils/authUtils';
+import AutoTokenManager from '../../utils/autoTokenUtils';
 import api from '../../services/api';
 
 const FormContainer = styled(Stack)(({ theme }) => ({
@@ -149,22 +150,44 @@ const LoginForm = ({ onGoogleLogin }) => {
         account_type: 'manual'
       });
 
-      // Store user data in session
+      console.log('🔐 Login response received:', response);
+
+      // Enhanced session handling with auto token management
       let userData = response.data || response;
+      
+      // Handle different response structures
       if (userData.user) {
-        userData = userData.user;
+        // If user data is nested, extract it but preserve tokens at root level
+        userData = {
+          ...userData.user,
+          token: userData.token || userData.user.token,
+          refresh_token: userData.refresh_token || userData.user.refresh_token
+        };
       }
 
-      // Persist via both legacy keys and centralized session util
-      localStorage.setItem('authToken', JSON.stringify(userData.token));
+      // Use enhanced auto session setup
+      const normalizedSession = setAutoSession(userData);
+      
+      // Legacy storage for backward compatibility
+      if (userData.token) {
+        localStorage.setItem('authToken', userData.token);
+      }
       localStorage.setItem('userData', JSON.stringify(userData));
-      setSession(userData);
+
+      // Start automatic token management
+      console.log('🚀 Starting auto token management...');
+      AutoTokenManager.startAutoRefresh();
+      
+      // Log token status for debugging
+      const tokenStatus = AutoTokenManager.getTokenStatus();
+      console.log('🔍 Token status after login:', tokenStatus);
 
       setTimeout(() => {
         navigate('/dashboard');
       }, 100);
 
     } catch (err) {
+      console.error('❌ Login error:', err);
       setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);

@@ -13,7 +13,7 @@ const MapContainer = styled(Paper)(({ theme }) => ({
 }));
 
 const MapContent = styled(Stack)(({ theme }) => ({
-  direction: 'row',
+  flexDirection: 'row',
   height: '590px'
 }));
 
@@ -49,6 +49,7 @@ const HeatmapMapSection = ({ mapData, businessName }) => {
           <HeatmapMapView 
             pins={mapData.pins}
             center={mapData.center}
+            radius={mapData.radius || 2}
           />
         </MapPanel>
       </MapContent>

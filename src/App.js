@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Register from './components/Register/Register'
 import Login from './components/Login/Login';
@@ -32,6 +32,10 @@ import ProfileStrengthPage from './components/ProfileStrength/ProfileStrengthPag
 import 'leaflet/dist/leaflet.css';
 import HeatmapPage from './components/Heatmap/HeatmapPage';
 import HeatmapResultsPage from './components/HeatmapResults/HeatmapResultsPage';
+import ReviewsManagement from './components/ReviewsManagement/ReviewsManagement';
+import AutoTokenManager from './utils/autoTokenUtils';
+import { getSession } from './utils/authUtils';
+
 
 
 
@@ -42,6 +46,19 @@ import './styles.css';
 
 
 function App() {
+  useEffect(() => {
+    // Initialize auto token management if user is logged in
+    const session = getSession();
+    if (session && session.token) {
+      console.log('🚀 Initializing auto token management...');
+      AutoTokenManager.startAutoRefresh();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      AutoTokenManager.stopAutoRefresh();
+    };
+  }, []);
   return (
     <Router>
       <Routes>
@@ -75,6 +92,11 @@ function App() {
         <Route path="/profile-strength" element={<ProfileStrengthPage />} />
         <Route path="/heatmap" element={<HeatmapPage />} />
         <Route path="/heatmap-results" element={<HeatmapResultsPage />} />
+        <Route path="/reviews-management" element={
+          <DashboardLayout>
+            <ReviewsManagement />
+          </DashboardLayout>
+        } />
       </Routes>
     </Router>
   );
