@@ -21,7 +21,6 @@ const AccountInfoForm = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
     setLogo(file);
@@ -35,8 +34,16 @@ const AccountInfoForm = () => {
       setLogoPreview(null);
     }
   };
-
   const handleCancel = async (e) => {
+    e.preventDefault();
+    setForm(initialFormState);
+    setLogo(null);
+    setLogoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const user = (localStorage.getItem('authToken'));
     const payload = {
@@ -61,8 +68,8 @@ const AccountInfoForm = () => {
           }
         }
       )
+      alert('Updated!');
       console.log('API Response:', response.data);
-      // navigate('../upload-logo');
     } catch (error) {
       if (error.response) {
         console.error("Server responded with:", error.response.data);
@@ -71,23 +78,11 @@ const AccountInfoForm = () => {
       }
       alert('Something went wrong while submitting the form. Please try again.');
     }
-    setForm(initialFormState);
-    setLogo(null);
-    setLogoPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Handle update logic here
     alert('Updated!');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-
   return (
     <div className="account-info-form-container">
       <h2>Account Information</h2>
@@ -114,14 +109,14 @@ const AccountInfoForm = () => {
         </label>
       </div>
       <form className="account-info-form" onSubmit={handleSubmit}>
-        <label>Business Name*<input name="businessName" value={form.business_name} onChange={handleChange} /></label>
-        <label>Industry Type*<input name="industryType" value={form.industry_type} onChange={handleChange} /></label>
+        <label>Business Name*<input name="business_name" value={form.business_name} onChange={handleChange}  /></label>
+        <label>Industry Type*<input name="industry_type" value={form.industry_type} onChange={handleChange} /></label>
         <div className="form-row">
           <label>Start Date*
-            <input name="startDate" type="date" value={form.start_date} onChange={handleChange} />
+            <input name="start_date" type="date" value={form.start_date} onChange={handleChange} />
           </label>
           <label>End Date*
-            <input name="endDate" type="date" value={form.end_date} onChange={handleChange} />
+            <input name="end_date" type="date" value={form.end_date} onChange={handleChange} />
           </label>
         </div>
         <label>Email ID*<input name="email" value={form.email} onChange={handleChange} /></label>

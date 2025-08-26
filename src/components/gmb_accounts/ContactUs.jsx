@@ -15,7 +15,6 @@ import {
 import { styled } from '@mui/material/styles';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import PageHeader from '../Dashboard/components/PageHeader';
-import CalendarIcon from '../icons/CalendarIcon';
 
 // Styled Components (same as before)
 const FormContainer = styled(Paper)(({ theme }) => ({
@@ -35,7 +34,7 @@ const FieldLabel = styled(Typography)(({ theme }) => ({
   fontWeight: 400,
   marginBottom: '8px'
 }));
-const RequiredLabel = styled(FieldLabel)(({ theme }) => ({ color: '#EF232A' }));
+const RequiredLabel = styled(FieldLabel)(({ theme }) => ({ color: '#1a1717ff' }));
 const OptionalLabel = styled(FieldLabel)(({ theme }) => ({ color: '#121927' }));
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
@@ -43,7 +42,7 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     borderRadius: '8px',
     backgroundColor: '#FFFFFF',
     '& fieldset': {
-      borderColor: '#A0A0AA',
+      borderColor: '#0b0b0cff',
       borderWidth: '0.2px'
     },
     '&:hover fieldset': {
@@ -73,7 +72,7 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   fontSize: '14px',
   fontWeight: 400,
   '& .MuiOutlinedInput-notchedOutline': {
-    borderColor: '#A0A0AA',
+    borderColor: '#111111ff',
     borderWidth: '0.2px'
   },
   '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -84,7 +83,7 @@ const StyledSelect = styled(Select)(({ theme }) => ({
     borderWidth: '1px'
   },
   '& .MuiSelect-select': {
-    color: '#A0A0AA'
+    color: '#0b0b0cff'
   }
 }));
 
@@ -108,7 +107,7 @@ const TimePickerField = styled(TextField)(({ theme }) => ({
       fontFamily: 'Inter, sans-serif',
       fontSize: '14px',
       fontWeight: 400,
-      color: '#A0A0AA',
+      color: '#060607ff',
       '&::placeholder': {
         color: '#A0A0AA',
         opacity: 1
@@ -117,14 +116,6 @@ const TimePickerField = styled(TextField)(({ theme }) => ({
   }
 }));
 
-const CalendarIconContainer = styled(Box)(({ theme }) => ({
-  position: 'absolute',
-  right: '12px',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  cursor: 'pointer',
-  zIndex: 1
-}));
 
 const MessageField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
@@ -202,6 +193,7 @@ const ContactUs = () => {
           }
         }
       );
+      alert('Updated')
       console.log('Form submitted successfully:', response.data);
     } catch (error) {
       console.error('Submission error:', error.response?.data || error.message);
@@ -307,15 +299,11 @@ const ContactUs = () => {
                   <TimePickerField
                     fullWidth
                     name="date_and_time"
+                    type="date"
                     value={formData.date_and_time}
                     onChange={handleInputChange}
-                    placeholder="Select Time"
-                    variant="outlined"
                     required
                   />
-                  <CalendarIconContainer>
-                    <CalendarIcon width={17} height={19} color="#A0A0AA" />
-                  </CalendarIconContainer>
                 </TimePickerContainer>
               </Box>
 

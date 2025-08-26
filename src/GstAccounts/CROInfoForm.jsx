@@ -1,23 +1,21 @@
 import React, { useState } from 'react';
 import './CROInfoForm.css';
+import axios from 'axios';
 
 const initialFormState = {
-  selectedTags: ['Property', 'Buy/Rent Property'],
-  civilWork: '',
-  croEmployee: 'John',
-  seoEmployee: 'John',
-  welcomeCall: false,
-  claimTaken: false,
-  category: 'Gold',
-  faAccount: '',
-  seoPostPeriod: 'Daily',
-  totalPost: '2',
-  reportPeriod: 'Daily',
-  clientStatus: '5',
-  gmailId: '',
+  cro_employee_name: '',
+  seo_employee_name: '',
+  cro_category: '',
+  fa_account: '',
+  seo_post_period: '',
+  total_post: '',
+  report_period: '',
+  client_status: '',
+  email: '',
   password: '',
-  recoveryGmail: '',
-  googleAccount: '',
+  recory_email: '',
+  recory_password: '',
+  google_account: '',
   location: '',
 };
 
@@ -29,7 +27,6 @@ const clientStatusOptions = ['Dormant', 'Non Dormant'];
 
 const CROInfoForm = () => {
   const [form, setForm] = useState(initialFormState);
-
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm({
@@ -59,9 +56,48 @@ const CROInfoForm = () => {
     setForm(initialFormState);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert('Updated!');
+    const user = (localStorage.getItem('authToken'));
+    const payload = {
+      user_id: user?.id,
+      cro_employee_name: form.cro_employee_name,
+      seo_employee_name: form.seo_employee_name,
+      cro_category: form.cro_category,
+      fa_account: form.fa_account,
+      seo_post_period: form.seo_post_period,
+      total_post: form.total_post,
+      report_period: form.report_period,
+      client_status: form.client_status,
+      email: form.email,
+      password: form.password,
+      recory_email: form.recory_email,
+      recory_password: form.recory_password,
+      google_account: form.google_account,
+      location: form.location,
+    }
+    try {
+      const token = JSON.parse(localStorage.getItem('userData'));
+      const response = await axios.post(
+        'http://52.44.140.230:8089/api/v1/customer/cro-information/create-cro-information',
+        payload,
+        {
+          headers: {
+            Authorization: `${token?.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      alert('Updated!');
+      console.log('API Response:', response.data);
+    } catch (error) {
+      if (error.response) {
+        console.error("Server responded with:", error.response.data);
+      } else {
+        console.error("Error:", error.message);
+      }
+      alert('Something went wrong while submitting the form. Please try again.');
+    }
   };
 
   return (
@@ -69,36 +105,15 @@ const CROInfoForm = () => {
       <h2>CRO Information</h2>
       <p>Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing</p>
       <form className="cro-info-form" onSubmit={handleSubmit}>
-        <label>Keyword*
-          <div className="keyword-input-wrapper" >
-            {form.selectedTags.map((tag) => (
-              <span className="tag selected" key={tag}>
-                {tag}
-                <span className="tag-remove" onClick={() => handleTagRemove(tag)}>&times;</span>
-              </span>
-            ))}
-          </div>
-          <div className="tag-row keyword-tag-row">
-            {tagOptions.map((tag) => (
-              <span
-                key={tag}
-                className={form.selectedTags.includes(tag) ? 'tag selected' : 'tag'}
-                onClick={() => handleTagClick(tag)}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </label>
         <label>Civil work<input name="civilWork" value={form.civilWork} onChange={handleChange} /></label>
         <div className="form-row">
           <label>CRO Employee
-            <select name="croEmployee" value={form.croEmployee} onChange={handleChange}>
+            <select name="cro_employee_name" value={form.cro_employee_name} onChange={handleChange}>
               {employeeOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
           </label>
           <label>SEO Employee
-            <select name="seoEmployee" value={form.seoEmployee} onChange={handleChange}>
+            <select name="seo_employee_name" value={form.seo_employee_name} onChange={handleChange}>
               {employeeOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
           </label>
@@ -110,39 +125,39 @@ const CROInfoForm = () => {
         </div>
         <div className="form-row">
           <label>Category
-            <select name="category" value={form.category} onChange={handleChange}>
+            <select name="cro_category" value={form.cro_category} onChange={handleChange}>
               {categoryOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
           </label>
-          <label>FA Account<input name="faAccount" value={form.faAccount} onChange={handleChange} /></label>
+          <label>FA Account<input name="fa_account" value={form.fa_account} onChange={handleChange} /></label>
         </div>
         <div className="form-row">
           <label>SEO Post Period
-            <select name="seoPostPeriod" value={form.seoPostPeriod} onChange={handleChange}>
+            <select name="seo_post_period" value={form.seo_post_period} onChange={handleChange}>
               {periodOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
           </label>
-          <label>Total Post<input name="totalPost" value={form.totalPost} onChange={handleChange} /></label>
+          <label>Total Post<input name="total_post" value={form.total_post} onChange={handleChange} /></label>
         </div>
         <div className="form-row">
           <label>Report Period
-            <select name="reportPeriod" value={form.reportPeriod} onChange={handleChange}>
+            <select name="report_period" value={form.report_period} onChange={handleChange}>
               {periodOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
           </label>
           <label>Client Status
-            <select name="clientStatus" value={form.clientStatus} onChange={handleChange}>
+            <select name="client_status" value={form.client_status} onChange={handleChange}>
               {clientStatusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
           </label>
         </div>
         <div className="form-row">
-          <label>Gmail ID<input name="gmailId" value={form.gmailId} onChange={handleChange} /></label>
+          <label>Gmail ID<input name="email" value={form.email} onChange={handleChange} /></label>
           <label>Password<input name="password" value={form.password} onChange={handleChange} /></label>
         </div>
-        <label>Recovery Gmail and Password<input name="recoveryGmail" value={form.recoveryGmail} onChange={handleChange} /></label>
+        <label>Recovery Gmail and Password<input name="recory_email" value={form.recory_email} onChange={handleChange} /></label>
         <div className="form-row">
-          <label>Google Account<input name="googleAccount" value={form.googleAccount} onChange={handleChange} /></label>
+          <label>Google Account<input name="google_account" value={form.google_account} onChange={handleChange} /></label>
           <label>Location<input name="location" value={form.location} onChange={handleChange} /></label>
         </div>
         <div className="form-actions">
