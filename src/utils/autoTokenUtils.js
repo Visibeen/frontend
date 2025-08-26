@@ -1,27 +1,33 @@
 import { getSession, setSession } from './authUtils';
 import ApiService from '../services/api';
+import tokenManager from '../auth/TokenManager';
+import { registerGoogleRefresher } from '../auth/googleRefresher';
 
 class AutoTokenManager {
     constructor() {
         this.tokenCheckInterval = null;
         this.refreshThreshold = 5 * 60 * 1000; // 5 minutes before expiry
         this.checkIntervalMs = 60000; // Check every minute
+        
+        // Initialize Google refresher
+        registerGoogleRefresher();
     }
 
-    // Start automatic token monitoring
+    // Start automatic token monitoring for both backend and Google tokens
     startAutoRefresh(intervalMs = this.checkIntervalMs) {
         if (this.tokenCheckInterval) {
             clearInterval(this.tokenCheckInterval);
         }
 
-        console.log('🔄 Starting automatic token refresh monitoring...');
+        console.log('🔄 Starting automatic token refresh monitoring (Backend + Google)...');
         
         this.tokenCheckInterval = setInterval(() => {
-            this.checkAndRefreshToken();
+            this.checkAndRefreshAllTokens();
         }, intervalMs);
 
-        // Initial check
-        this.checkAndRefreshToken();
+        // Initial check and setup
+        this.autoSetupGoogleToken();
+        this.checkAndRefreshAllTokens();
     }
 
     // Stop automatic token monitoring
@@ -33,27 +39,62 @@ class AutoTokenManager {
         }
     }
 
-    // Check if token needs refresh and refresh automatically
-    async checkAndRefreshToken() {
+    // Check and refresh both backend and Google tokens
+    async checkAndRefreshAllTokens() {
+        // Check backend token
+        await this.checkAndRefreshBackendToken();
+        
+        // Check Google token
+        await this.checkAndRefreshGoogleToken();
+    }
+
+    // Check if backend token needs refresh and refresh automatically
+    async checkAndRefreshBackendToken() {
         const session = getSession();
         if (!session || !session.token) {
-            console.log('🔍 No session or token found during auto-check');
             return;
         }
 
         // Check if token is about to expire
         if (this.isTokenExpiringSoon(session)) {
-            console.log('⏰ Token expiring soon, attempting auto-refresh...');
+            console.log('⏰ Backend token expiring soon, attempting auto-refresh...');
             try {
-                await this.refreshToken();
-                console.log('✅ Token auto-refreshed successfully');
+                await this.refreshBackendToken();
+                console.log('✅ Backend token auto-refreshed successfully');
             } catch (error) {
-                console.warn('❌ Auto token refresh failed:', error);
+                console.warn('❌ Backend auto token refresh failed:', error);
             }
         }
     }
 
-    // Check if token is expiring soon
+    // Check and refresh Google token
+    async checkAndRefreshGoogleToken() {
+        const googleToken = tokenManager.get('google');
+        if (!googleToken || !googleToken.access_token) {
+            // Try to setup from legacy storage
+            this.autoSetupGoogleToken();
+            return;
+        }
+
+        // Check if Google token is about to expire
+        if (this.isGoogleTokenExpiringSoon(googleToken)) {
+            console.log('⏰ Google access token expiring soon, attempting auto-refresh...');
+            try {
+                const newToken = await tokenManager.getValidAccessToken('google');
+                if (newToken) {
+                    console.log('✅ Google access token auto-refreshed successfully');
+                    
+                    // Also update localStorage for backward compatibility
+                    localStorage.setItem('googleAccessToken', newToken);
+                    sessionStorage.setItem('googleAccessToken', newToken);
+                }
+            } catch (error) {
+                console.warn('❌ Google token auto-refresh failed:', error);
+            }
+        }
+    }
+
+    // Check if backend token is expiring soon
     isTokenExpiringSoon(session) {
         if (!session.expires_at) {
             // If no expiry info, assume it's valid for now
@@ -66,24 +107,127 @@ class AutoTokenManager {
         return (expiryTime - currentTime) <= this.refreshThreshold;
     }
 
-    // Refresh token using the existing refresher
-    async refreshToken() {
+    // Check if Google token is expiring soon
+    isGoogleTokenExpiringSoon(googleToken) {
+        if (!googleToken.expires_at) {
+            // If no expiry info, check if it's been more than 50 minutes (Google tokens typically last 1 hour)
+            const defaultExpiryTime = 50 * 60 * 1000; // 50 minutes
+            const tokenAge = Date.now() - (googleToken.created_at || Date.now());
+            return tokenAge >= defaultExpiryTime;
+        }
+        
+        const expiryTime = new Date(googleToken.expires_at).getTime();
+        const currentTime = Date.now();
+        
+        return (expiryTime - currentTime) <= this.refreshThreshold;
+    }
+
+    // Refresh backend token using the existing refresher
+    async refreshBackendToken() {
         const { refreshIfPossible } = await import('../auth/backendRefresher');
         return await refreshIfPossible(ApiService.baseURL);
     }
 
-    // Get current auto token status
+    // Refresh Google token using TokenManager
+    async refreshGoogleToken() {
+        return await tokenManager.getValidAccessToken('google');
+    }
+
+    // Auto-setup Google token from various sources
+    autoSetupGoogleToken() {
+        // Check if we have a Google token in various locations
+        const sources = [
+            () => tokenManager.get('google')?.access_token,
+            () => localStorage.getItem('googleAccessToken'),
+            () => sessionStorage.getItem('googleAccessToken'),
+            () => {
+                // Check URL params (for OAuth redirects)
+                if (typeof window !== 'undefined') {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    return urlParams.get('access_token') || urlParams.get('google_token');
+                }
+                return null;
+            },
+            () => {
+                // Check environment variable (for development - should be removed in production)
+                return process.env.REACT_APP_GOOGLE_ACCESS_TOKEN;
+            }
+        ];
+        
+        for (const getToken of sources) {
+            try {
+                const token = getToken();
+                if (token && typeof token === 'string' && token.length > 10) {
+                    console.log('🔍 Found Google token, setting up auto-management...');
+                    tokenManager.set('google', { 
+                        access_token: token, 
+                        token_type: 'Bearer',
+                        created_at: Date.now()
+                    });
+                    
+                    // Sync to legacy storage
+                    localStorage.setItem('googleAccessToken', token);
+                    sessionStorage.setItem('googleAccessToken', token);
+                    
+                    return token;
+                }
+            } catch (error) {
+                console.warn('Error checking token source:', error);
+            }
+        }
+        
+        return null;
+    }
+
+    // Get Google token from auto sources
+    getAutoGoogleToken() {
+        // Try TokenManager first
+        const tokenManagerToken = tokenManager.get('google')?.access_token;
+        if (tokenManagerToken) {
+            return tokenManagerToken;
+        }
+
+        // Fallback to legacy storage
+        const legacyToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
+        if (legacyToken) {
+            // Sync back to TokenManager
+            tokenManager.set('google', { 
+                access_token: legacyToken, 
+                token_type: 'Bearer',
+                created_at: Date.now()
+            });
+            return legacyToken;
+        }
+
+        return null;
+    }
+
+    // Get current auto token status for both backend and Google
     getTokenStatus() {
         const session = getSession();
-        const hasToken = !!session?.token;
-        const hasRefreshToken = !!session?.refresh_token;
+        const googleToken = tokenManager.get('google');
+        const hasBackendToken = !!session?.token;
+        const hasBackendRefreshToken = !!session?.refresh_token;
+        const hasGoogleToken = !!googleToken?.access_token;
+        const hasGoogleRefreshToken = !!googleToken?.refresh_token;
         
         return {
-            hasToken,
-            hasRefreshToken,
+            // Backend token status
+            hasToken: hasBackendToken,
+            hasRefreshToken: hasBackendRefreshToken,
             isExpiringSoon: session ? this.isTokenExpiringSoon(session) : false,
+            tokenPreview: hasBackendToken ? `${session.token.substring(0, 10)}...` : 'No token',
+            
+            // Google token status
+            hasGoogleToken,
+            hasGoogleRefreshToken,
+            isGoogleTokenExpiringSoon: googleToken ? this.isGoogleTokenExpiringSoon(googleToken) : false,
+            googleTokenPreview: hasGoogleToken ? `${googleToken.access_token.substring(0, 10)}...` : 'No Google token',
+            
+            // Auto refresh status
             autoRefreshActive: !!this.tokenCheckInterval,
-            tokenPreview: hasToken ? `${session.token.substring(0, 10)}...` : 'No token',
+            
+            // Session info
             session: session ? {
                 hasUser: !!session.user,
                 hasData: !!session.data,
@@ -92,12 +236,15 @@ class AutoTokenManager {
         };
     }
 
-    // Get detailed token information for debugging
+    // Get detailed token information for debugging (both backend and Google)
     getDetailedTokenInfo() {
         const session = getSession();
+        const googleToken = tokenManager.get('google');
         const autoToken = ApiService.prototype.getAutoToken.call(ApiService);
+        const autoGoogleToken = this.getAutoGoogleToken();
         
         return {
+            // Backend token info
             session: session,
             autoExtractedToken: autoToken ? `${autoToken.substring(0, 10)}...` : 'No token',
             tokenSources: {
@@ -107,22 +254,61 @@ class AutoTokenManager {
                 localStorage: (typeof window !== 'undefined' && localStorage.getItem('authToken')) 
                     ? `${localStorage.getItem('authToken').substring(0, 10)}...` : null
             },
+            
+            // Google token info
+            googleToken: googleToken,
+            autoExtractedGoogleToken: autoGoogleToken ? `${autoGoogleToken.substring(0, 10)}...` : 'No Google token',
+            googleTokenSources: {
+                tokenManager: googleToken?.access_token ? `${googleToken.access_token.substring(0, 10)}...` : null,
+                localStorage: (typeof window !== 'undefined' && localStorage.getItem('googleAccessToken')) 
+                    ? `${localStorage.getItem('googleAccessToken').substring(0, 10)}...` : null,
+                sessionStorage: (typeof window !== 'undefined' && sessionStorage.getItem('googleAccessToken')) 
+                    ? `${sessionStorage.getItem('googleAccessToken').substring(0, 10)}...` : null,
+                environment: process.env.REACT_APP_GOOGLE_ACCESS_TOKEN 
+                    ? `${process.env.REACT_APP_GOOGLE_ACCESS_TOKEN.substring(0, 10)}...` : null
+            },
+            
             status: this.getTokenStatus()
         };
     }
 
-    // Manual token refresh trigger
+    // Manual token refresh trigger for both backend and Google tokens
     async manualRefresh() {
-        console.log('🔄 Manual token refresh triggered...');
+        console.log('🔄 Manual token refresh triggered for both backend and Google...');
         try {
-            const result = await this.refreshToken();
-            if (result) {
-                console.log('✅ Manual token refresh successful');
-                return result;
-            } else {
-                console.warn('⚠️ Manual token refresh returned no result');
-                return null;
+            const results = {
+                backend: null,
+                google: null
+            };
+            
+            // Refresh backend token
+            try {
+                results.backend = await this.refreshBackendToken();
+                if (results.backend) {
+                    console.log('✅ Manual backend token refresh successful');
+                } else {
+                    console.warn('⚠️ Manual backend token refresh returned no result');
+                }
+            } catch (error) {
+                console.error('❌ Manual backend token refresh failed:', error);
             }
+            
+            // Refresh Google token
+            try {
+                results.google = await this.refreshGoogleToken();
+                if (results.google) {
+                    console.log('✅ Manual Google token refresh successful');
+                    // Update legacy storage
+                    localStorage.setItem('googleAccessToken', results.google);
+                    sessionStorage.setItem('googleAccessToken', results.google);
+                } else {
+                    console.warn('⚠️ Manual Google token refresh returned no result');
+                }
+            } catch (error) {
+                console.error('❌ Manual Google token refresh failed:', error);
+            }
+            
+            return results;
         } catch (error) {
             console.error('❌ Manual token refresh failed:', error);
             throw error;

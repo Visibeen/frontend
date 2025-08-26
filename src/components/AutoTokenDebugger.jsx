@@ -109,8 +109,25 @@ const AutoTokenDebugger = ({ open = false }) => {
                       size="small"
                     />
                   )}
+                  <Chip 
+                    label={tokenStatus.hasGoogleToken ? '✅ Has Google Token' : '❌ No Google Token'} 
+                    color={tokenStatus.hasGoogleToken ? 'success' : 'error'}
+                    size="small"
+                  />
+                  <Chip 
+                    label={tokenStatus.hasGoogleRefreshToken ? '✅ Has Google Refresh Token' : '❌ No Google Refresh Token'} 
+                    color={tokenStatus.hasGoogleRefreshToken ? 'success' : 'error'}
+                    size="small"
+                  />
+                  {tokenStatus.isGoogleTokenExpiringSoon && (
+                    <Chip 
+                      label="⚠️ Google Token Expiring Soon" 
+                      color="warning"
+                      size="small"
+                    />
+                  )}
                   <Typography variant="caption" color="textSecondary">
-                    Token Preview: {tokenStatus.tokenPreview}
+                    Google Token Preview: {tokenStatus.googleTokenPreview}
                   </Typography>
                 </Stack>
               )}
@@ -133,6 +150,12 @@ const AutoTokenDebugger = ({ open = false }) => {
                   </Typography>
                   <Typography variant="caption" display="block">
                     LocalStorage Token: {debugInfo.localStorage.authToken}
+                  </Typography>
+                  <Typography variant="caption" display="block">
+                    Google Token: {debugInfo.autoExtractedGoogleToken || 'No Google token'}
+                  </Typography>
+                  <Typography variant="caption" display="block">
+                    Google LocalStorage: {debugInfo.googleTokenSources?.localStorage || 'No Google token'}
                   </Typography>
                 </Box>
               )}
