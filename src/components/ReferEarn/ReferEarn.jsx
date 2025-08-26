@@ -75,7 +75,7 @@ const ShareButton = styled(Button)(({ theme }) => ({
   backgroundColor: '#0B91D6',
   color: '#ffffff',
   fontFamily: 'Inter, sans-serif',
-  fontSize: '14px',
+  fontSize: '26px',
   fontWeight: 600,
   textTransform: 'none',
   padding: '12px 24px',

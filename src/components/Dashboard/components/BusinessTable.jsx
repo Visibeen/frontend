@@ -126,17 +126,12 @@ const BusinessTable = ({ businesses = [] }) => {
   };
 
   const getOptimizationDisplay = (business) => {
-    if (business.status?.toLowerCase() === 'suspended') {
-      return <CheckNowLink>Check now</CheckNowLink>;
-    }
-    if (business.status?.toLowerCase() === 'unverified') {
-      return (
-        <CheckNowButton onClick={() => handleCheckNow(business)}>
-          Check Now
-        </CheckNowButton>
-      );
-    }
-    return <OptimizationScore>{business.optimizationScore || business.score || 'N/A'}</OptimizationScore>;
+    // Always show the Check Now button regardless of status
+    return (
+      <CheckNowButton onClick={() => handleCheckNow(business)}>
+        Check Now
+      </CheckNowButton>
+    );
   };
 
   return (

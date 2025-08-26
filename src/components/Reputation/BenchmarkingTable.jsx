@@ -64,7 +64,24 @@ const ColumnHeaderText = styled(Typography)(({ theme, color }) => ({
   textAlign: 'center'
 }));
 
-const BenchmarkingTable = () => {
+const BenchmarkingTable = ({ reputationData }) => {
+  // Use real data if available, otherwise fallback to mock data
+  const data = reputationData || {
+    yourBusiness: { rating: 4.6, responseRate: 52, negativeRatio: 6, reviewCount: 20 },
+    cityAverage: { rating: 4.2, responseRate: 36, negativeRatio: 23, reviewCount: 180 },
+    topCompetitor: { rating: 4.4, responseRate: 48, negativeRatio: 44, reviewCount: 60 }
+  };
+
+  // Helper function to safely format numbers and avoid NaN
+  const safeNumber = (value, defaultValue = 0) => {
+    const num = Number(value);
+    return isNaN(num) ? defaultValue : num;
+  };
+
+  const safeRating = (value) => safeNumber(value, 4.0).toFixed(1);
+  const safePercentage = (value) => `${Math.round(safeNumber(value, 0))}%`;
+  const safeCount = (value) => Math.max(0, Math.round(safeNumber(value, 0))).toString();
+
   const tableData = [
     {
       header: '',
@@ -73,22 +90,38 @@ const BenchmarkingTable = () => {
     {
       header: 'Average Rating',
       color: '#0B91D6',
-      rows: ['4.6', '4.2', '4.4']
+      rows: [
+        safeRating(data.yourBusiness.rating),
+        safeRating(data.cityAverage.rating),
+        safeRating(data.topCompetitor.rating)
+      ]
     },
     {
       header: 'Review Response Rate',
       color: '#34A853',
-      rows: ['52%', '36%', '48%']
+      rows: [
+        safePercentage(data.yourBusiness.responseRate),
+        safePercentage(data.cityAverage.responseRate),
+        safePercentage(data.topCompetitor.responseRate)
+      ]
     },
     {
       header: 'Negative Review Ratio',
       color: '#EF232A',
-      rows: ['6%', '23%', '44%']
+      rows: [
+        safePercentage(data.yourBusiness.negativeRatio),
+        safePercentage(data.cityAverage.negativeRatio),
+        safePercentage(data.topCompetitor.negativeRatio)
+      ]
     },
     {
       header: 'Review Count',
       color: '#121927',
-      rows: ['20', '180', '60']
+      rows: [
+        safeCount(data.yourBusiness.reviewCount),
+        safeCount(data.cityAverage.reviewCount),
+        safeCount(data.topCompetitor.reviewCount)
+      ]
     }
   ];
 

@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Register from './components/Register/Register'
 import Login from './components/Login/Login';
 import ForgotPassword from './components/Login/ForgotPassword';
-import VerifyOtp from './components/Login/VerifyOtp';
 import Dashboard from './components/Dashboard/Dashboard';
 import Homepage from './components/Homepage/Homepage';
 import ProfilePage from './components/Dashboard/pages/Profile';
@@ -15,7 +14,6 @@ import GoogleConnect from './components/Services/GoogleConnect';
 import ContactUs from './components/gmb_accounts/ContactUs';
 import CreateAccount from './components/gmb_accounts/Create_Account/CreateAccount';
 import CreatePostForm from './components/Create_Post/CreatePostForm';
-import CreatePost from './components/CreatePost/CreatePost';
 import Reputation from './components/Reputation/Reputation';
 import ReferEarn from './components/Refer&Earn';
 import MyAccount from './components/MyAccount';
@@ -28,7 +26,14 @@ import DashboardLayout from './components/Layouts/DashboardLayout';
 import GMBDataFetcher from './components/gmb_accounts/GMBDataFetcher';
 import ProfileStrengthAnalysis from './components/ProfileStrengthAnalysis/ProfileStrengthAnalysis';
 import ProfileStrengthResults from './components/ProfileStrengthResults/ProfileStrengthResults';
+import ProfileStrengthPage from './components/ProfileStrength/ProfileStrengthPage';
 import 'leaflet/dist/leaflet.css';
+import HeatmapPage from './components/Heatmap/HeatmapPage';
+import HeatmapResultsPage from './components/HeatmapResults/HeatmapResultsPage';
+import ReviewsManagement from './components/ReviewsManagement/ReviewsManagement';
+import AutoTokenManager from './utils/autoTokenUtils';
+import { getSession } from './utils/authUtils';
+
 
 
 
@@ -39,6 +44,19 @@ import './styles.css';
 
 
 function App() {
+  useEffect(() => {
+    // Initialize auto token management if user is logged in
+    const session = getSession();
+    if (session && session.token) {
+      console.log('🚀 Initializing auto token management...');
+      AutoTokenManager.startAutoRefresh();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      AutoTokenManager.stopAutoRefresh();
+    };
+  }, []);
   return (
     <Router>
       <Routes>
@@ -69,6 +87,14 @@ function App() {
         <Route path="/free-website" element={<FreeWebsite />} />
         <Route path="/profile-strength-analysis" element={<ProfileStrengthAnalysis />} />
         <Route path="/profile-strength-results" element={<ProfileStrengthResults />} />
+        <Route path="/profile-strength" element={<ProfileStrengthPage />} />
+        <Route path="/heatmap" element={<HeatmapPage />} />
+        <Route path="/heatmap-results" element={<HeatmapResultsPage />} />
+        <Route path="/reviews-management" element={
+          <DashboardLayout>
+            <ReviewsManagement />
+          </DashboardLayout>
+        } />
       </Routes>
     </Router>
   );

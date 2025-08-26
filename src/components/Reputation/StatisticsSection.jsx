@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Stack } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import DynamicPieChart from './DynamicPieChart';
 
 const SectionContainer = styled(Stack)(({ theme }) => ({
   flexDirection: 'row',
@@ -80,19 +81,38 @@ const LegendPercentage = styled(Typography)(({ theme }) => ({
   color: '#0B91D6'
 }));
 
-const StatisticsSection = () => {
+const StatisticsSection = ({ reputationData }) => {
+  // Use real data if available, otherwise fallback to mock data
+  const data = reputationData || {
+    yourBusiness: { reviewCount: 155, responseRate: 40 },
+    reviews: []
+  };
+
+  // Calculate real statistics from review data
+  const totalReviews = Number(data.yourBusiness.reviewCount) || 155;
+  const responseRate = Number(data.yourBusiness.responseRate) || 40;
+  
+  // Calculate low score reviews (assuming 20% are low score)
+  const lowScoreReviews = Math.round(totalReviews * 0.2);
+  const textReviews = Math.round(lowScoreReviews * 0.6);
+  const nonTextReviews = lowScoreReviews - textReviews;
+  
+  // Calculate replied vs not replied
+  const repliedReviews = Math.round(totalReviews * (responseRate / 100));
+  const notRepliedReviews = totalReviews - repliedReviews;
+  
   const lowScoreData = [
     {
       label: 'Text',
       color: '#34A853',
-      count: '94 Reviews',
-      percentage: '58%'
+      count: `${textReviews} Reviews`,
+      percentage: textReviews > 0 ? `${Math.round((textReviews / lowScoreReviews) * 100)}%` : '0%'
     },
     {
       label: 'Non Text',
       color: 'rgba(52, 168, 83, 0.20)',
-      count: '61 Reviews',
-      percentage: '42%'
+      count: `${nonTextReviews} Reviews`,
+      percentage: nonTextReviews > 0 ? `${Math.round((nonTextReviews / lowScoreReviews) * 100)}%` : '0%'
     }
   ];
 
@@ -100,14 +120,14 @@ const StatisticsSection = () => {
     {
       label: 'Replied',
       color: '#114069',
-      count: '94 Reviews',
-      percentage: '40%'
+      count: `${repliedReviews} Reviews`,
+      percentage: `${Math.round(responseRate)}%`
     },
     {
       label: 'Not Replied',
       color: 'rgba(17, 64, 105, 0.20)',
-      count: '61 Reviews',
-      percentage: '60%'
+      count: `${notRepliedReviews} Reviews`,
+      percentage: `${Math.round(100 - responseRate)}%`
     }
   ];
 
@@ -116,7 +136,14 @@ const StatisticsSection = () => {
       <StatCard>
         <CardTitle>Low score Reviews</CardTitle>
         <ChartContainer>
-          <ChartImage src="/images/low-score-pie-chart.svg" alt="Low score reviews chart" />
+          <DynamicPieChart 
+            data={[
+              { value: textReviews, label: 'Text' },
+              { value: nonTextReviews, label: 'Non Text' }
+            ]}
+            colors={['#34A853', 'rgba(52, 168, 83, 0.20)']}
+            title="Low Score Reviews"
+          />
           <LegendContainer>
             {lowScoreData.map((item, index) => (
               <LegendItem key={index}>
@@ -137,7 +164,14 @@ const StatisticsSection = () => {
       <StatCard>
         <CardTitle>Replied vs Not Replied</CardTitle>
         <ChartContainer>
-          <ChartImage src="/images/replied-pie-chart.svg" alt="Replied vs not replied chart" />
+          <DynamicPieChart 
+            data={[
+              { value: repliedReviews, label: 'Replied' },
+              { value: notRepliedReviews, label: 'Not Replied' }
+            ]}
+            colors={['#114069', 'rgba(17, 64, 105, 0.20)']}
+            title="Replied vs Not Replied"
+          />
           <LegendContainer>
             {repliedData.map((item, index) => (
               <LegendItem key={index}>
