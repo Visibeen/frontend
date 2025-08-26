@@ -14,9 +14,6 @@ Google OAuth
 - REACT_APP_GMB_PROJECT_ID=your_google_project_id
 - REACT_APP_GMB_API_KEY=your_google_api_key
 
-Notes
-- REACT_APP_REFRESH_ENDPOINT is relative to REACT_APP_API_BASE_URL and used by the frontend to auto-refresh the backend token on 401.
-- For Google, refresh_token is typically obtained server-side. The frontend is wired to store it if your backend returns it during link.
 
 ## Token Management Overview
 
@@ -131,3 +128,4 @@ if (googleToken) {
 
 - Use `api.get/post/put/delete` from `src/services/api.js` for backend calls; no manual headers required.
 - Use `GMBService` for Google calls, e.g., `GMBService.getAccounts()`; token is handled automatically.
+=======
