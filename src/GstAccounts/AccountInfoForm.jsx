@@ -109,7 +109,7 @@ const AccountInfoForm = () => {
         </label>
       </div>
       <form className="account-info-form" onSubmit={handleSubmit}>
-        <label>Business Name*<input name="business_name" value={form.business_name} onChange={handleChange} /></label>
+        <label>Business Name*<input name="business_name" value={form.business_name} onChange={handleChange}  /></label>
         <label>Industry Type*<input name="industry_type" value={form.industry_type} onChange={handleChange} /></label>
         <div className="form-row">
           <label>Start Date*

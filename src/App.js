@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Register from './components/Register/Register'
 import Login from './components/Login/Login';
 import ForgotPassword from './components/Login/ForgotPassword';
-import VerifyOtp from './components/Login/VerifyOtp';
 import Dashboard from './components/Dashboard/Dashboard';
 import Homepage from './components/Homepage/Homepage';
 import ProfilePage from './components/Dashboard/pages/Profile';
@@ -15,7 +14,6 @@ import GoogleConnect from './components/Services/GoogleConnect';
 import ContactUs from './components/gmb_accounts/ContactUs';
 import CreateAccount from './components/gmb_accounts/Create_Account/CreateAccount';
 import CreatePostForm from './components/Create_Post/CreatePostForm';
-import CreatePost from './components/CreatePost/CreatePost';
 import Reputation from './components/Reputation/Reputation';
 import ReferEarn from './components/Refer&Earn';
 import MyAccount from './components/MyAccount';
