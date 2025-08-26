@@ -30,6 +30,7 @@ import ProfileStrengthPage from './components/ProfileStrength/ProfileStrengthPag
 import 'leaflet/dist/leaflet.css';
 import HeatmapPage from './components/Heatmap/HeatmapPage';
 import HeatmapResultsPage from './components/HeatmapResults/HeatmapResultsPage';
+import Holidays from './components/edms/Holidays';
 
 
 
@@ -73,6 +74,7 @@ function App() {
         <Route path="/profile-strength" element={<ProfileStrengthPage />} />
         <Route path="/heatmap" element={<HeatmapPage />} />
         <Route path="/heatmap-results" element={<HeatmapResultsPage />} />
+        <Route path="/holidays" element={<Holidays />} />
       </Routes>
     </Router>
   );
