@@ -202,6 +202,7 @@ const ContactUs = () => {
           }
         }
       );
+      alert('Updated')
       console.log('Form submitted successfully:', response.data);
     } catch (error) {
       console.error('Submission error:', error.response?.data || error.message);
