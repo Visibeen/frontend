@@ -1,89 +1,102 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import { generateGridPoints } from '../../heatmap/lib/geolocation';
 
-const MapContainer = styled(Box)(({ theme }) => ({
+const MapWrapper = styled(Box)(({ theme }) => ({
   position: 'relative',
   width: '100%',
   height: '100%',
   overflow: 'hidden'
 }));
 
-const PinOverlay = styled(Box)(({ theme }) => ({
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  pointerEvents: 'none'
-}));
+// Create ranking pin icons
+const createRankingIcon = (rank, color) => {
+  const size = 30;
+  return L.divIcon({
+    html: `
+      <div style="
+        width:${size}px;height:${size}px;border-radius:50%;
+        background:${color};border:2px solid #ffffff;
+        box-shadow:0 2px 4px rgba(0,0,0,0.2);
+        display:flex;align-items:center;justify-content:center;
+        font-family:Inter,sans-serif;font-size:12px;font-weight:600;
+        color:#ffffff;cursor:pointer;
+      ">${rank}</div>
+    `,
+    className: '',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+};
 
-const Pin = styled(Box)(({ theme, color, top, left }) => ({
-  position: 'absolute',
-  top: `${top}%`,
-  left: `${left}%`,
-  transform: 'translate(-50%, -50%)',
-  width: '30px',
-  height: '30px',
-  borderRadius: '50%',
-  backgroundColor: color,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  border: '2px solid #ffffff',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-  pointerEvents: 'auto',
-  cursor: 'pointer',
-  '&:hover': {
-    transform: 'translate(-50%, -50%) scale(1.1)',
-    zIndex: 10
+const HeatmapMapView = ({ pins, center, radius = 2 }) => {
+  const gridSize = Math.sqrt(pins.length);
+  const hasValidCenter = center && typeof center.lat === 'number' && typeof center.lng === 'number';
+  const mapCenter = hasValidCenter ? center : { lat: 28.6139, lng: 77.2090 };
+  
+  console.log('HeatmapMapView - pins:', pins.length, 'gridSize:', gridSize, 'center:', center);
+  
+  // Generate grid points for the map
+  const gridPoints = useMemo(() => {
+    if (!hasValidCenter || !gridSize) return [];
+    return generateGridPoints(center, radius, gridSize);
+  }, [center, radius, gridSize, hasValidCenter]);
+  
+  // Match pins with grid points
+  const mapMarkers = useMemo(() => {
+    return pins.map((pin, index) => {
+      const gridPoint = gridPoints[index];
+      if (!gridPoint) return null;
+      
+      return {
+        id: pin.id,
+        position: [gridPoint.lat, gridPoint.lng],
+        rank: pin.rank,
+        color: pin.color,
+        icon: createRankingIcon(pin.rank, pin.color)
+      };
+    }).filter(Boolean);
+  }, [pins, gridPoints]);
+
+  if (!pins || pins.length === 0) {
+    return (
+      <MapWrapper>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <Typography>No ranking data available</Typography>
+        </Box>
+      </MapWrapper>
+    );
   }
-}));
-
-const PinText = styled(Typography)(({ theme }) => ({
-  fontFamily: 'Inter, sans-serif',
-  fontSize: '14.37px',
-  fontWeight: 500,
-  color: '#ffffff',
-  textAlign: 'center',
-  lineHeight: 1
-}));
-
-const HeatmapMapView = ({ pins, center }) => {
-  // Define pin positions based on a 5x5 grid layout
-  const getPinPosition = (row, col, gridSize = 5) => {
-    // Map positions to approximate locations on the map background
-    const startTop = 25; // Start from 25% from top
-    const endTop = 75;   // End at 75% from top
-    const startLeft = 25; // Start from 25% from left
-    const endLeft = 75;   // End at 75% from left
-    
-    const top = startTop + (row / (gridSize - 1)) * (endTop - startTop);
-    const left = startLeft + (col / (gridSize - 1)) * (endLeft - startLeft);
-    
-    return { top, left };
-  };
 
   return (
-    <MapContainer>
-      <PinOverlay>
-        {pins.map((pin) => {
-          const { top, left } = getPinPosition(pin.position.row, pin.position.col);
-          
-          return (
-            <Pin
-              key={pin.id}
-              color={pin.color}
-              top={top}
-              left={left}
-              title={`Rank: ${pin.rank}`}
-            >
-              <PinText>{pin.rank}</PinText>
-            </Pin>
-          );
-        })}
-      </PinOverlay>
-    </MapContainer>
+    <MapWrapper>
+      <MapContainer 
+        center={[mapCenter.lat, mapCenter.lng]} 
+        zoom={12} 
+        style={{ width: '100%', height: '100%', borderRadius: 0 }}
+        zoomControl={true}
+        scrollWheelZoom={true}
+        doubleClickZoom={true}
+        dragging={true}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        {mapMarkers.map((marker) => (
+          <Marker 
+            key={marker.id} 
+            position={marker.position} 
+            icon={marker.icon}
+            title={`Rank: ${marker.rank}`}
+          />
+        ))}
+      </MapContainer>
+    </MapWrapper>
   );
 };
 

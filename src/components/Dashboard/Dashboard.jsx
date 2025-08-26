@@ -5,6 +5,7 @@ import { styled } from '@mui/material/styles';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import GMBService from '../../services/GMBService';
 import tokenManager from '../../auth/TokenManager';
+import AutoTokenDebugger from '../AutoTokenDebugger';
 
 import PageHeader from './components/PageHeader';
 import BusinessTable from './components/BusinessTable';
@@ -58,6 +59,7 @@ const Dashboard = () => {
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showDebugger, setShowDebugger] = useState(envDebugMode);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -222,54 +224,54 @@ const Dashboard = () => {
           return;
         }
 
-        // Normalize locations to BusinessTable shape
-        const normalized = allLocations.map(({ account, loc }) => {
+        // Normalize locations to BusinessTable shape using VoiceOfMerchantState for status
+        const normalized = await Promise.all(allLocations.map(async ({ account, loc }) => {
           const id = loc.name?.split('/').pop();
           const address = loc.storefrontAddress?.addressLines?.join(', ') ||
                           loc.storefrontAddress?.locality ||
                           loc.storefrontAddress?.administrativeArea ||
                           'Address not available';
 
-          // Derive verification from multiple possible sources
-          const rawVer = (
-            loc?.metadata?.verification?.status ||
-            loc?.locationState?.verificationStatus ||
-            (loc?.locationState?.isVerified ? 'VERIFIED' : '') ||
-            (loc?.metadata?.verified ? 'VERIFIED' : '') ||
-            account?.verificationState ||
-            'UNKNOWN'
-          );
-
-          const verUpper = String(rawVer).toUpperCase();
-          let mappedStatus = 'unverified';
-          if (verUpper === 'VERIFIED') mappedStatus = 'verified';
-          else if (
-            verUpper === 'PENDING_VERIFICATION' ||
-            verUpper === 'PENDING' ||
-            verUpper === 'VERIFICATION_PENDING' ||
-            verUpper === 'NEEDS_VERIFICATION'
-          ) {
-            mappedStatus = 'pending_verification';
-          } else if (verUpper === 'SUSPENDED') {
-            mappedStatus = 'suspended';
+          // Fetch verification via VoiceOfMerchantState API
+          let simplifiedStatus = 'unknown';
+          let hasVOM = false;
+          let hasBA = false;
+          try {
+            // IMPORTANT: Verifications API expects 'locations/{locationId}', not 'accounts/.../locations/{id}'
+            const vom = await GMBService.getVoiceOfMerchantState(id, accessToken);
+            simplifiedStatus = vom?.simplifiedStatus || 'unknown';
+            hasVOM = vom?.raw?.hasVoiceOfMerchant === true;
+            hasBA = vom?.raw?.hasBusinessAuthority === true;
+            if (envDebugMode) console.log('VOM state for', id, { simplifiedStatus, hasVOM, hasBA, raw: vom?.raw });
+          } catch (e) {
+            console.warn('VOM fetch failed for', id, e?.message || e);
           }
+
+          // Map to UI status: only treat hasVoiceOfMerchant OR explicit 'verified' as verified
+          // When hasVoiceOfMerchant is false, show 'unverified' unless API says 'verified'
+          const status = (
+            (hasVOM || simplifiedStatus === 'verified') ? 'verified' :
+            simplifiedStatus === 'suspended' ? 'suspended' :
+            simplifiedStatus === 'pending_verification' ? 'pending_verification' :
+            'unverified'
+          );
 
           return {
             id,
             name: loc.title || account?.accountName || envBusinessName,
             address,
-            status: mappedStatus,
+            status,
             optimizationScore: 'N/A',
             locationId: id,
             accountType: account?.type || 'UNKNOWN',
-            verificationState: rawVer,
+            verificationState: simplifiedStatus,
             vettedState: account?.vettedState || 'UNKNOWN',
             // expose hints for table just in case
-            verified: mappedStatus === 'verified',
+            verified: status === 'verified',
             locationState: loc?.locationState || null,
             metadata: loc?.metadata || null,
           };
-        });
+        }));
 
         // If user has three profiles, they will appear; otherwise show all found
         setBusinesses(normalized);
@@ -334,8 +336,17 @@ const Dashboard = () => {
       />
       
       {/* Configuration Status (only shown in debug mode) */}
-      
-    
+      {envDebugMode && (
+        <Box sx={{ mb: 2 }}>
+          <Button 
+            size="small" 
+            onClick={() => setShowDebugger(!showDebugger)}
+            variant="outlined"
+          >
+            {showDebugger ? '🔧 Hide' : '🔧 Show'} Auto Token Debugger
+          </Button>
+        </Box>
+      )}
       
       {businesses.length === 0 ? (
         <NoBusinessesContainer>
@@ -349,6 +360,9 @@ const Dashboard = () => {
       ) : (
         <BusinessTable businesses={businesses} />
       )}
+      
+      {/* Auto Token Debugger */}
+      <AutoTokenDebugger open={showDebugger} />
     </DashboardLayout>
   );
 };
