@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Stack, Typography, Button, Paper, Rating, LinearProgress, Chip, CircularProgress, Alert, Menu, MenuItem, ListItemText, ListItemIcon, Divider } from '@mui/material';
+import { Box, Stack, Typography, Button, Paper, Rating, LinearProgress, Chip, CircularProgress, Alert, Menu, MenuItem, ListItemText, ListItemIcon, Divider, Modal, IconButton } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../Layouts/DashboardLayout';
@@ -14,6 +14,7 @@ import ShareIcon from '../../icons/ShareIcon';
 import QRCodeIcon from '../../icons/QRCodeIcon';
 import SwitchAccountIcon from '../../icons/SwitchAccountIcon';
 import ProfileGaugeIcon from '../../icons/ProfileGaugeIcon';
+import CloseIcon from '@mui/icons-material/Close';
 
 // Styled Components
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -806,6 +807,9 @@ const BusinessProfile = () => {
   const [availableProfiles, setAvailableProfiles] = useState([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  // Photo popup state
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null); // { original, proxy }
   const [currentAccount, setCurrentAccount] = useState(null);
   const [verificationState, setVerificationState] = useState({
     loading: true,
@@ -816,6 +820,17 @@ const BusinessProfile = () => {
   });
   
   // State for managing expanded views
+  // Handlers for photo modal
+  const handlePhotoClick = (originalSrc, proxied) => {
+    if (!originalSrc && !proxied) return;
+    setSelectedPhoto({ original: originalSrc || '', proxy: proxied || '' });
+    setPhotoModalOpen(true);
+  };
+
+  const closePhotoModal = () => {
+    setPhotoModalOpen(false);
+    setSelectedPhoto(null);
+  };
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [showPerformanceDetails, setShowPerformanceDetails] = useState(false);
   const [showFeedDetails, setShowFeedDetails] = useState(false);
@@ -1421,7 +1436,13 @@ const BusinessProfile = () => {
                       const proxied = originalSrc ? buildProxyUrl(originalSrc) : null;
                       const initialSrc = proxied || originalSrc;
                       return (
-                        <PhotoItem key={item.name || `photo-${index}`}>
+                        <PhotoItem
+                          key={item.name || `photo-${index}`}
+                          sx={{ cursor: initialSrc ? 'pointer' : 'default' }}
+                          onClick={() => handlePhotoClick(originalSrc, proxied)}
+                          role={initialSrc ? 'button' : undefined}
+                          aria-label={initialSrc ? 'Open photo' : undefined}
+                        >
                           {initialSrc ? (
                             <img
                               src={initialSrc}
@@ -1480,6 +1501,57 @@ const BusinessProfile = () => {
                   </AddPhotoButton>
                 </PhotosGrid>
               </PhotosSection>
+
+              {/* Photo Modal */}
+              <Modal open={photoModalOpen} onClose={closePhotoModal} aria-labelledby="photo-modal">
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                  {/* Top-right close button */}
+                  <IconButton
+                    aria-label="Close"
+                    onClick={closePhotoModal}
+                    sx={{
+                      position: 'fixed',
+                      top: 12,
+                      right: 12,
+                      color: '#EF232A',
+                      bgcolor: 'transparent',
+                      '&:hover': { bgcolor: 'transparent', color: '#d32f2f' }
+                    }}
+                    size="medium"
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                  <Box sx={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', outline: 'none' }}>
+                    {selectedPhoto && (
+                      <img
+                        src={selectedPhoto.proxy || selectedPhoto.original}
+                        alt="Selected"
+                        style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', display: 'block' }}
+                        referrerPolicy="no-referrer"
+                        crossOrigin="anonymous"
+                        data-original={selectedPhoto.original || ''}
+                        data-proxy={selectedPhoto.proxy || ''}
+                        data-retry="0"
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          const retry = parseInt(img.dataset.retry || '0', 10);
+                          const og = img.dataset.original;
+                          const proxy = img.dataset.proxy;
+                          if (retry === 0 && proxy && img.src === proxy && og) {
+                            img.dataset.retry = '1';
+                            img.src = og;
+                          } else if (retry <= 1 && proxy && img.src === og) {
+                            img.dataset.retry = '2';
+                            img.src = placeholderSmall;
+                          } else {
+                            img.src = placeholderSmall;
+                          }
+                        }}
+                      />
+                    )}
+                  </Box>
+                </Box>
+              </Modal>
 
               <ActionsGrid>
                 <ActionButton onClick={() => websiteUrl !== 'Not available' && window.open(websiteUrl, '_blank')}>

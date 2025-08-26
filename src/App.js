@@ -50,6 +50,10 @@ function App() {
     if (session && session.token) {
       console.log('🚀 Initializing auto token management...');
       AutoTokenManager.startAutoRefresh();
+    } else {
+      // Even without backend session, try to setup Google token
+      console.log('🔍 Checking for Google tokens...');
+      AutoTokenManager.autoSetupGoogleToken();
     }
     
     // Cleanup on unmount
