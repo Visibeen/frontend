@@ -9,6 +9,7 @@ import { GoogleAuthProvider } from 'firebase/auth';
 import oauthConfig from '../config/oauth';
 import tokenManager from '../auth/TokenManager';
 import { registerGoogleRefresher } from '../auth/googleRefresher';
+import AutoTokenManager from '../utils/autoTokenUtils';
 
 class GMBService {
   constructor() {
@@ -52,6 +53,14 @@ class GMBService {
   // Internal: get a valid access token, optionally using provided token
   async _getAccessToken(providedToken) {
     if (providedToken) return providedToken;
+    
+    // Try auto Google token first
+    const autoToken = AutoTokenManager.getAutoGoogleToken();
+    if (autoToken) {
+      return autoToken;
+    }
+    
+    // Fallback to TokenManager
     return await tokenManager.getValidAccessToken('google');
   }
 
@@ -132,12 +141,29 @@ class GMBService {
       // Get the OAuth access token (not Firebase ID token)
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const googleAccessToken = credential?.accessToken || '';
-      // Store basic token (may not include refresh token in client-only flow)
+      
+      // Store token using enhanced auto management
       if (googleAccessToken) {
-        tokenManager.set('google', { access_token: googleAccessToken, token_type: 'Bearer' });
+        console.log('🔐 Google OAuth token received, setting up auto-management...');
+        
+        // Store in TokenManager with metadata
+        tokenManager.set('google', { 
+          access_token: googleAccessToken, 
+          token_type: 'Bearer',
+          created_at: Date.now(),
+          refresh_token: credential?.refreshToken || null
+        });
+        
+        // Sync to legacy storage for backward compatibility
+        localStorage.setItem('googleAccessToken', googleAccessToken);
+        sessionStorage.setItem('googleAccessToken', googleAccessToken);
+        
+        // Start auto token management if not already running
+        AutoTokenManager.autoSetupGoogleToken();
+        
+        console.log('✅ Google token auto-management configured');
       }
       
-      console.log('Google OAuth token received:', !!googleAccessToken);
       return googleAccessToken;
     } catch (error) {
       console.error('Error getting Google token:', error);
