@@ -807,6 +807,13 @@ const BusinessProfile = () => {
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentAccount, setCurrentAccount] = useState(null);
+  const [verificationState, setVerificationState] = useState({
+    loading: true,
+    error: null,
+    simplified: 'unknown',
+    raw: null,
+    isVerified: false,
+  });
   
   // State for managing expanded views
   const [showAllTasks, setShowAllTasks] = useState(false);
@@ -862,6 +869,11 @@ const BusinessProfile = () => {
           loc.name.split('/').pop() === locationId
         ) || locations[0];
 
+        // Add review count to location data if available from GMB locations API
+        if (targetLocation && !targetLocation.reviewCount && !targetLocation.profile?.reviewCount) {
+          // The location from GMB locations API might not have review count, we'll get it from reviews API
+          console.log('Location data missing review count, will rely on reviews API');
+        }
         setLocationData(targetLocation);
         setCurrentAccount(targetAccount);
 
@@ -899,10 +911,35 @@ const BusinessProfile = () => {
         // Extract the location ID once for downstream calls
         const actualLocationId = targetLocation.name.split('/').pop();
 
+        // Fetch VoiceOfMerchantState for verification status
+        try {
+          console.log('[BusinessProfile] Fetching VoiceOfMerchantState for location:', actualLocationId);
+          const { raw, simplifiedStatus } = await GMBService.getVoiceOfMerchantState(actualLocationId);
+          const hasVOM = raw?.hasVoiceOfMerchant === true;
+          const hasBA = raw?.hasBusinessAuthority === true;
+          // Only treat hasVoiceOfMerchant OR explicit 'verified' as verified
+          const derivedVerified = hasVOM || simplifiedStatus === 'verified';
+          setVerificationState({
+            loading: false,
+            error: null,
+            simplified: simplifiedStatus || 'unknown',
+            raw,
+            isVerified: derivedVerified,
+          });
+          console.log('[BusinessProfile] VoiceOfMerchantState result:', { simplifiedStatus, hasVOM, hasBA, derivedVerified, raw });
+        } catch (vomErr) {
+          console.warn('[BusinessProfile] Error fetching VoiceOfMerchantState:', vomErr);
+          setVerificationState((prev) => ({
+            ...prev,
+            loading: false,
+            error: vomErr?.message || 'Failed to fetch VoiceOfMerchantState',
+          }));
+        }
+
         // Fetch reviews data for this location directly
         try {
           const reviews = await GMBService.getReviews(undefined, targetAccount.name, targetLocation.name);
-          setReviewsData({ reviews });
+          setReviewsData(reviews);
           console.log('Reviews data fetched successfully:', { count: reviews.length });
         } catch (reviewsError) {
           console.warn('Error fetching reviews:', reviewsError);
@@ -1006,8 +1043,8 @@ const BusinessProfile = () => {
     return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
   };
   const mapsUri = createMapsUrl();
-  // Determine verification status: prefer account's verification state, fallback to location metadata
-  const isVerified = (currentAccount?.verificationState === 'VERIFIED') || (locationData?.metadata?.verified === true);
+  // Determine verification status using VoiceOfMerchantState flags and simplified status
+  const isVerified = verificationState.isVerified;
 
   // Build Heatmap link handler now that we have businessTitle and locationData
   const currentPlaceId = locationData?.metadata?.placeId || locationData?.placeId || '';
@@ -1019,8 +1056,8 @@ const BusinessProfile = () => {
     navigate(`/profile-strength?${qs.toString()}`);
   };
 
-  // Calculate real reviews data
-  const reviews = reviewsData?.reviews || [];
+  // Calculate real reviews data - handle new GMBService format
+  const reviews = Array.isArray(reviewsData?.reviews) ? reviewsData.reviews : (reviewsData?.reviews?.reviews || []);
   // Map Google's enum star ratings (e.g., 'FIVE') to numeric values
   const toNumericRating = (star) => {
     if (typeof star === 'number') return star;
@@ -1029,14 +1066,27 @@ const BusinessProfile = () => {
     return map[key] || 0;
   };
   const numericRatings = reviews.map(r => toNumericRating(r.starRating));
-  const totalReviews = numericRatings.length;
-  const averageRating = totalReviews > 0 ?
-    numericRatings.reduce((sum, n) => sum + n, 0) / totalReviews : 0;
+  
+  // Get the actual total review count from the reviews API response
+  const actualTotalFromAPI = reviewsData?.totalReviewCount || reviewsData?.total || null;
+  
+  // Since locationData comes from GMB locations API (not reviews API), it won't have totalReviewCount
+  // We need to use the totalReviewCount from the reviews API response directly
+  const totalReviews = actualTotalFromAPI || numericRatings.length;
+  
+  console.log('BusinessProfile totalReviews calculation:', {
+    reviewsData: reviewsData,
+    actualTotalFromAPI,
+    arrayLength: numericRatings.length,
+    finalTotalReviews: totalReviews
+  });
+  const averageRating = numericRatings.length > 0 ?
+    numericRatings.reduce((sum, n) => sum + n, 0) / numericRatings.length : 0;
 
-  // Calculate rating distribution
+  // Calculate rating distribution - use actual review count for percentages but fetched reviews for counts
   const ratingDistribution = [5, 4, 3, 2, 1].map(rating => {
     const count = numericRatings.filter(n => Math.round(n) === rating).length;
-    const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+    const percentage = numericRatings.length > 0 ? (count / numericRatings.length) * 100 : 0;
     return { rating, count, percentage };
   });
 
@@ -1602,11 +1652,11 @@ const BusinessProfile = () => {
             </ReviewsGrid>
             <ReviewsStatsGrid>
               <ReviewsStat>
-                <ReviewsStatValue>{reviewsData?.reviews?.length || 0}</ReviewsStatValue>
+                <ReviewsStatValue>{reviewsData?.totalReviewCount || reviews.length || 0}</ReviewsStatValue>
                 <ReviewsStatLabel>Total Reviews</ReviewsStatLabel>
               </ReviewsStat>
               <ReviewsStat>
-                <ReviewsStatValue>{reviewsData?.reviews?.filter(review => {
+                <ReviewsStatValue>{reviews.filter(review => {
                   const reviewDate = new Date(review.createTime);
                   const sevenDaysAgo = new Date();
                   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -1615,7 +1665,7 @@ const BusinessProfile = () => {
                 <ReviewsStatLabel>Reviews In Last 7 Days</ReviewsStatLabel>
               </ReviewsStat>
               <ReviewsStat>
-                <ReviewsStatValue>{reviewsData?.reviews?.filter(review => {
+                <ReviewsStatValue>{reviews.filter(review => {
                   const reviewDate = new Date(review.createTime);
                   const thirtyDaysAgo = new Date();
                   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);

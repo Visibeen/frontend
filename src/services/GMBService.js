@@ -231,27 +231,58 @@ class GMBService {
    */
   async getReviews(accessToken, accountName, locationName) {
     try {
-      // Extract IDs from names
-      const accountId = (accountName || '').split('/')[1];
-      const locationId = (locationName || '').split('/')[1];
-      
-      if (!accountId || !locationId) {
-        throw new Error('Invalid account or location identifiers');
-      }
+      let allReviews = [];
+      let nextPageToken = null;
+      let totalReviewCount = 0;
+      let averageRating = 0;
 
-      const response = await this._googleFetch(
-        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/reviews`,
-        { method: 'GET' },
-        accessToken
-      );
+      do {
+        const url = `https://mybusiness.googleapis.com/v4/${accountName}/${locationName}/reviews` + 
+                   (nextPageToken ? `?pageToken=${nextPageToken}` : '');
+        
+        const response = await this._googleFetch(
+          url,
+          { method: 'GET' },
+          accessToken
+        );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to fetch reviews');
-      }
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'Failed to fetch reviews');
+        }
 
-      const data = await response.json();
-      return data.reviews || [];
+        const data = await response.json();
+        
+        // Add reviews from this page
+        if (data.reviews && data.reviews.length > 0) {
+          allReviews = allReviews.concat(data.reviews);
+        }
+        
+        // Store metadata from first response
+        if (!nextPageToken) {
+          totalReviewCount = data.totalReviewCount || 0;
+          averageRating = data.averageRating || 0;
+        }
+        
+        nextPageToken = data.nextPageToken;
+        
+        // Safety check to prevent infinite loops
+        if (allReviews.length > 10000) {
+          console.warn('Reached maximum review limit of 10,000');
+          break;
+        }
+        
+      } while (nextPageToken);
+
+      console.log(`Fetched ${allReviews.length} reviews out of ${totalReviewCount} total`);
+
+      // Return the full response object with all reviews
+      return {
+        reviews: allReviews,
+        totalReviewCount: totalReviewCount,
+        averageRating: averageRating,
+        nextPageToken: null
+      };
     } catch (error) {
       console.error('Error fetching reviews:', error);
       throw error;
@@ -490,6 +521,59 @@ class GMBService {
       return await response.json();
     } catch (error) {
       console.error('Error refreshing token:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get Voice of Merchant verification state for a Business Profile location
+   * API: https://mybusinessverifications.googleapis.com/v1/locations/{locationId}/VoiceOfMerchantState
+   * @param {string} locationNameOrId - e.g., 'locations/11157617678660838845' or just the numeric ID
+   * @param {string} accessToken - optional Google OAuth access token
+   * @returns {Promise<{ raw: object, simplifiedStatus: 'verified'|'suspended'|'pending_verification'|'not_verified'|'unknown' }>} 
+   */
+  async getVoiceOfMerchantState(locationNameOrId, accessToken) {
+    try {
+      if (!locationNameOrId) throw new Error('locationNameOrId is required');
+      const locName = String(locationNameOrId).includes('locations/')
+        ? String(locationNameOrId)
+        : `locations/${locationNameOrId}`;
+
+      const url = `https://mybusinessverifications.googleapis.com/v1/${locName}/VoiceOfMerchantState`;
+      console.log('[GMBService] Fetching VoiceOfMerchantState:', url);
+      const response = await this._googleFetch(url, { method: 'GET' }, accessToken);
+      if (!response.ok) {
+        const rawText = await response.text().catch(() => '');
+        console.error('[GMBService] VoiceOfMerchantState error', {
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          body: rawText
+        });
+        let errorMessage = 'Failed to fetch VoiceOfMerchantState';
+        try {
+          const errorData = JSON.parse(rawText);
+          errorMessage = errorData?.error?.message || errorMessage;
+        } catch (_) {}
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+
+      // Derive a simplified status from whatever fields are present
+      const rawState = (data?.state || data?.status || data?.voiceOfMerchantState || '').toString().toUpperCase();
+      let simplified = 'unknown';
+
+      if (rawState.includes('VERIFIED')) simplified = 'verified';
+      else if (rawState.includes('SUSPENDED')) simplified = 'suspended';
+      else if (rawState.includes('PENDING')) simplified = 'pending_verification';
+      else if (data?.isVerified === true) simplified = 'verified';
+      else if (data?.isVerified === false) simplified = 'not_verified';
+      else simplified = 'not_verified';
+
+      return { raw: data, simplifiedStatus: simplified };
+    } catch (error) {
+      console.error('Error fetching VoiceOfMerchantState:', error);
       throw error;
     }
   }

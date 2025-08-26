@@ -5,8 +5,7 @@ import { useLocation } from 'react-router-dom';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import EditIcon from '../icons/EditIcon';
 import GMBService from '../../services/GMBService';
-import CompetitorScraper from '../../services/CompetitorScraper';
-import GMBProductScraper from '../../services/GMBProductScraper';
+ 
 
 const MainContent = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -383,10 +382,6 @@ const ProfileStrengthResults = () => {
   const [completedSteps, setCompletedSteps] = useState([]);
   const [stepProgress, setStepProgress] = useState(0);
   
-  // Competitor analysis data
-  const [competitorData, setCompetitorData] = useState([]);
-  const [competitorStats, setCompetitorStats] = useState(null);
-  const [myBusinessProducts, setMyBusinessProducts] = useState(null);
 
   // Ensure target location is always set with available data
   useEffect(() => {
@@ -642,11 +637,21 @@ const ProfileStrengthResults = () => {
         setCompletedSteps(prev => [...new Set([...prev, ...completed])]);
       };
 
-      // 1) Verification status
+      // 1) Verification status (respect Dashboard-passed status/flags)
       updateProgress('Checking verification status...', 10);
       await new Promise(resolve => setTimeout(resolve, 600));
-      const verificationState = (account?.verificationState || '').toUpperCase();
-      const isVerified = verificationState === 'VERIFIED' || targetLocation?.metadata?.verified === true;
+      const verificationStateRaw = account?.verificationState || '';
+      const verificationState = String(verificationStateRaw).toUpperCase();
+      const dashStatus = String(business?.status || state?.selected?.status || '').toLowerCase();
+      const dashVerified = (business?.verified === true) || (state?.selected?.verified === true);
+      const isVerified = (
+        dashVerified ||
+        dashStatus === 'verified' ||
+        verificationState === 'VERIFIED' ||
+        String(verificationStateRaw).toLowerCase() === 'verified' ||
+        targetLocation?.metadata?.verified === true
+      );
+      try { console.debug('[Results] Verification inputs:', { verificationStateRaw, verificationState, dashStatus, dashVerified, resolvedIsVerified: isVerified }); } catch (_) {}
       const isSoftSuspended = (
         (targetLocation?.metadata?.placeSuspensionReason || '').toString().toUpperCase().includes('SOFT') ||
         (targetLocation?.metadata?.state || '').toString().toUpperCase().includes('SOFT')
@@ -1302,108 +1307,21 @@ const ProfileStrengthResults = () => {
           const compAvg = compTotals.length ? (compTotals.reduce((s, n) => s + n, 0) / compTotals.length) : 0;
           console.log('Competitor stats:', { totalFetched: resultsAll.length, competitorCount: competitors.length, compAvg });
 
-          // Scrape user's own business products first
-          updateProgress('Analyzing your business products...', 92, ['My Business Products']);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          try {
-            if (targetLocation) {
-              const myBusinessData = {
-                name: targetLocation.name || targetLocation.businessName,
-                place_id: targetLocation.place_id,
-                website: targetLocation.website,
-                address: targetLocation.address || targetLocation.formatted_address
-              };
-
-              console.log('[Profile Strength] Scraping products for user business:', myBusinessData);
-              const myProductsResult = await GMBProductScraper.getMyBusinessProducts(myBusinessData);
-              
-              setMyBusinessProducts(myProductsResult);
-              
-              if (myProductsResult.scrapingSuccess) {
-                console.log(`[Profile Strength] Found ${myProductsResult.productCount} products for your business!`);
-                console.log(`[Profile Strength] Your products: ${myProductsResult.products.slice(0, 3).map(p => p.name).join(', ')}${myProductsResult.productCount > 3 ? '...' : ''}`);
-                
-                // Award points for having products
-                const productPoints = Math.min(myProductsResult.productCount * 3, 30); // Max 30 points for products
-                score += productPoints;
-                console.log(`[Profile Strength] Added ${productPoints} points for having ${myProductsResult.productCount} products`);
-              } else {
-                console.log('[Profile Strength] No products found for your business');
-              }
-            }
-          } catch (error) {
-            console.error('[Profile Strength] Error scraping user business products:', error);
-          }
-
-          // Enhanced competitor analysis with product scraping
-          updateProgress('Analyzing competitor products...', 96, ['Competitor Analysis']);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          try {
-            const topCompetitors = competitors.slice(0, 5).map(comp => ({
-              name: comp.name,
-              place_id: comp.place_id,
-              website: comp.website,
-              types: comp.types,
-              rating: comp.rating,
-              user_ratings_total: comp.user_ratings_total
-            }));
-
-            if (topCompetitors.length > 0) {
-              console.log('[GMB Scraper] Starting enhanced competitor product analysis...');
-              
-              // Use the new GMB Product Scraper for more accurate results
-              const gmbResults = await GMBProductScraper.getCompetitorProductCounts(topCompetitors);
-              const stats = CompetitorScraper.getSummaryStats(gmbResults);
-              
-              setCompetitorData(gmbResults);
-              setCompetitorStats(stats);
-              
-              console.log('[GMB Scraper] Enhanced competitor analysis complete:', stats);
-              
-              // Adjust scoring based on product count comparison
-              if (stats.averageProductCount > 0) {
-                // Estimate current business product count (you can enhance this)
-                const myEstimatedProducts = CompetitorScraper.estimateFromBusinessTypes(
-                  targetLocation?.categories?.primaryCategory ? [targetLocation.categories.primaryCategory] : ['establishment']
-                );
-                
-                const productRatio = myEstimatedProducts / stats.averageProductCount;
-                const productBonus = productRatio > 1 ? Math.min(15, productRatio * 5) : 0;
-                
-                reviewsPts += Math.round(productBonus);
-                score += Math.round(productBonus);
-                
-                console.log('[Scraper] Product comparison bonus:', {
-                  myProducts: myEstimatedProducts,
-                  avgCompetitorProducts: stats.averageProductCount,
-                  ratio: productRatio,
-                  bonus: productBonus
-                });
-              }
-            }
-          } catch (scrapingError) {
-            console.warn('[Scraper] Competitor product analysis failed:', scrapingError);
-          }
-
+          // Removed competitor products scraping and product-based comparison bonus
+          // Proceed with generic competitor analysis without product data
+          updateProgress('Analyzing competitors...', 96, ['Competitor Analysis']);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          // Retain competitor discovery and distance table without product counts
           try {
             const compRows = competitors.map((p) => {
               const plat = p.geometry?.location?.lat;
               const plng = p.geometry?.location?.lng;
               const dist = (plat != null && plng != null) ? Math.round(haversine({ lat, lng }, { lat: plat, lng: plng })) : null;
-              
-              // Find matching competitor data from scraping results
-              const scrapedData = competitorData.find(comp => 
-                comp.name && p.name && comp.name.toLowerCase().includes(p.name.toLowerCase().split(' ')[0].toLowerCase())
-              );
-              
               return {
                 name: p.name || '(no name)',
                 rating: p.rating ?? null,
                 user_ratings_total: p.user_ratings_total ?? 0,
-                distance_m: dist,
-                products: scrapedData ? scrapedData.productCount : 'pending...'
+                distance_m: dist
               };
             });
             if (compRows.length) {
@@ -1610,142 +1528,6 @@ const ProfileStrengthResults = () => {
             View Heat Map
           </ViewHeatMapButton>
 
-          {/* My Business Products Results */}
-          {myBusinessProducts && (
-            <Box sx={{ mt: 4, p: 3, backgroundColor: '#f0f8ff', borderRadius: '12px', border: '2px solid #0B91D6' }}>
-              <Typography variant="h6" sx={{ mb: 2, color: '#0B91D6', fontWeight: 600 }}>
-                Your Business Products
-              </Typography>
-              
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 2 }}>
-                <Box sx={{ p: 2, backgroundColor: '#fff', borderRadius: '8px', textAlign: 'center' }}>
-                  <Typography variant="h4" sx={{ color: myBusinessProducts.scrapingSuccess ? '#34A853' : '#EA4335', fontWeight: 700 }}>
-                    {myBusinessProducts.productCount}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Products Found
-                  </Typography>
-                </Box>
-                
-                <Box sx={{ p: 2, backgroundColor: '#fff', borderRadius: '8px', textAlign: 'center' }}>
-                  <Typography variant="body1" sx={{ color: '#0B91D6', fontWeight: 600 }}>
-                    {myBusinessProducts.scrapingSuccess ? '✅ Success' : '❌ Failed'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Scraping Status
-                  </Typography>
-                </Box>
-              </Box>
-
-              {myBusinessProducts.scrapingSuccess && myBusinessProducts.products.length > 0 && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Sample Products:
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {myBusinessProducts.products.slice(0, 5).map(p => p.name).join(', ')}
-                    {myBusinessProducts.products.length > 5 ? '...' : ''}
-                  </Typography>
-                </Box>
-              )}
-
-              {myBusinessProducts.scrapingMethods && myBusinessProducts.scrapingMethods.length > 0 && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Scraping Methods Used:
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {myBusinessProducts.scrapingMethods.join(', ')}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          )}
-
-          {/* Competitor Analysis Results */}
-          {competitorStats && competitorData.length > 0 && (
-            <Box sx={{ mt: 4, p: 3, backgroundColor: '#f8f9fa', borderRadius: '12px', border: '1px solid #e9ecef' }}>
-              <Typography variant="h6" sx={{ mb: 2, color: '#0B91D6', fontWeight: 600 }}>
-                Competitor Analysis Results
-              </Typography>
-              
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 3 }}>
-                <Box sx={{ p: 2, backgroundColor: '#fff', borderRadius: '8px', textAlign: 'center' }}>
-                  <Typography variant="h4" sx={{ color: '#34A853', fontWeight: 700 }}>
-                    {competitorStats.successfulScrapes}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Competitors Analyzed
-                  </Typography>
-                </Box>
-                
-                <Box sx={{ p: 2, backgroundColor: '#fff', borderRadius: '8px', textAlign: 'center' }}>
-                  <Typography variant="h4" sx={{ color: '#0B91D6', fontWeight: 700 }}>
-                    {competitorStats.averageProductCount}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Avg Products/Services
-                  </Typography>
-                </Box>
-                
-                <Box sx={{ p: 2, backgroundColor: '#fff', borderRadius: '8px', textAlign: 'center' }}>
-                  <Typography variant="h4" sx={{ color: '#EA4335', fontWeight: 700 }}>
-                    {competitorStats.maxProductCount}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Top Competitor
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-                Individual Competitor Data:
-              </Typography>
-              
-              <Box sx={{ maxHeight: '200px', overflowY: 'auto' }}>
-                {competitorData.map((comp, index) => (
-                  <Box key={index} sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    p: 2, 
-                    mb: 1, 
-                    backgroundColor: '#fff', 
-                    borderRadius: '6px',
-                    border: '1px solid #e9ecef'
-                  }}>
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {comp.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Source: {comp.source.replace('_', ' ')}
-                      </Typography>
-                      {comp.products && comp.products.length > 0 && (
-                        <Typography variant="caption" sx={{ 
-                          display: 'block', 
-                          mt: 0.5, 
-                          color: '#666',
-                          fontSize: '11px'
-                        }}>
-                          Products: {comp.products.slice(0, 3).join(', ')}
-                          {comp.products.length > 3 && '...'}
-                        </Typography>
-                      )}
-                    </Box>
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="h6" sx={{ color: comp.productCount > 0 ? '#34A853' : '#666' }}>
-                        {comp.productCount}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        products
-                      </Typography>
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-          )}
         </ContentSection>
       </MainContent>
 
