@@ -11,16 +11,16 @@ import PageHeader from './components/PageHeader';
 import BusinessTable from './components/BusinessTable';
 
 // .env-driven config
-const envUseMockGmb = (import.meta.env.VITE_USE_MOCK_GMB || 'false') === 'true';
-const envGoogleAccessToken = import.meta.env.VITE_GOOGLE_ACCESS_TOKEN || '';
+const envUseMockGmb = (process.env.REACT_APP_USE_MOCK_GMB || 'false') === 'true';
+const envGoogleAccessToken = process.env.REACT_APP_GOOGLE_ACCESS_TOKEN || '';
 
-const envBusinessName = import.meta.env.VITE_BUSINESS_NAME || 'E2E Networks Limited';
-const envGoogleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-const envGoogleClientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
-const envGmbApiKey = import.meta.env.VITE_GMB_API_KEY || '';
-const envGmbProjectId = import.meta.env.VITE_GMB_PROJECT_ID || '';
-const envUseLiveApi = (import.meta.env.VITE_USE_LIVE_API || 'true') === 'true';
-const envDebugMode = (import.meta.env.VITE_DEBUG_MODE || 'false') === 'true';
+const envBusinessName = process.env.REACT_APP_BUSINESS_NAME || 'E2E Networks Limited';
+const envGoogleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+const envGoogleClientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET || '';
+const envGmbApiKey = process.env.REACT_APP_GMB_API_KEY || '';
+const envGmbProjectId = process.env.REACT_APP_GMB_PROJECT_ID || '';
+const envUseLiveApi = (process.env.REACT_APP_USE_LIVE_API || 'true') === 'true';
+const envDebugMode = (process.env.REACT_APP_DEBUG_MODE || 'false') === 'true';
 
 const LoadingContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
