@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Stack, Button, Checkbox, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { useNavigate } from 'react-router-dom';
 import ReviewCard from './ReviewCard';
 import FilterPopup from './FilterPopup';
 import SortPopup from './SortPopup';
@@ -168,6 +169,7 @@ const CreatePostButton = styled(Button)(({ theme }) => ({
 }));
 
 const ReviewsManagement = () => {
+  const navigate = useNavigate();
   const [selectAll, setSelectAll] = useState(false);
   const [selectedReviews, setSelectedReviews] = useState([]);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -333,6 +335,14 @@ const ReviewsManagement = () => {
     setSortOpen(true);
   };
 
+  const handleCreatePost = () => {
+    navigate('/create-post');
+  };
+
+  const handleAIReply = () => {
+    navigate('/set-auto-reply');
+  };
+
   const handleFilterClose = () => {
     setFilterOpen(false);
     setFilterAnchor(null);
@@ -389,7 +399,7 @@ const ReviewsManagement = () => {
       <ActionButtonsContainer>
         <ActionRow sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
           <Stack direction="row" gap="18px">
-            <AIButton>
+            <AIButton onClick={handleAIReply}>
               <AIIcon width={14} height={13} className="ai-icon" />
               Reply with AI
             </AIButton>
@@ -443,7 +453,7 @@ const ReviewsManagement = () => {
         </Button>
       </Stack>
 
-      <CreatePostButton>
+      <CreatePostButton onClick={() => navigate('/create-post')}>
         Create Post
       </CreatePostButton>
 
