@@ -9,7 +9,9 @@ const StyledCard = styled(Card)(({ theme, bgcolor }) => ({
   border: 'none',
   backgroundColor: bgcolor || theme.palette.background.paper,
   boxShadow: 'none',
-  height: '100%'
+  height: '100%',
+  minWidth: '183px',
+  flex: 1
 }));
 
 const MetricTitle = styled(Typography)(({ theme }) => ({
@@ -54,7 +56,7 @@ const MetricCard = ({
   
   return (
     <StyledCard bgcolor={backgroundColor}>
-      <CardContent sx={{ padding: '14px' }}>
+      <CardContent sx={{ padding: '14px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <MetricTitle>{title}</MetricTitle>
         <MetricValue valueColor={valueColor}>
           {typeof value === 'number' ? value.toLocaleString() : value}

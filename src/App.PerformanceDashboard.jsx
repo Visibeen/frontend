@@ -1,21 +1,27 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import PerformanceDashboard from './components/Performance/PerformanceDashboard';
+import { CssBaseline } from '@mui/material';
+import './index.css';
 import theme from './theme';
+import PerformanceDashboard from './components/Performance/PerformanceDashboard';
 
 function App() {
+  const handleExportToPDF = () => {
+    console.log('Export to PDF functionality would be implemented here');
+  };
+
+  const handleTimeRangeChange = (timeRange) => {
+    console.log('Time range changed:', timeRange);
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <Routes>
-          <Route path="/" element={<Navigate to="/performance" replace />} />
-          <Route path="/performance" element={<PerformanceDashboard />} />
-          <Route path="*" element={<Navigate to="/performance" replace />} />
-        </Routes>
-      </Router>
+      <PerformanceDashboard
+        onExportToPDF={handleExportToPDF}
+        onTimeRangeChange={handleTimeRangeChange}
+        selectedTimeRange="6 Month"
+      />
     </ThemeProvider>
   );
 }

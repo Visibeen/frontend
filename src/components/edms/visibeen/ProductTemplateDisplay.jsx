@@ -414,7 +414,7 @@ const ProductTemplateDisplay = () => {
             >
               ← Move Logo Left
             </button>
-            <div style={{
+            {/* <div style={{
               padding: '10px 20px',
               backgroundColor: 'rgba(0,0,0,0.7)', 
               color: 'white', 
@@ -423,7 +423,7 @@ const ProductTemplateDisplay = () => {
               fontWeight: 'bold' 
             }}> 
               Position: {Math.round(logoPosition)}% 
-            </div> 
+            </div>  */}
             <button  
               onClick={moveLogoRight} 
               style={{ 
