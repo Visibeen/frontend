@@ -6,6 +6,11 @@ const initialFormState = {
   industry_type: '',
   start_date: '',
   end_date: '',
+  cro_employee_name: '',
+  seo_employee_name: '',
+  password: '',
+  contact_person: '',
+  contact_number: '',
   email: '',
   address: '',
   website: '',
@@ -52,6 +57,11 @@ const AccountInfoForm = () => {
       industry_type: form.industry_type,
       start_date: form.start_date,
       end_date: form.end_date,
+      cro_employee_name: form.cro_employee_name,
+      seo_employee_name: form.seo_employee_name,
+      password: form.password,
+      contact_person: form.contact_person,
+      contact_number: form.contact_number,
       email: form.email,
       address: form.address,
       website: form.website
@@ -109,7 +119,7 @@ const AccountInfoForm = () => {
         </label>
       </div>
       <form className="account-info-form" onSubmit={handleSubmit}>
-        <label>Business Name*<input name="business_name" value={form.business_name} onChange={handleChange}  /></label>
+        <label>Business Name*<input name="business_name" value={form.business_name} onChange={handleChange} /></label>
         <label>Industry Type*<input name="industry_type" value={form.industry_type} onChange={handleChange} /></label>
         <div className="form-row">
           <label>Start Date*
@@ -119,9 +129,20 @@ const AccountInfoForm = () => {
             <input name="end_date" type="date" value={form.end_date} onChange={handleChange} />
           </label>
         </div>
+        <div className="form-row">
+          <label>CRO Employee
+            <input name="cro_employee_name" value={form.cro_employee_name} onChange={handleChange} />
+          </label>
+          <label>SEO Employee
+            <input name="seo_employee_name" value={form.seo_employee_name} onChange={handleChange} />
+          </label>
+        </div>
         <label>Email ID*<input name="email" value={form.email} onChange={handleChange} /></label>
+        <label>Password*<input name="password" value={form.password} onChange={handleChange} /></label>
         <label>Address*<input name="address" value={form.address} onChange={handleChange} /></label>
         <label>Website*<input name="website" value={form.website} onChange={handleChange} /></label>
+        <label>Contact Person*<input name="contact_person" value={form.contact_person} onChange={handleChange} /></label>
+        <label>Contact Number<input name="contact_number" value={form.contact_number} onChange={handleChange} /></label>
         <div className="form-actions">
           <button type="button" className="cancel-btn" onClick={handleCancel}>Cancel</button>
           <button type="submit" className="update-btn">Update</button>

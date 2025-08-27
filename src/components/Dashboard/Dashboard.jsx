@@ -172,7 +172,7 @@ const Dashboard = () => {
           setLoading(false);
           return;
         }
-
+         
         if (envDebugMode) {
           console.log('Found GMB accounts:', accounts.length);
           console.log('First account details:', accounts[0]);
@@ -231,7 +231,7 @@ const Dashboard = () => {
                           loc.storefrontAddress?.locality ||
                           loc.storefrontAddress?.administrativeArea ||
                           'Address not available';
-
+                  
           // Fetch verification via VoiceOfMerchantState API
           let simplifiedStatus = 'unknown';
           let hasVOM = false;
@@ -277,7 +277,7 @@ const Dashboard = () => {
         setBusinesses(normalized);
         setLoading(false);
         return;
-        
+         
       } catch (err) {
         console.error('Error fetching businesses:', err);
         setError(err.message);

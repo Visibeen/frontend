@@ -33,6 +33,12 @@ import ProfileStrengthPage from './components/ProfileStrength/ProfileStrengthPag
 import { getSession } from './utils/authUtils.js';
 import AutoTokenManager from './utils/autoTokenUtils.js';
 import 'leaflet/dist/leaflet.css';
+import Holidays from './components/edms/Holidays';
+
+
+
+
+// Adjust the path based on where ProfileView.jsx is saved
 
 import './styles.css';
 
@@ -87,6 +93,7 @@ function App() {
         <Route path="/profile-strength-analysis" element={<ProfileStrengthAnalysis />} />
         <Route path="/profile-strength" element={<ProfileStrengthPage />} />
         <Route path="/heatmap-results" element={<HeatmapResultsPage />} />
+        <Route path="/holidays" element={<Holidays />} />
         <Route path="/reviews-management" element={
           <DashboardLayout>
             <ReviewsManagement />
