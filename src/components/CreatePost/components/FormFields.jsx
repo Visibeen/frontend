@@ -53,7 +53,7 @@ const FormFields = ({ formData, onFormChange }) => {
           placeholder="Write your testimonial..."
           rows="4"
           style={{
-            width: "100%",
+            width: "40px",
             padding: "10px",
             border: "1px solid #ccc",
             borderRadius: "6px",

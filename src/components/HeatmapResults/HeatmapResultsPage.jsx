@@ -35,12 +35,12 @@ const HeatmapResultsPage = () => {
     async function fetchRanking() {
       try {
         setError(null);
-        const apiKey = process.env.REACT_APP_PLACES_API_KEY || process.env.REACT_APP_GOOGLE_API_KEY || '';
+        const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || '';
         console.log('API Key available:', !!apiKey);
         console.log('Config:', { businessName, keyword, gridSize, radius, lat, lng });
         
         if (!apiKey) {
-          throw new Error('Google Places API key not found. Please set REACT_APP_PLACES_API_KEY or REACT_APP_GOOGLE_API_KEY in your .env file.');
+          throw new Error('Google Places API key not found. Please set VITE_GOOGLE_API_KEY in your .env file.');
         }
         
         const svc = new RankingService(apiKey, true);

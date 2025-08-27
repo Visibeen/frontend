@@ -1,43 +1,38 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Register from './components/Register/Register'
-import Login from './components/Login/Login';
-import ForgotPassword from './components/Login/ForgotPassword';
-import Dashboard from './components/Dashboard/Dashboard';
-import Homepage from './components/Homepage/Homepage';
-import ProfilePage from './components/Dashboard/pages/Profile';
-import BusinessProfile from './components/Dashboard/pages/BusinessProfile';
-import ResetPassword from './components/Login/ResetPassword';
-import EDMsFlow from './components/edms/EDMsFlow';
-import AccountNotFound from './components/gmb_accounts/AccountNotFound';
-import GoogleConnect from './components/Services/GoogleConnect';
-import ContactUs from './components/gmb_accounts/ContactUs';
-import CreateAccount from './components/gmb_accounts/Create_Account/CreateAccount';
-import CreatePostForm from './components/Create_Post/CreatePostForm';
-import Reputation from './components/Reputation/Reputation';
-import ReferEarn from './components/Refer&Earn';
-import MyAccount from './components/MyAccount';
-import FontStyleSelection from './components/Create_Post/FontStyleSelection';
-import FreeWebsite from './components/FreeWebsite/FreeWebsite';
-import GSTInfoForm from './GstAccounts/GSTInfoForm';
-import CROInfoForm from './GstAccounts/CROInfoForm';
-import AccountInfoForm from './GstAccounts/AccountInfoForm';
-import DashboardLayout from './components/Layouts/DashboardLayout';
-import GMBDataFetcher from './components/gmb_accounts/GMBDataFetcher';
-import ProfileStrengthAnalysis from './components/ProfileStrengthAnalysis/ProfileStrengthAnalysis';
-import ProfileStrengthResults from './components/ProfileStrengthResults/ProfileStrengthResults';
-import ProfileStrengthPage from './components/ProfileStrength/ProfileStrengthPage';
+import Register from './components/Register/Register.jsx'
+import Login from './components/Login/Login.jsx';
+import ForgotPassword from './components/Login/ForgotPassword.jsx';
+import Dashboard from './components/Dashboard/Dashboard.jsx';
+import Homepage from './components/Homepage/Homepage.jsx';
+import ProfilePage from './components/Dashboard/pages/Profile.jsx';
+import BusinessProfile from './components/Dashboard/pages/BusinessProfile.jsx';
+import ResetPassword from './components/Login/ResetPassword.jsx';
+import EDMsFlow from './components/edms/EDMsFlow.jsx';
+import AccountNotFound from './components/gmb_accounts/AccountNotFound.jsx';
+import GoogleConnect from './components/Services/GoogleConnect.jsx';
+import ContactUs from './components/gmb_accounts/ContactUs.jsx';
+import CreateAccount from './components/gmb_accounts/Create_Account/CreateAccount.jsx';
+import CreatePostPage from './components/CreatePost/CreatePostPage.jsx';
+import Reputation from './components/Reputation/Reputation.jsx';
+import ReferEarn from './components/Refer&Earn.jsx';
+import MyAccount from './components/MyAccount.jsx';
+import FontStyleSelection from './components/FontStyleSelection/FontStyleSelection.jsx';
+import PostGenerationResults from './components/PostGenerationResults/PostGenerationResults.jsx';
+import FreeWebsite from './components/FreeWebsite/FreeWebsite.jsx';
+import GSTInfoForm from './GstAccounts/GSTInfoForm.jsx';
+import CROInfoForm from './GstAccounts/CROInfoForm.jsx';
+import AccountInfoForm from './GstAccounts/AccountInfoForm.jsx';
+import DashboardLayout from './components/Layouts/DashboardLayout.jsx';
+import GMBDataFetcher from './components/gmb_accounts/GMBDataFetcher.jsx';
+import ProfileStrengthAnalysis from './components/ProfileStrengthAnalysis/ProfileStrengthAnalysis.jsx';
+import ReviewsManagement from './components/ReviewsManagement/ReviewsManagement.jsx';
+import SetAutoReply from './components/SetAutoReply/SetAutoReply.jsx';
+import HeatmapResultsPage from './components/HeatmapResults/HeatmapResultsPage.jsx';
+import ProfileStrengthPage from './components/ProfileStrength/ProfileStrengthPage.jsx';
+import { getSession } from './utils/authUtils.js';
+import AutoTokenManager from './utils/autoTokenUtils.js';
 import 'leaflet/dist/leaflet.css';
-import HeatmapPage from './components/Heatmap/HeatmapPage';
-import HeatmapResultsPage from './components/HeatmapResults/HeatmapResultsPage';
-import ReviewsManagement from './components/ReviewsManagement/ReviewsManagement';
-import AutoTokenManager from './utils/autoTokenUtils';
-import { getSession } from './utils/authUtils';
-
-
-
-
-// Adjust the path based on where ProfileView.jsx is saved
 
 import './styles.css';
 
@@ -79,7 +74,7 @@ function App() {
         <Route path="/account-not-found" element={<AccountNotFound />} />
         <Route path="/contact-us" element={<ContactUs />} />
         <Route path="/create-account" element={<CreateAccount />} />
-        <Route path="/create-post" element={<CreatePostForm />} />
+        <Route path="/create-post" element={<CreatePostPage />} />
         <Route path="/reputation" element={<Reputation />} />
         <Route path="/font-style" element={<FontStyleSelection />} />
         <Route path="/refer-earn" element={<ReferEarn />} />
@@ -90,15 +85,15 @@ function App() {
         <Route path="/gmb-data" element={<GMBDataFetcher />} />
         <Route path="/free-website" element={<FreeWebsite />} />
         <Route path="/profile-strength-analysis" element={<ProfileStrengthAnalysis />} />
-        <Route path="/profile-strength-results" element={<ProfileStrengthResults />} />
         <Route path="/profile-strength" element={<ProfileStrengthPage />} />
-        <Route path="/heatmap" element={<HeatmapPage />} />
         <Route path="/heatmap-results" element={<HeatmapResultsPage />} />
         <Route path="/reviews-management" element={
           <DashboardLayout>
             <ReviewsManagement />
           </DashboardLayout>
         } />
+        <Route path="/post-generation-results" element={<PostGenerationResults />} />
+        <Route path="/set-auto-reply" element={<SetAutoReply />} />
       </Routes>
     </Router>
   );
