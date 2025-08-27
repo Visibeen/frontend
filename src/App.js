@@ -30,8 +30,10 @@ import ReviewsManagement from './components/ReviewsManagement/ReviewsManagement.
 import SetAutoReply from './components/SetAutoReply/SetAutoReply.jsx';
 import HeatmapResultsPage from './components/HeatmapResults/HeatmapResultsPage.jsx';
 import ProfileStrengthPage from './components/ProfileStrength/ProfileStrengthPage.jsx';
+import Performance from './components/Performance/Performance.jsx';
 import { getSession } from './utils/authUtils.js';
 import AutoTokenManager from './utils/autoTokenUtils.js';
+import { AppProvider } from './contexts/AppContext';
 import 'leaflet/dist/leaflet.css';
 import Holidays from './components/edms/Holidays';
 
@@ -63,7 +65,8 @@ function App() {
     };
   }, []);
   return (
-    <Router>
+    <AppProvider>
+      <Router>
       <Routes>
         <Route path="/" element={<Homepage />} />
         <Route path="/login" element={<Login />} />
@@ -101,8 +104,14 @@ function App() {
         } />
         <Route path="/post-generation-results" element={<PostGenerationResults />} />
         <Route path="/set-auto-reply" element={<SetAutoReply />} />
-      </Routes>
-    </Router>
+        <Route path="/performance" element={
+          <DashboardLayout>
+            <Performance />
+          </DashboardLayout>
+        } />
+        </Routes>
+      </Router>
+    </AppProvider>
   );
 }
 
