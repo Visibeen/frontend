@@ -13,8 +13,8 @@ const GMBDataFetcher = () => {
   const [selectedLocation, setSelectedLocation] = useState(null);
 
   // Display environment variables (client ID and project ID only, not secret)
-  const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-  const projectId = process.env.REACT_APP_GMB_PROJECT_ID;
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+  const projectId = import.meta.env.VITE_GMB_PROJECT_ID || '';
 
   const handleConnect = async () => {
     try {
