@@ -128,15 +128,6 @@ const CreatePostForm = ({ initialData, onCancel, onNext }) => {
           rows={3}
         />
       </FieldContainer>
-
-      <FieldContainer>
-        <FieldLabel>Background Color</FieldLabel>
-        <ColorPicker
-          value={formData.backgroundColor}
-          onChange={handleColorChange}
-        />
-      </FieldContainer>
-
       <ActionButtons>
         <CancelButton onClick={onCancel}>
           Cancel

@@ -32,7 +32,10 @@ const ProfileStrengthPage = () => {
     const businessName = searchParams.get('businessName');
     const placeId = searchParams.get('placeId');
     const address = searchParams.get('address');
-    
+    const lat = parseFloat(searchParams.get('lat'));
+    const lng = parseFloat(searchParams.get('lng'));
+
+    // Set business name if provided
     if (businessName) {
       setFormData(prev => ({
         ...prev,
@@ -40,6 +43,7 @@ const ProfileStrengthPage = () => {
       }));
     }
 
+    // Set address if provided
     if (address) {
       setFormData(prev => ({
         ...prev,
@@ -47,15 +51,53 @@ const ProfileStrengthPage = () => {
       }));
     }
 
+    // If we have direct coordinates, use them
+    if (!isNaN(lat) && !isNaN(lng)) {
+      setFormData(prev => ({
+        ...prev,
+        center: { lat, lng }
+      }));
+      return;
+    }
+
+    // Otherwise try to get coordinates from placeId
     async function resolveCenter() {
       if (!placeId) return;
+      
       try {
+        console.log('Attempting to resolve coordinates for placeId:', placeId);
         const coords = await places.getCoordinatesByPlaceId(placeId);
-        setFormData(prev => ({ ...prev, center: { lat: coords.lat, lng: coords.lng } }));
+        console.log('Resolved coordinates:', coords);
+        
+        if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number') {
+          setFormData(prev => ({
+            ...prev,
+            center: { lat: coords.lat, lng: coords.lng },
+            location: address || `Lat: ${coords.lat.toFixed(6)}, Lng: ${coords.lng.toFixed(6)}`
+          }));
+        } else {
+          console.warn('Invalid coordinates received:', coords);
+        }
       } catch (e) {
-        console.warn('Failed to resolve center by placeId', e);
+        console.error('Failed to resolve center by placeId:', e);
+        // Fallback to default coordinates if available
+        if (address) {
+          try {
+            const coords = await places.geocodeAddress(address);
+            if (coords) {
+              setFormData(prev => ({
+                ...prev,
+                center: coords,
+                location: address
+              }));
+            }
+          } catch (geocodeError) {
+            console.error('Geocoding fallback failed:', geocodeError);
+          }
+        }
       }
     }
+    
     resolveCenter();
   }, [searchParams]);
 
