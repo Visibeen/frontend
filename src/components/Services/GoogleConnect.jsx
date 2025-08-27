@@ -43,7 +43,7 @@ function GoogleConnect() {
                 headers: {
                     'Authorization': `Bearer ${googleAccessToken}`,
                     'Content-Type': 'application/json',
-                    'X-Goog-User-Project': import.meta.env.VITE_GMB_PROJECT_ID || ''
+                    'X-Goog-User-Project': process.env.REACT_APP_GMB_PROJECT_ID || ''
                 }
             });
 
