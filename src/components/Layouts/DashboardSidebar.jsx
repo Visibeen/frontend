@@ -72,87 +72,100 @@ const SectionDivider = styled(Box)(({ theme }) => ({
 }));
 
 const DashboardSidebar = () => {
-  const [myAccountOpen, setMyAccountOpen] = useState(false);
-
-  const toggleMyAccount = (e) => {
-    e.preventDefault(); // Prevent default NavLink behavior
-    setMyAccountOpen(!myAccountOpen);
+  const [edmsOpen, setEdmsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const toggleEdms = (e) => {
+    e.preventDefault();
+    setEdmsOpen(!edmsOpen);
+  };
+  const toggleAccount = (e) => {
+    e.preventDefault();
+    setAccountOpen(!accountOpen);
   };
 
   return (
     <SidebarContainer>
       <NavSection>
-        <NavItem to="/dashboard" className={({ isActive }) => isActive ? 'active' : ''}>
+        <NavItem to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
           <OverviewIcon className="nav-icon" width={16} height={16} color="currentColor" />
           <NavText className="nav-text">Overview</NavText>
         </NavItem>
-        
-        <NavItem to="/performance" className={({ isActive }) => isActive ? 'active' : ''}>
+
+        <NavItem to="/performance" className={({ isActive }) => (isActive ? 'active' : '')}>
           <PerformanceIcon className="nav-icon" width={16} height={16} color="currentColor" />
           <NavText className="nav-text">Performance</NavText>
         </NavItem>
-        
-        <NavItem to="/reputation" className={({ isActive }) => isActive ? 'active' : ''}>
+
+        <NavItem to="/reputation" className={({ isActive }) => (isActive ? 'active' : '')}>
           <ReputationIcon className="nav-icon" width={16} height={16} color="currentColor" />
           <NavText className="nav-text">Reputation Management</NavText>
         </NavItem>
-        
-        <NavItem to="/get-edms/account-info" className={({ isActive }) => isActive ? 'active' : ''}>
-          <EDMIcon className="nav-icon" width={16} height={16} color="currentColor" />
-          <NavText className="nav-text">Get EDMs</NavText>
-        </NavItem>
-        
-        <NavItem to="/free-website" className={({ isActive }) => isActive ? 'active' : ''}>
+
+        <div onClick={toggleEdms} style={{ cursor: 'pointer' }}>
+          <NavItem as="div" to="/my-account">
+            <MyAccountIcon className="nav-icon" width={16} height={16} color="currentColor" />
+            <NavText className="nav-text">Get EDMs</NavText>
+            <Box sx={{ marginLeft: 'auto' }}>{edmsOpen ? '\u25B2' : '\u25BC'}</Box>
+          </NavItem>
+        </div>
+        {edmsOpen && (
+          <Stack sx={{ pl: 4, gap: '8px' }}>
+            <NavItem to="" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <NavText className="nav-text">Images</NavText>
+            </NavItem>
+            <NavItem to="" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <NavText className="nav-text">Holidays</NavText>
+            </NavItem>
+          </Stack>
+        )}
+        <NavItem to="/free-website" className={({ isActive }) => (isActive ? 'active' : '')}>
           <WebsiteIcon className="nav-icon" width={16} height={16} color="currentColor" />
           <NavText className="nav-text">Free Website</NavText>
         </NavItem>
       </NavSection>
-
       <SectionDivider />
-
       <NavSection>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 16px' }}>
           <WhatsAppIcon className="nav-icon" width={16} height={16} color="#000000" />
           <NavText className="nav-text">Whats app</NavText>
           <ComingSoonBadge>(Coming soon)</ComingSoonBadge>
         </Box>
-        
+
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 16px' }}>
           <BlogIcon className="nav-icon" width={16} height={16} color="#121927" />
           <NavText className="nav-text">Blogs</NavText>
           <ComingSoonBadge>(Coming soon)</ComingSoonBadge>
         </Box>
-        
+
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 16px' }}>
           <SocialMediaIcon className="nav-icon" width={16} height={16} color="#121927" />
           <NavText className="nav-text">Social Media</NavText>
           <ComingSoonBadge>(Coming soon)</ComingSoonBadge>
         </Box>
-        
-        <NavItem to="/refer-earn" className={({ isActive }) => isActive ? 'active' : ''}>
+
+        <NavItem to="/refer-earn" className={({ isActive }) => (isActive ? 'active' : '')}>
           <ReferEarnIcon className="nav-icon" width={16} height={16} color="currentColor" />
           <NavText className="nav-text">Refer & Earn</NavText>
         </NavItem>
-        
-        <div onClick={toggleMyAccount} style={{ cursor: 'pointer' }}>
-          <NavItem as="div" to="/my-account" className={({ isActive }) => isActive ? 'active' : ''}>
+
+        {/* My Account Dropdown */}
+        <div onClick={toggleAccount} style={{ cursor: 'pointer' }}>
+          <NavItem as="div" to="/my-account">
             <MyAccountIcon className="nav-icon" width={16} height={16} color="currentColor" />
             <NavText className="nav-text">My Account</NavText>
-            <Box sx={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
-              {myAccountOpen ? '\u25B2' : '\u25BC'} {/* Up or Down arrow */}
-            </Box>
+            <Box sx={{ marginLeft: 'auto' }}>{accountOpen ? '\u25B2' : '\u25BC'}</Box>
           </NavItem>
         </div>
-        {myAccountOpen && (
+        {accountOpen && (
           <Stack sx={{ pl: 4, gap: '8px' }}>
-            <NavItem to="/my-account/account-information" className={({ isActive }) => isActive ? 'active' : ''}>
+            <NavItem to="/my-account/account-information" className={({ isActive }) => (isActive ? 'active' : '')}>
               <NavText className="nav-text">Account Information</NavText>
             </NavItem>
-            <NavItem to="/my-account/gst-information" className={({ isActive }) => isActive ? 'active' : ''}>
+            <NavItem to="/my-account/gst-information" className={({ isActive }) => (isActive ? 'active' : '')}>
               <NavText className="nav-text">GST Information</NavText>
             </NavItem>
-            <NavItem to="/my-account/cro-information" className={({ isActive }) => isActive ? 'active' : ''}>
-              <NavText className="nav-text">CRO Information</NavText>
+            <NavItem to="/contact-us" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <NavText className="nav-text">Contact Us</NavText>
             </NavItem>
           </Stack>
         )}
