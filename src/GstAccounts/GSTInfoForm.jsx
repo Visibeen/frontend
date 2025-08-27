@@ -3,8 +3,8 @@ import './GSTInfoForm.css';
 import axios from 'axios';
 
 const initialFormState = {
-  gst_detail: '212888888',
-  date_of_registration: '02-01-2025',
+  gst_detail: '45241524',
+  start_date: '02-01-2025',
   end_date: '02-01-2025'
 };
 
@@ -35,7 +35,7 @@ const GSTInfoForm = () => {
       const token = JSON.parse(localStorage.getItem('userData'));
       const payload = {
         gst_detail: form.gst_detail,
-        date_of_registration: form.date_of_registration,
+        start_date: form.start_date,
         end_date: form.end_date
       };
 
@@ -107,7 +107,7 @@ const GSTInfoForm = () => {
 <div className="form-row">
   <div className="form-field">
     <label>Date of Registration*</label>
-    <input name="date_of_registration" value={form.date_of_registration} onChange={handleChange} type="text" />
+    <input name="start_date" value={form.start_date} onChange={handleChange} type="text" />
   </div>
   <div className="form-field">
       <label>End Date*</label>
