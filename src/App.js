@@ -33,12 +33,7 @@ import ProfileStrengthPage from './components/ProfileStrength/ProfileStrengthPag
 import { getSession } from './utils/authUtils.js';
 import AutoTokenManager from './utils/autoTokenUtils.js';
 import 'leaflet/dist/leaflet.css';
-import HeatmapPage from './components/Heatmap/HeatmapPage';
-import HeatmapResultsPage from './components/HeatmapResults/HeatmapResultsPage';
 import Holidays from './components/edms/Holidays';
-import ReviewsManagement from './components/ReviewsManagement/ReviewsManagement';
-import AutoTokenManager from './utils/autoTokenUtils';
-import { getSession } from './utils/authUtils';
 
 
 
