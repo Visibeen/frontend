@@ -267,9 +267,29 @@ const ReviewCard = ({ review, selected, onSelect }) => {
             <AIIcon width={13} height={13} color="#fbbc05" />
             Reply with AI
           </AIReplyButton>
+          
+          <Button 
+            onClick={() => navigate('/create-post')}
+            sx={{
+              backgroundColor: '#4caf50',
+              borderRadius: '8px',
+              color: '#ffffff',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '14px',
+              fontWeight: 600,
+              width: '140px',
+              height: '44px',
+              textTransform: 'capitalize',
+              padding: '8px 16px',
+              gap: '8px',
+              '&:hover': {
+                backgroundColor: '#45a049'
+              }
+            }}
+          >
+            Create Post
+          </Button>
         </ActionButtons>
-        
-        <CreatePostText>Create Post</CreatePostText>
       </ActionsRow>
       
       {showReplyInput && (
