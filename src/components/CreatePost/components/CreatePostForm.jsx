@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Stack, Typography, TextField, Button, Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ColorPicker from './ColorPicker';
+import axios from 'axios';
 
 const FormContainer = styled(Stack)(({ theme }) => ({
   gap: '24px',
@@ -80,8 +81,8 @@ const NextButton = styled(Button)(({ theme }) => ({
 
 const CreatePostForm = ({ initialData, onCancel, onNext }) => {
   const [formData, setFormData] = useState({
-    name: initialData?.name || '',
-    testimonialText: initialData?.testimonialText || '',
+    name: initialData?.name,
+    testimonial_text: initialData?.testimonial_text,
     backgroundColor: initialData?.backgroundColor || '#EF232A'
   });
 
@@ -99,11 +100,35 @@ const CreatePostForm = ({ initialData, onCancel, onNext }) => {
     }));
   };
 
-  const handleSubmit = () => {
-    if (onNext) {
-      onNext(formData);
+  const handleSubmit = async () => {
+    const user = (localStorage.getItem('authToken'));
+    try {
+      const payload = {
+        user_id: user?.id,
+        name: formData.name,
+        testimonial_text: formData.testimonial_text
+      };
+      const token = JSON.parse(localStorage.getItem('userData'));
+      const response = await axios.post(
+        'http://52.44.140.230:8089/api/v1/customer/post/create-post',
+        payload,
+        {
+          headers: {
+            Authorization: `${token?.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      alert('Post created successfully!');
+      console.log('Post created successfully:', response.data);
+      if (onNext) {
+        onNext(response.data);
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
     }
   };
+
 
   return (
     <FormContainer>
@@ -120,8 +145,8 @@ const CreatePostForm = ({ initialData, onCancel, onNext }) => {
       <FieldContainer>
         <FieldLabel>Testimonial Text</FieldLabel>
         <StyledTextField
-          value={formData.testimonialText}
-          onChange={handleInputChange('testimonialText')}
+          value={formData.testimonial_text}
+          onChange={handleInputChange('testimonial_text')}
           variant="outlined"
           fullWidth
           multiline
