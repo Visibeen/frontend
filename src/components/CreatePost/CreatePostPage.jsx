@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Stack } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import UserProfileCard from './components/UserProfileCard';
 import CreatePostForm from './components/CreatePostForm';
@@ -41,7 +42,8 @@ const FormCard = styled(Box)(({ theme }) => ({
 }));
 
 const CreatePostPage = ({ user, initialFormData }) => {
-  const userData = user || mockRootProps.user;
+  const navigate = useNavigate();
+  const userData = user || mockRootProps.userProfile;
   const formData = initialFormData || mockRootProps.formData;
 
   const handleCancel = () => {
@@ -51,7 +53,8 @@ const CreatePostPage = ({ user, initialFormData }) => {
 
   const handleNext = (data) => {
     console.log('Form submitted:', data);
-    // Handle form submission
+    // Navigate to font style selection page
+    navigate('/font-style');
   };
 
   return (

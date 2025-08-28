@@ -18,7 +18,7 @@ const initialFormState = {
 
 const AccountInfoForm = () => {
   const [form, setForm] = useState(initialFormState);
-  const [logo, setLogo] = useState(null);
+  const [, setLogo] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -138,7 +138,7 @@ const AccountInfoForm = () => {
           </label>
         </div>
         <label>Email ID*<input name="email" value={form.email} onChange={handleChange} /></label>
-        <label>Password*<input name="password" value={form.password} onChange={handleChange} /></label>
+        <label>Password*<input name="password" value={form.password} onChange={handleChange} autoComplete="current-password" minLength="8" /></label>
         <label>Address*<input name="address" value={form.address} onChange={handleChange} /></label>
         <label>Website*<input name="website" value={form.website} onChange={handleChange} /></label>
         <label>Contact Person*<input name="contact_person" value={form.contact_person} onChange={handleChange} /></label>

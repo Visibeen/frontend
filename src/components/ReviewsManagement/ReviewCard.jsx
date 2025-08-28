@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Stack, Typography, Checkbox, Button, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { useNavigate } from 'react-router-dom';
 import StarRatingIcon from '../icons/StarRatingIcon';
 import GoogleIcon from '../icons/GoogleIcon';
 import ReplyIcon from '../icons/ReplyIcon';
@@ -196,6 +197,7 @@ const SendButton = styled(Box)(({ theme }) => ({
 }));
 
 const ReviewCard = ({ review, selected, onSelect }) => {
+  const navigate = useNavigate();
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
 
@@ -208,6 +210,10 @@ const ReviewCard = ({ review, selected, onSelect }) => {
     console.log('Sending reply:', replyText);
     setReplyText('');
     setShowReplyInput(false);
+  };
+
+  const handleAIReply = () => {
+    navigate('/set-auto-reply');
   };
 
   return (
@@ -257,7 +263,7 @@ const ReviewCard = ({ review, selected, onSelect }) => {
             Reply
           </ReplyButton>
           
-          <AIReplyButton>
+          <AIReplyButton onClick={handleAIReply}>
             <AIIcon width={13} height={13} color="#fbbc05" />
             Reply with AI
           </AIReplyButton>
