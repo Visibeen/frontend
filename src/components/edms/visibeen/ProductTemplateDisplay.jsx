@@ -1,20 +1,33 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useState, useRef, useEffect } from 'react';
 import { useAccount } from './AccountContext';
 import './ProductsEDMs.css'; // Reusing ProductsEDMs.css for initial styling
 import visibenLogo from './VISIBEN.svg';
 import ImageWithAccountInfo from './ImageWithAccountInfo';
 
+// Import all template images
+import car1 from './car1.jpg';
+import digitalMarketAgency from './digital market agency.png';
+import home from './home.jpg';
+import exportWebDev from './Export  Web Development services.png';
+import carRepair from './car repair.png';
+import crackers from './crackers.jpg';
+import car2 from './car2.jpg';
+import plotOnSale from './Plot  on sale.png';
+import car3 from './car3.jpg';
+import car4 from './car4.jpeg';
+import car5 from './car5.jpg';
+import car6 from './car6.jpg';
+
 const templateData = [
   // Product Template 1 - Use placeholder images from visibeen
-  ['car1.jpg', 'digital market agency.png', 'home.jpg'],
+  [car1, digitalMarketAgency, home],
   // Product Template 2
-  ['Export  Web Development services.png', 'car repair.png', 'crackers.jpg'],
+  [exportWebDev, carRepair, crackers],
   // Product Template 3
-  ['car2.jpg', 'Plot  on sale.png', 'car3.jpg'],
+  [car2, plotOnSale, car3],
   // Product Template 4
-  ['car4.jpeg', 'car5.jpg', 'car6.jpg'],
+  [car4, car5, car6],
 ];
 
 const templateNames = [
@@ -351,7 +364,7 @@ const ProductTemplateDisplay = () => {
               // Set the clicked image as the main preview
               setMainImg(img);
             }}>
-              <ImageWithAccountInfo imageSrc={require(`./${img}`)} imageIndex={idx} isMainPreview={false} 
+              <ImageWithAccountInfo imageSrc={img} imageIndex={idx} isMainPreview={false} 
                  logoPosition={logoPosition} isDraggingLogo={isDraggingLogo} 
                  handleLogoMouseDown={handleLogoMouseDown} handleLogoMouseMove={handleLogoMouseMove} handleLogoMouseUp={handleLogoMouseUp}
                  customFooterColor={customFooterColor} getFontFamily={getFontFamily}
@@ -361,7 +374,7 @@ const ProductTemplateDisplay = () => {
         </div>
         {/* Large Preview */}
         <div className="large-preview">
-          <ImageWithAccountInfo imageSrc={require(`./${mainImg}`)} imageIndex={templateData[currentTemplate].indexOf(mainImg)} isMainPreview={true} 
+          <ImageWithAccountInfo imageSrc={mainImg} imageIndex={templateData[currentTemplate].indexOf(mainImg)} isMainPreview={true} 
               logoPosition={logoPosition} isDraggingLogo={isDraggingLogo} 
               handleLogoMouseDown={handleLogoMouseDown} handleLogoMouseMove={handleLogoMouseMove} handleLogoMouseUp={handleLogoMouseUp}
               customFooterColor={customFooterColor} getFontFamily={getFontFamily}
