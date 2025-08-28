@@ -453,9 +453,6 @@ const ReviewsManagement = () => {
         </Button>
       </Stack>
 
-      <CreatePostButton onClick={() => navigate('/create-post')}>
-        Create Post
-      </CreatePostButton>
 
       <FilterPopup
         open={filterOpen}

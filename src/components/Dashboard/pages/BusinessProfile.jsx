@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Stack, Typography, Button, Paper, Rating, LinearProgress, Chip, CircularProgress, Alert, Menu, MenuItem, ListItemText, ListItemIcon, Divider, Modal, IconButton } from '@mui/material';
+import { Box, Stack, Typography, Button, Paper, Rating, LinearProgress, Chip, CircularProgress, Alert, Menu, MenuItem, ListItemText, ListItemIcon, Divider, Modal, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Input } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../Layouts/DashboardLayout';
@@ -125,7 +125,10 @@ const EditProfileLink = styled(Typography)(({ theme }) => ({
   fontWeight: 400,
   color: '#0B91D6',
   cursor: 'pointer',
-  textDecoration: 'none'
+  textDecoration: 'underline',
+  '&:hover': {
+    opacity: 0.8
+  }
 }));
 
 const AddressText = styled(Typography)(({ theme }) => ({
@@ -219,6 +222,32 @@ const PhotosGrid = styled(Box)(({ theme }) => ({
   display: 'flex',
   gap: '18px',
   alignItems: 'center'
+}));
+
+const CoverPhotoContainer = styled(Box)(({ theme }) => ({
+  width: '100%',
+  height: '200px',
+  borderRadius: '12px',
+  overflow: 'hidden',
+  marginBottom: '18px',
+  position: 'relative',
+  cursor: 'pointer',
+  '&:hover': {
+    opacity: 0.9
+  }
+}));
+
+const CoverPhotoLabel = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: '8px',
+  left: '8px',
+  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  color: '#ffffff',
+  padding: '4px 8px',
+  borderRadius: '4px',
+  fontSize: '12px',
+  fontWeight: 500,
+  fontFamily: 'Inter, sans-serif'
 }));
 
 const PhotoItem = styled(Box)(({ theme }) => ({
@@ -734,9 +763,9 @@ const getMetricsData = (performanceData) => {
     // Fallback mock data if API fails
     return [
       { label: 'Local Views (Last 30 days)', value: '2,300', change: '+35% vs last month', color: '#34A853' },
-      { label: 'Calls from GBP (Last 30 days)', value: '221', change: '+15% vs last month', color: '#34A853' },
-      { label: 'Direction Requests (Last 30 days)', value: '12', change: '+5% vs last month', color: '#EF232A' },
-      { label: 'Website Clicks (Last 30 days)', value: '2,300', change: '+5% vs last month', color: '#34A853' }
+      { label: 'Calls from GBP (Last 30 days)', value: '156', change: '+12% vs last month', color: '#34A853' },
+      { label: 'Direction Requests (Last 30 days)', value: '89', change: '+8% vs last month', color: '#34A853' },
+      { label: 'Website Clicks (Last 30 days)', value: '234', change: '+18% vs last month', color: '#34A853' }
     ];
   }
 
@@ -745,25 +774,25 @@ const getMetricsData = (performanceData) => {
       label: 'Local Views (Last 30 days)',
       value: formatNumber(performanceData.localViews),
       change: `${performanceData.localViewsChange >= 0 ? '+' : ''}${performanceData.localViewsChange}% vs last period`,
-      color: performanceData.localViewsChange >= 0 ? '#34A853' : '#EF232A'
+      color: '#34A853'
     },
     {
       label: 'Calls from GBP (Last 30 days)',
       value: formatNumber(performanceData.callClicks),
       change: `${performanceData.callClicksChange >= 0 ? '+' : ''}${performanceData.callClicksChange}% vs last period`,
-      color: performanceData.callClicksChange >= 0 ? '#34A853' : '#EF232A'
+      color: '#34A853'
     },
     {
       label: 'Direction Requests (Last 30 days)',
       value: formatNumber(performanceData.directionRequests),
       change: `${performanceData.directionRequestsChange >= 0 ? '+' : ''}${performanceData.directionRequestsChange}% vs last period`,
-      color: performanceData.directionRequestsChange >= 0 ? '#34A853' : '#EF232A'
+      color: '#34A853'
     },
     {
       label: 'Website Clicks (Last 30 days)',
       value: formatNumber(performanceData.websiteClicks),
       change: `${performanceData.websiteClicksChange >= 0 ? '+' : ''}${performanceData.websiteClicksChange}% vs last period`,
-      color: performanceData.websiteClicksChange >= 0 ? '#34A853' : '#EF232A'
+      color: '#34A853'
     }
   ];
 };
@@ -836,6 +865,10 @@ const BusinessProfile = () => {
   const [showFeedDetails, setShowFeedDetails] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showAllGMBFeed, setShowAllGMBFeed] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [showAllSocialFeed, setShowAllSocialFeed] = useState(false);
 
   const locationId = searchParams.get('id');
@@ -967,14 +1000,26 @@ const BusinessProfile = () => {
           let items = await GMBService.getMedia(undefined, accountId, actualLocationId);
           // Filter photos and items with at least one usable URL
           items = items.filter(i => (i.mediaFormat === 'PHOTO' || !i.mediaFormat) && (i.googleUrl || i.thumbnailUrl || i.sourceUrl));
+          
+          // Separate cover photos from regular photos
+          const coverPhotos = items.filter(i => i.category === 'COVER' || i.category === 'PROFILE');
+          const regularPhotos = items.filter(i => i.category !== 'COVER' && i.category !== 'PROFILE');
+          
           // Sort by createTime desc if present
-          items.sort((a, b) => {
+          const sortByTime = (a, b) => {
             const ta = a.createTime ? Date.parse(a.createTime) : 0;
             const tb = b.createTime ? Date.parse(b.createTime) : 0;
             return tb - ta;
-          });
-          console.log('Media items (photos) after filter/sort:', items.length, items.slice(0, 3));
-          setMediaItems(items);
+          };
+          
+          coverPhotos.sort(sortByTime);
+          regularPhotos.sort(sortByTime);
+          
+          // Combine with cover photos first
+          const sortedItems = [...coverPhotos, ...regularPhotos];
+          
+          console.log('Media items (photos) after filter/sort:', sortedItems.length, 'Cover photos:', coverPhotos.length);
+          setMediaItems(sortedItems);
         } catch (mediaErr) {
           console.warn('Error fetching media:', mediaErr);
           setMediaItems([]);
@@ -1117,39 +1162,94 @@ const BusinessProfile = () => {
     setProfilesLoading(true);
     try {
       const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
+      console.log('[Switch Account] Starting to fetch profiles...');
       const accounts = await GMBService.getAccounts(accessToken);
+      console.log('[Switch Account] Found accounts:', accounts.length);
       
-      // Convert accounts to same format as dashboard
-      const allProfiles = accounts.map((account) => {
-        // Map GMB verification states to our status format
-        let mappedStatus = 'unverified';
-        const verificationState = account.verificationState;
-        
-        if (verificationState === 'VERIFIED') {
-          mappedStatus = 'verified';
-        } else if (verificationState === 'PENDING_VERIFICATION' || verificationState === 'PENDING') {
-          mappedStatus = 'pending_verification';
-        } else if (verificationState === 'SUSPENDED') {
-          mappedStatus = 'suspended';
-        } else if (verificationState === 'UNVERIFIED' || !verificationState) {
-          mappedStatus = 'unverified';
+      if (accounts.length === 0) {
+        setAvailableProfiles([]);
+        return;
+      }
+
+      // Fetch locations for ALL accounts (same as dashboard logic)
+      const allLocations = [];
+      for (const acct of accounts) {
+        try {
+          if (!acct?.name) continue;
+          console.log('[Switch Account] Fetching locations for account:', acct.name);
+          const locs = await GMBService.getLocations(accessToken, acct.name);
+          console.log('[Switch Account] Found locations for account:', acct.name, locs?.length || 0);
+          if (Array.isArray(locs) && locs.length) {
+            // Attach account context to each location
+            locs.forEach(l => allLocations.push({ account: acct, loc: l }));
+          }
+        } catch (e) {
+          console.warn('Failed to fetch locations for account', acct?.name, e?.message || e);
         }
-        
+      }
+      console.log('[Switch Account] Total locations found:', allLocations.length);
+
+      if (allLocations.length === 0) {
+        // Fallback: present accounts as rows if no locations are returned (same as dashboard)
+        const fallback = accounts.map((account) => {
+          let mappedStatus = 'unverified';
+          const verificationState = account.verificationState;
+          if (verificationState === 'VERIFIED') mappedStatus = 'verified';
+          else if (verificationState === 'PENDING_VERIFICATION' || verificationState === 'PENDING') mappedStatus = 'pending_verification';
+          else if (verificationState === 'SUSPENDED') mappedStatus = 'suspended';
+          
+          return {
+            id: account.name?.split('/').pop(),
+            name: account.accountName || 'Business Account',
+            address: 'Account level - no location data',
+            status: mappedStatus,
+            locationId: account.name?.split('/').pop(),
+            isCurrentLocation: account.name?.split('/').pop() === locationId
+          };
+        });
+        setAvailableProfiles(fallback);
+        return;
+      }
+
+      // Normalize locations to same format as dashboard
+      const normalized = await Promise.all(allLocations.map(async ({ account, loc }) => {
+        const id = loc.name?.split('/').pop();
+        const address = loc.storefrontAddress?.addressLines?.join(', ') ||
+                        loc.storefrontAddress?.locality ||
+                        loc.storefrontAddress?.administrativeArea ||
+                        'Address not available';
+                
+        // Fetch verification via VoiceOfMerchantState API (same as dashboard)
+        let simplifiedStatus = 'unknown';
+        let hasVOM = false;
+        try {
+          const vom = await GMBService.getVoiceOfMerchantState(id, accessToken);
+          simplifiedStatus = vom?.simplifiedStatus || 'unknown';
+          hasVOM = vom?.raw?.hasVoiceOfMerchant === true;
+        } catch (e) {
+          console.warn('VOM fetch failed for', id, e?.message || e);
+        }
+
+        // Map to UI status (same logic as dashboard)
+        const status = (
+          (hasVOM || simplifiedStatus === 'verified') ? 'verified' :
+          simplifiedStatus === 'suspended' ? 'suspended' :
+          simplifiedStatus === 'pending_verification' ? 'pending_verification' :
+          'unverified'
+        );
+
         return {
-          id: account.name?.split('/').pop(),
-          name: account.accountName || 'Business Account',
-          address: 'Account level - no location data',
-          status: mappedStatus,
-          optimizationScore: account.vettedState || 'N/A',
-          locationId: account.name?.split('/').pop(),
-          accountType: account.type || 'UNKNOWN',
-          verificationState: account.verificationState || 'UNKNOWN',
-          vettedState: account.vettedState || 'UNKNOWN',
-          isCurrentLocation: account.name?.split('/').pop() === locationId
+          id,
+          name: loc.title || account?.accountName || 'Business Location',
+          address,
+          status,
+          locationId: id,
+          isCurrentLocation: id === locationId
         };
-      });
-      
-      setAvailableProfiles(allProfiles);
+      }));
+
+      console.log('[Switch Account] Final normalized profiles:', normalized);
+      setAvailableProfiles(normalized);
     } catch (err) {
       console.error('Error fetching available profiles:', err);
     } finally {
@@ -1168,6 +1268,107 @@ const BusinessProfile = () => {
 
   const handleViewFeedDetails = () => {
     setShowFeedDetails(!showFeedDetails);
+  };
+
+  const handleEditProfile = () => {
+    setEditProfileOpen(true);
+  };
+
+  const handleSaveProfile = async (formData) => {
+    try {
+      const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
+      
+      if (!locationId) {
+        throw new Error('Missing location information');
+      }
+
+      // Prepare update data based on form fields
+      const updateData = {};
+      if (formData.businessName) updateData.title = formData.businessName;
+      if (formData.description) updateData.profile = { description: formData.description };
+      if (formData.phone) updateData.phoneNumbers = { primaryPhone: formData.phone };
+      if (formData.website) updateData.websiteUri = formData.website;
+
+      // Update business profile using new API
+      const result = await GMBService.updateBusinessProfile(accessToken, locationId, updateData);
+      console.log('Profile updated successfully:', result);
+      
+      // Refresh location data by reloading the page or triggering a re-fetch
+      window.location.reload();
+      setEditProfileOpen(false);
+      
+      return result;
+    } catch (error) {
+      console.error('Error updating business profile:', error);
+      throw error;
+    }
+  };
+
+  const handlePhotoUpload = () => {
+    setPhotoUploadOpen(true);
+    setSelectedFile(null);
+    setUploading(false);
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    setSelectedFile(file);
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!selectedFile) return;
+    
+    setUploading(true);
+    try {
+      await uploadPhotoToGMB(selectedFile);
+      setPhotoUploadOpen(false);
+      setSelectedFile(null);
+      console.log('Photo uploaded successfully!');
+    } catch (error) {
+      console.error('Failed to upload photo:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const uploadPhotoToGMB = async (file) => {
+    try {
+      const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
+      const accountId = currentAccount?.name?.split('/').pop();
+      
+      if (!accountId || !locationId) {
+        throw new Error('Missing account or location information');
+      }
+
+      // Upload photo to GMB using v4 API
+      const result = await GMBService.uploadMedia(accessToken, accountId, locationId, file);
+      console.log('Photo uploaded successfully:', result);
+      
+      // Refresh media items to show the new photo
+      const items = await GMBService.getMedia(undefined, accountId, locationId);
+      const filteredItems = items.filter(i => (i.mediaFormat === 'PHOTO' || !i.mediaFormat) && (i.googleUrl || i.thumbnailUrl || i.sourceUrl));
+      
+      // Separate cover photos from regular photos
+      const coverPhotos = filteredItems.filter(i => i.category === 'COVER' || i.category === 'PROFILE');
+      const regularPhotos = filteredItems.filter(i => i.category !== 'COVER' && i.category !== 'PROFILE');
+      
+      const sortByTime = (a, b) => {
+        const ta = a.createTime ? Date.parse(a.createTime) : 0;
+        const tb = b.createTime ? Date.parse(b.createTime) : 0;
+        return tb - ta;
+      };
+      
+      coverPhotos.sort(sortByTime);
+      regularPhotos.sort(sortByTime);
+      
+      const sortedItems = [...coverPhotos, ...regularPhotos];
+      setMediaItems(sortedItems);
+      
+      return result;
+    } catch (error) {
+      console.error('Error uploading photo to GMB:', error);
+      throw error;
+    }
   };
 
   const handleViewAllReviews = () => {
@@ -1250,16 +1451,12 @@ const BusinessProfile = () => {
               <HeaderLink onClick={goToHeatmap}>Open Heatmap</HeaderLink>
             </HeaderLeft>
             <SwitchAccountButton
-              onClick={(event) => {
-                setAnchorEl(event.currentTarget);
-                if (availableProfiles.length === 0) {
-                  fetchAvailableProfiles();
-                }
+              onClick={() => {
+                navigate('/dashboard');
               }}
-              disabled={profilesLoading}
             >
               <SwitchAccountIcon width={17} height={15} color="#121927" />
-              {profilesLoading ? 'Loading...' : 'Switch Account'}
+              Switch Account
             </SwitchAccountButton>
             <Menu
               anchorEl={anchorEl}
@@ -1395,7 +1592,7 @@ const BusinessProfile = () => {
                     )}
                   </Box>
                 </BusinessTitle>
-                <EditProfileLink>(Edit Profile)</EditProfileLink>
+                <EditProfileLink onClick={handleEditProfile}>(Edit Profile)</EditProfileLink>
               </Box>
 
               <AddressText>
@@ -1415,12 +1612,12 @@ const BusinessProfile = () => {
                   <ContactValue>{primaryPhone}</ContactValue>
                 </ContactItem>
                 <ContactItem>
-                  <ContactLabel>Website:</ContactLabel>
-                  <ContactValue>{websiteUrl}</ContactValue>
+                  <ContactLabel>Secondary Number:</ContactLabel>
+                  <ContactValue>{locationData?.secondaryPhone || 'Not available'}</ContactValue>
                 </ContactItem>
                 <ContactItem>
-                  <ContactLabel>Language:</ContactLabel>
-                  <ContactValue>{locationData?.languageCode || 'Not specified'}</ContactValue>
+                  <ContactLabel>Manager Number:</ContactLabel>
+                  <ContactValue>{locationData?.managerPhone || 'Not available'}</ContactValue>
                 </ContactItem>
               </ContactGrid>
 
@@ -1429,56 +1626,114 @@ const BusinessProfile = () => {
 
               <PhotosSection>
                 <PhotosTitle>Photos</PhotosTitle>
-                <PhotosGrid>
-                  {mediaItems && mediaItems.length > 0 ? (
-                    mediaItems.slice(0, 2).map((item, index) => {
-                      const originalSrc = item.googleUrl || item.thumbnailUrl || item.sourceUrl || '';
+                
+                {/* Cover Photo Display */}
+                {mediaItems && mediaItems.length > 0 && (
+                  (() => {
+                    const coverPhoto = mediaItems.find(item => item.category === 'COVER' || item.category === 'PROFILE');
+                    if (coverPhoto) {
+                      const originalSrc = coverPhoto.googleUrl || coverPhoto.thumbnailUrl || coverPhoto.sourceUrl || '';
                       const proxied = originalSrc ? buildProxyUrl(originalSrc) : null;
                       const initialSrc = proxied || originalSrc;
+                      
                       return (
-                        <PhotoItem
-                          key={item.name || `photo-${index}`}
-                          sx={{ cursor: initialSrc ? 'pointer' : 'default' }}
+                        <CoverPhotoContainer
                           onClick={() => handlePhotoClick(originalSrc, proxied)}
-                          role={initialSrc ? 'button' : undefined}
-                          aria-label={initialSrc ? 'Open photo' : undefined}
+                          role="button"
+                          aria-label="Open cover photo"
                         >
-                          {initialSrc ? (
-                            <img
-                              src={initialSrc}
-                              alt={`GMB Photo ${index + 1}`}
-                              referrerPolicy="no-referrer"
-                              crossOrigin="anonymous"
-                              data-original={originalSrc}
-                              data-proxy={proxied || ''}
-                              data-retry="0"
-                              onError={(e) => {
-                                const img = e.currentTarget;
-                                const retry = parseInt(img.dataset.retry || '0', 10);
-                                const og = img.dataset.original;
-                                const proxy = img.dataset.proxy;
-                                if (retry === 0 && proxy && img.src === proxy && og) {
-                                  console.warn('Photo failed via proxy, retrying original:', og);
-                                  img.dataset.retry = '1';
-                                  img.src = og;
-                                } else if (retry <= 1 && proxy && img.src === og) {
-                                  console.warn('Photo failed via original, falling back to placeholder');
-                                  img.dataset.retry = '2';
-                                  img.src = placeholderSmall;
-                                } else {
-                                  img.src = placeholderSmall;
-                                }
-                              }}
-                            />
-                          ) : (
-                            <img
-                              src={placeholderSmall}
-                              alt="No image available"
-                            />
-                          )}
-                        </PhotoItem>
+                          <CoverPhotoLabel>
+                            {coverPhoto.category === 'COVER' ? 'Cover Photo' : 'Profile Photo'}
+                          </CoverPhotoLabel>
+                          <img
+                            src={initialSrc}
+                            alt="GMB Cover Photo"
+                            referrerPolicy="no-referrer"
+                            crossOrigin="anonymous"
+                            data-original={originalSrc}
+                            data-proxy={proxied || ''}
+                            data-retry="0"
+                            onError={(e) => {
+                              const img = e.target;
+                              const retry = parseInt(img.dataset.retry || '0');
+                              const og = img.dataset.original;
+                              const proxy = img.dataset.proxy;
+                              if (retry === 0 && proxy && img.src === proxy && og) {
+                                console.warn('Cover photo failed via proxy, retrying original:', og);
+                                img.dataset.retry = '1';
+                                img.src = og;
+                              } else if (retry <= 1 && proxy && img.src === og) {
+                                console.warn('Cover photo failed via original, falling back to placeholder');
+                                img.dataset.retry = '2';
+                                img.src = placeholderSmall;
+                              } else {
+                                img.src = placeholderSmall;
+                              }
+                            }}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </CoverPhotoContainer>
                       );
-                    })
+                    }
+                    return null;
+                  })()
+                )}
+
+                <PhotosGrid>
+                  {mediaItems && mediaItems.length > 0 ? (
+                    mediaItems
+                      .filter(item => item.category !== 'COVER' && item.category !== 'PROFILE')
+                      .slice(0, 2)
+                      .map((item, index) => {
+                        const originalSrc = item.googleUrl || item.thumbnailUrl || item.sourceUrl || '';
+                        const proxied = originalSrc ? buildProxyUrl(originalSrc) : null;
+                        const initialSrc = proxied || originalSrc;
+                        return (
+                          <PhotoItem
+                            key={item.name || `photo-${index}`}
+                            sx={{ cursor: initialSrc ? 'pointer' : 'default' }}
+                            onClick={() => handlePhotoClick(originalSrc, proxied)}
+                            role={initialSrc ? 'button' : undefined}
+                            aria-label={initialSrc ? 'Open photo' : undefined}
+                          >
+                            {initialSrc ? (
+                              <img
+                                src={initialSrc}
+                                alt={`GMB Photo ${index + 1}`}
+                                referrerPolicy="no-referrer"
+                                crossOrigin="anonymous"
+                                data-original={originalSrc}
+                                data-proxy={proxied || ''}
+                                data-retry="0"
+                                onError={(e) => {
+                                  const img = e.target;
+                                  const retry = parseInt(img.dataset.retry || '0');
+                                  const og = img.dataset.original;
+                                  const proxy = img.dataset.proxy;
+                                  if (retry === 0 && proxy && img.src === proxy && og) {
+                                    console.warn('Photo failed via proxy, retrying original:', og);
+                                    img.dataset.retry = '1';
+                                    img.src = og;
+                                  } else if (retry <= 1 && proxy && img.src === og) {
+                                    console.warn('Photo failed via original, falling back to placeholder');
+                                    img.dataset.retry = '2';
+                                    img.src = placeholderSmall;
+                                  } else {
+                                    img.src = placeholderSmall;
+                                  }
+                                }}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <img 
+                                src={placeholderSmall}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                alt="No image available"
+                              />
+                            )}
+                          </PhotoItem>
+                        );
+                      })
                   ) : (
                     <>
                       <PhotoItem>
@@ -1495,9 +1750,9 @@ const BusinessProfile = () => {
                       </PhotoItem>
                     </>
                   )}
-                  <AddPhotoButton>
-                    <AddPhotoIcon width={25} height={22} color="#A0A0AA" />
-                    <AddPhotoText>Add photos</AddPhotoText>
+                  <AddPhotoButton onClick={handlePhotoUpload}>
+                    <AddPhotoIcon width={24} height={24} color="#0B91D6" />
+                    <AddPhotoText>Add Photo</AddPhotoText>
                   </AddPhotoButton>
                 </PhotosGrid>
               </PhotosSection>
@@ -1505,23 +1760,30 @@ const BusinessProfile = () => {
               {/* Photo Modal */}
               <Modal open={photoModalOpen} onClose={closePhotoModal} aria-labelledby="photo-modal">
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-                  {/* Top-right close button */}
-                  <IconButton
-                    aria-label="Close"
-                    onClick={closePhotoModal}
-                    sx={{
-                      position: 'fixed',
-                      top: 12,
-                      right: 12,
-                      color: '#EF232A',
-                      bgcolor: 'transparent',
-                      '&:hover': { bgcolor: 'transparent', color: '#d32f2f' }
-                    }}
-                    size="medium"
-                  >
-                    <CloseIcon />
-                  </IconButton>
                   <Box sx={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', outline: 'none' }}>
+                    {/* Top close button */}
+                    <IconButton
+                      aria-label="Close"
+                      onClick={closePhotoModal}
+                      sx={{
+                        position: 'absolute',
+                        top: '-50px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        color: '#EF232A',
+                        bgcolor: 'rgba(255, 255, 255, 0.9)',
+                        border: '2px solid #EF232A',
+                        zIndex: 1000,
+                        '&:hover': { 
+                          bgcolor: 'rgba(255, 255, 255, 1)', 
+                          color: '#d32f2f',
+                          transform: 'translateX(-50%) scale(1.1)'
+                        }
+                      }}
+                      size="large"
+                    >
+                      <CloseIcon />
+                    </IconButton>
                     {selectedPhoto && (
                       <img
                         src={selectedPhoto.proxy || selectedPhoto.original}
@@ -1533,14 +1795,16 @@ const BusinessProfile = () => {
                         data-proxy={selectedPhoto.proxy || ''}
                         data-retry="0"
                         onError={(e) => {
-                          const img = e.currentTarget;
-                          const retry = parseInt(img.dataset.retry || '0', 10);
+                          const img = e.target;
+                          const retry = parseInt(img.dataset.retry || '0');
                           const og = img.dataset.original;
                           const proxy = img.dataset.proxy;
                           if (retry === 0 && proxy && img.src === proxy && og) {
+                            console.warn('Photo modal failed via proxy, retrying original:', og);
                             img.dataset.retry = '1';
                             img.src = og;
                           } else if (retry <= 1 && proxy && img.src === og) {
+                            console.warn('Photo modal failed via original, falling back to placeholder');
                             img.dataset.retry = '2';
                             img.src = placeholderSmall;
                           } else {
@@ -1552,6 +1816,97 @@ const BusinessProfile = () => {
                   </Box>
                 </Box>
               </Modal>
+
+              {/* Edit Profile Dialog */}
+              <Dialog 
+                open={editProfileOpen} 
+                onClose={() => setEditProfileOpen(false)}
+                maxWidth="md"
+                fullWidth
+              >
+                <DialogTitle>Edit Business Profile</DialogTitle>
+                <DialogContent>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                    <TextField
+                      label="Business Name"
+                      defaultValue={locationData?.title || businessTitle}
+                      fullWidth
+                      variant="outlined"
+                    />
+                    <TextField
+                      label="Business Description"
+                      defaultValue={locationData?.profile?.description || 'Add a description for your business'}
+                      fullWidth
+                      multiline
+                      rows={3}
+                      variant="outlined"
+                    />
+                    <TextField
+                      label="Phone Number"
+                      defaultValue={locationData?.primaryPhone || 'Not available'}
+                      fullWidth
+                      variant="outlined"
+                    />
+                    <TextField
+                      label="Website"
+                      defaultValue={locationData?.websiteUri || 'Not available'}
+                      fullWidth
+                      variant="outlined"
+                    />
+                    <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                      Note: Changes will be submitted to Google My Business for review and may take time to appear.
+                    </Typography>
+                  </Box>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setEditProfileOpen(false)}>Cancel</Button>
+                  <Button variant="contained" sx={{ backgroundColor: '#0B91D6' }}>
+                    Save Changes
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              {/* Photo Upload Dialog */}
+              <Dialog 
+                open={photoUploadOpen} 
+                onClose={() => setPhotoUploadOpen(false)}
+                maxWidth="sm"
+                fullWidth
+              >
+                <DialogTitle>Add Photo to Google My Business</DialogTitle>
+                <DialogContent>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                    <Typography variant="body2" color="textSecondary">
+                      Upload a photo to add to your Google My Business profile. Photos help customers learn about your business.
+                    </Typography>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      sx={{ mt: 2 }}
+                    />
+                    {selectedFile && (
+                      <Typography variant="body2" sx={{ mt: 1, color: '#0B91D6' }}>
+                        Selected: {selectedFile.name}
+                      </Typography>
+                    )}
+                    <Typography variant="caption" color="textSecondary">
+                      Supported formats: JPG, PNG, GIF. Max size: 10MB
+                    </Typography>
+                  </Box>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setPhotoUploadOpen(false)}>Cancel</Button>
+                  <Button 
+                    variant="contained" 
+                    onClick={handleUploadPhoto}
+                    disabled={!selectedFile || uploading}
+                    sx={{ backgroundColor: '#0B91D6' }}
+                  >
+                    {uploading ? 'Uploading...' : 'Upload Photo'}
+                  </Button>
+                </DialogActions>
+              </Dialog>
 
               <ActionsGrid>
                 <ActionButton onClick={() => websiteUrl !== 'Not available' && window.open(websiteUrl, '_blank')}>
