@@ -100,24 +100,10 @@ const DashboardSidebar = () => {
           <ReputationIcon className="nav-icon" width={16} height={16} color="currentColor" />
           <NavText className="nav-text">Reputation Management</NavText>
         </NavItem>
-
-        <div onClick={toggleEdms} style={{ cursor: 'pointer' }}>
-          <NavItem as="div" to="/my-account">
-            <MyAccountIcon className="nav-icon" width={16} height={16} color="currentColor" />
-            <NavText className="nav-text">Get EDMs</NavText>
-            <Box sx={{ marginLeft: 'auto' }}>{edmsOpen ? '\u25B2' : '\u25BC'}</Box>
-          </NavItem>
-        </div>
-        {edmsOpen && (
-          <Stack sx={{ pl: 4, gap: '8px' }}>
-            <NavItem to="" className={({ isActive }) => (isActive ? 'active' : '')}>
-              <NavText className="nav-text">Images</NavText>
-            </NavItem>
-            <NavItem to="" className={({ isActive }) => (isActive ? 'active' : '')}>
-              <NavText className="nav-text">Holidays</NavText>
-            </NavItem>
-          </Stack>
-        )}
+          <NavItem to="/get-edms" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <EDMIcon className="nav-icon" width={16} height={16} color="currentColor" />
+          <NavText className="nav-text">Get EDMs</NavText>
+        </NavItem>
         <NavItem to="/free-website" className={({ isActive }) => (isActive ? 'active' : '')}>
           <WebsiteIcon className="nav-icon" width={16} height={16} color="currentColor" />
           <NavText className="nav-text">Free Website</NavText>
