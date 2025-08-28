@@ -111,24 +111,25 @@
   opacity: 0.95;
   /* position: fixed; */
 
-  .services-test {
-    font-size: 16px;
-    opacity: 0.8;
-    margin-top: 10px;
-    z-index: 2;
-    margin-left: -650px;
-    position: relative;
-    font-weight: 300;
-    margin-bottom: 300px;
-  }
-  
-  .service {
-    margin-top: auto;
-    font-size: 14px;
-  } */
-  
-  /* Right Panel */
-  /* .right {
+
+.services-test {
+  font-size: 16px;
+  opacity: 0.8;
+  margin-top: 10px;
+  z-index: 2;
+  margin-left: -650px;
+  position: relative;
+  font-weight: 300;
+  margin-bottom: 300px;
+}
+
+.service {
+  margin-top: auto;
+  font-size: 14px;
+}
+
+/* Right Panel */
+/* .right {
     width: 50%;
     display: flex;
     align-items: center;
@@ -250,7 +251,8 @@
       margin: 0 auto 20px auto;
     }
   } */
-   body {
+
+body {
     margin: 0;
     font-family: 'Segoe UI', sans-serif;
     background-color: #f8f8f8;
@@ -2543,9 +2545,8 @@
   
     .form-input:focus {
       outline: none;
-      ring: 2px;
-      ring-color: #3b82f6;
-      border-color: transparent;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
     }
   
     .form-input.has-value {
