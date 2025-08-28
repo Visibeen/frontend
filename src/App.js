@@ -35,7 +35,9 @@ import { getSession } from './utils/authUtils.js';
 import AutoTokenManager from './utils/autoTokenUtils.js';
 import { AppProvider } from './contexts/AppContext';
 import 'leaflet/dist/leaflet.css';
+import HeatmapPage from './components/Heatmap/HeatmapPage';
 import Holidays from './components/edms/Holidays';
+
 
 
 
@@ -97,6 +99,7 @@ function App() {
         <Route path="/profile-strength" element={<ProfileStrengthPage />} />
         <Route path="/heatmap-results" element={<HeatmapResultsPage />} />
         <Route path="/holidays" element={<Holidays />} />
+        <Route path="/src/heatmap/heatmap-pages" element={<HeatmapPage/>}/>
         <Route path="/reviews-management" element={
           <DashboardLayout>
             <ReviewsManagement />
