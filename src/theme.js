@@ -3,16 +3,16 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#0B91D6',
-      light: '#4AABDF',
-      dark: '#0A7BC4',
-      contrastText: '#FFFFFF'
+      main: '#03a9f4', // Blue from design
+      light: '#42a5f5',
+      dark: '#0277bd',
+      contrastText: '#ffffff'
     },
     secondary: {
-      main: '#34A853',
-      light: '#5CBF75',
-      dark: '#2E9447',
-      contrastText: '#FFFFFF'
+      main: '#00296c', // Dark blue from service titles
+      light: '#1976d2',
+      dark: '#001e4d',
+      contrastText: '#ffffff'
     },
     error: {
       main: '#EF232A',
@@ -21,65 +21,74 @@ const theme = createTheme({
       contrastText: '#FFFFFF'
     },
     warning: {
-      main: '#FBBC05',
-      light: '#FCC947',
-      dark: '#E6A804',
+      main: '#ffeb3b', // Yellow accent from design
+      light: '#fff176',
+      dark: '#f57f17',
       contrastText: '#000000'
     },
     text: {
-      primary: '#121927',
-      secondary: '#30302E',
-      disabled: '#A0A0AA'
+      primary: '#333333', // Main text color
+      secondary: '#9ca6c1', // Secondary text color
+      disabled: '#a2a9b0'
     },
     background: {
-      default: '#F8F8F8',
-      paper: '#FFFFFF'
+      default: '#ffffff',
+      paper: '#f6f6f6' // Footer background
     },
     grey: {
-      50: '#F6F0F0',
-      100: '#F0F0F0',
-      200: '#E0E0E0',
-      300: '#C0C0C0',
-      400: '#A0A0AA',
-      500: '#808080',
-      600: '#606060',
-      700: '#404040',
-      800: '#202020',
-      900: '#121927'
+      50: '#f9fafb',
+      100: '#f3f4f6', 
+      200: '#e5e7eb',
+      300: '#d1d5db',
+      400: '#9ca3af',
+      500: '#6b7280',
+      600: '#4b5563',
+      700: '#374151',
+      800: '#1f2937',
+      900: '#111827'
     },
     divider: 'rgba(160, 160, 170, 0.2)'
   },
   typography: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Montserrat, Source Sans Pro, sans-serif',
     fontSize: 14,
     fontWeightLight: 400,
     fontWeightRegular: 500,
     fontWeightMedium: 600,
     fontWeightBold: 700,
     h1: {
-      fontSize: '42px',
-      fontWeight: 600,
-      color: '#000000'
+      fontFamily: 'Montserrat, sans-serif',
+      fontSize: '60px',
+      fontWeight: 500,
+      letterSpacing: '1px',
+      lineHeight: '80px'
     },
     h2: {
-      fontSize: '32px',
-      fontWeight: 600,
-      color: '#121927'
+      fontFamily: 'Montserrat, sans-serif', 
+      fontSize: '30px',
+      fontWeight: 700,
+      letterSpacing: '1px',
+      lineHeight: '33px'
     },
     h3: {
-      fontSize: '28px',
-      fontWeight: 600,
-      color: '#0B91D6'
+      fontFamily: 'Montserrat, sans-serif',
+      fontSize: '30px', 
+      fontWeight: 400,
+      letterSpacing: '1px',
+      lineHeight: '33px'
     },
     h4: {
-      fontSize: '24px',
-      fontWeight: 600,
-      color: '#121927'
+      fontFamily: 'Montserrat, sans-serif',
+      fontSize: '22px',
+      fontWeight: 500,
+      letterSpacing: '-0.44px'
     },
     h5: {
-      fontSize: '20px',
-      fontWeight: 600,
-      color: '#FFFFFF'
+      fontFamily: 'Montserrat, sans-serif',
+      fontSize: '18px',
+      fontWeight: 700,
+      letterSpacing: '1px',
+      lineHeight: '19.80px'
     },
     h6: {
       fontSize: '18px',
@@ -87,23 +96,26 @@ const theme = createTheme({
       color: '#121927'
     },
     body1: {
+      fontFamily: 'Source Sans Pro, sans-serif',
       fontSize: '16px',
-      fontWeight: 500,
-      color: '#121927'
+      fontWeight: 400,
+      letterSpacing: '-0.32px',
+      lineHeight: '20px'
     },
     body2: {
-      fontSize: '14px',
+      fontFamily: 'Source Sans Pro, sans-serif',
+      fontSize: '15.5px',
       fontWeight: 400,
-      color: '#30302E'
+      lineHeight: '24px'
     },
     caption: {
-      fontSize: '12px',
-      fontWeight: 500,
-      color: '#121927'
+      fontFamily: 'Source Sans Pro, sans-serif',
+      fontSize: '14px',
+      fontWeight: 400
     }
   },
   shape: {
-    borderRadius: 8
+    borderRadius: 4
   }
 });
 
