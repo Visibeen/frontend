@@ -5,6 +5,8 @@ import { useLocation } from 'react-router-dom';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import EditIcon from '../icons/EditIcon';
 import GMBService from '../../services/GMBService';
+import EnhancedScorePopup from './components/EnhancedScorePopup';
+import AnalysisLoadingPopup from './components/AnalysisLoadingPopup';
  
 
 const MainContent = styled(Box)(({ theme }) => ({
@@ -382,6 +384,9 @@ const ProfileStrengthResults = () => {
   const [completedSteps, setCompletedSteps] = useState([]);
   const [stepProgress, setStepProgress] = useState(0);
   
+  // Enhanced popup state
+  const [showScorePopup, setShowScorePopup] = useState(false);
+  
 
   // Ensure target location is always set with available data
   useEffect(() => {
@@ -620,6 +625,14 @@ const ProfileStrengthResults = () => {
 
   // Compute profile strength score out of 500 based on provided rules
   useEffect(() => {
+    // Skip auto-calculation if we're coming from ProfileStrengthAnalysis with a pre-calculated score
+    const hasPreCalculatedScore = location.state?.preCalculatedScore;
+    if (hasPreCalculatedScore) {
+      setProfileScore(hasPreCalculatedScore);
+      setIsCalculating(false);
+      return;
+    }
+
     let isMounted = true;
     const computeScore = async () => {
       if (!isMounted) return;
@@ -1382,6 +1395,11 @@ const ProfileStrengthResults = () => {
         updateProgress('Analysis complete!', 100, ['Final Score Calculation']);
         await new Promise(resolve => setTimeout(resolve, 1000));
         setIsCalculating(false);
+        
+        // Show the enhanced popup after calculation is complete
+        setTimeout(() => {
+          setShowScorePopup(true);
+        }, 500);
       }
     };
 
@@ -1497,7 +1515,7 @@ const ProfileStrengthResults = () => {
           <ResultsSection>
             <ScoreSection>
               <ScoreLabel>Profile Strength Score</ScoreLabel>
-              <ScoreValue>{profileScore} / 500</ScoreValue>
+              <ScoreValue>{profileScore} / 300</ScoreValue>
             </ScoreSection>
 
             <ChartContainer>
@@ -1559,6 +1577,14 @@ const ProfileStrengthResults = () => {
           <Button variant="contained" onClick={handleSaveKeywords}>Save</Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Enhanced Score Popup */}
+      <EnhancedScorePopup
+        open={showScorePopup}
+        onClose={() => setShowScorePopup(false)}
+        score={profileScore}
+        maxScore={300}
+      />
     </DashboardLayout>
   );
 };

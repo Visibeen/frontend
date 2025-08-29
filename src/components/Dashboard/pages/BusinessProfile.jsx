@@ -872,6 +872,8 @@ const BusinessProfile = () => {
   const [notifications, setNotifications] = useState([]);
   const [newNotificationCount, setNewNotificationCount] = useState(0);
   const [notificationLoading, setNotificationLoading] = useState(false);
+  const [localPosts, setLocalPosts] = useState([]);
+  const [localPostsLoading, setLocalPostsLoading] = useState(false);
 
   const locationId = searchParams.get('id');
   const open = Boolean(anchorEl);
@@ -884,6 +886,62 @@ const BusinessProfile = () => {
       setNewNotificationCount(prev => prev + newNotifications.length);
     }
   }, []);
+
+  // Fetch local posts for GMB Feed
+  const fetchLocalPosts = useCallback(async () => {
+    console.log('[BusinessProfile] fetchLocalPosts called with locationId:', locationId);
+    if (!locationId) {
+      console.log('[BusinessProfile] No locationId, returning early');
+      return;
+    }
+    
+    setLocalPostsLoading(true);
+    try {
+      // Direct API call without using notification service for account detection
+      const accessToken = await GMBService.getAccessToken();
+      console.log('[BusinessProfile] Got access token, fetching accounts...');
+      
+      const accounts = await GMBService.getAccounts(accessToken);
+      console.log('[BusinessProfile] Available accounts:', accounts);
+      
+      let foundAccountId = null;
+      
+      // Search through accounts to find the one that owns this location
+      for (const account of accounts) {
+        try {
+          const locations = await GMBService.getLocations(accessToken, account.name);
+          const matchingLocation = locations.find(loc => {
+            const locId = loc.name?.split('/').pop();
+            return locId === locationId;
+          });
+          
+          if (matchingLocation) {
+            foundAccountId = account.name.split('/').pop();
+            console.log('[BusinessProfile] Found account for location:', foundAccountId);
+            break;
+          }
+        } catch (err) {
+          console.warn('[BusinessProfile] Error checking account:', account.name, err);
+        }
+      }
+      
+      if (foundAccountId) {
+        console.log('[BusinessProfile] Fetching local posts for account:', foundAccountId, 'location:', locationId);
+        const posts = await GMBService.getLocalPosts(accessToken, foundAccountId, locationId);
+        console.log('[BusinessProfile] Local posts API response:', posts);
+        console.log('[BusinessProfile] Setting localPosts state with:', posts?.length || 0, 'posts');
+        setLocalPosts(posts || []);
+      } else {
+        console.warn('[BusinessProfile] No account found that owns location:', locationId);
+        setLocalPosts([]);
+      }
+    } catch (error) {
+      console.error('[BusinessProfile] Error fetching local posts:', error);
+      setLocalPosts([]);
+    } finally {
+      setLocalPostsLoading(false);
+    }
+  }, [locationId]);
 
   // Start notification polling when component mounts
   useEffect(() => {
@@ -911,6 +969,10 @@ const BusinessProfile = () => {
         }
       };
       
+      // Fetch local posts for GMB Feed
+      console.log('[BusinessProfile] About to call fetchLocalPosts for locationId:', locationId);
+      fetchLocalPosts();
+      
       startNotifications();
     }
     
@@ -919,7 +981,7 @@ const BusinessProfile = () => {
       GMBNotificationService.removeListener(handleNotifications);
       GMBNotificationService.stopPolling();
     };
-  }, [locationId, handleNotifications]);
+  }, [locationId, handleNotifications, fetchLocalPosts]);
 
   useEffect(() => {
     const fetchLocationData = async () => {
@@ -2061,7 +2123,8 @@ const BusinessProfile = () => {
                             height: '18px', 
                             borderRadius: '50%', 
                             backgroundColor: notification.icon === 'review-red' ? '#EF232A' : 
-                                           notification.icon === 'photo' ? '#0B91D6' : '#34A853' 
+                                           notification.icon === 'photo' ? '#0B91D6' : 
+                                           notification.icon === 'post' ? '#9C27B0' : '#34A853' 
                           }} />
                           <FeedTitle>{notification.title}</FeedTitle>
                         </FeedHeader>
@@ -2094,6 +2157,7 @@ const BusinessProfile = () => {
                   <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Live notifications: {notifications.length}</Typography>
                   <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Recent reviews: {notifications.filter(n => n.type === 'NEW_REVIEW').length}</Typography>
                   <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• New photos: {notifications.filter(n => n.type === 'NEW_CUSTOMER_MEDIA').length}</Typography>
+                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• New posts: {notifications.filter(n => n.type === 'NEW_LOCAL_POST').length}</Typography>
                   <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>• Notification polling: {notificationLoading ? 'Connecting...' : 'Active'}</Typography>
                 </Box>
               )}
@@ -2178,13 +2242,42 @@ const BusinessProfile = () => {
           {/* GMB Feed */}
           <FeedCard>
             <SectionTitle>GMB Feed</SectionTitle>
-            {mediaItems && mediaItems.length > 0 ? (
+            {(() => {
+              console.log('[BusinessProfile] Rendering GMB Feed - localPostsLoading:', localPostsLoading, 'localPosts:', localPosts, 'length:', localPosts?.length);
+              return null;
+            })()}
+            {localPostsLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <Typography>Loading local posts...</Typography>
+              </Box>
+            ) : localPosts && localPosts.length > 0 ? (
               <>
                 <FeedGrid>
-                  {(showAllGMBFeed ? mediaItems : mediaItems.slice(0, 9)).map((item, index) => {
-                    const originalSrc = item.googleUrl || item.thumbnailUrl || item.sourceUrl || '';
+                  {(showAllGMBFeed ? localPosts : localPosts.slice(0, 9)).map((post, index) => {
+                    console.log('[BusinessProfile] Processing post:', post.name, 'media:', post.media);
+                    
+                    // Extract post data - check multiple possible image sources
+                    const postMedia = post.media?.[0]; // Get first media item if available
+                    let originalSrc = '';
+                    
+                    if (postMedia) {
+                      // Try different possible image URL fields
+                      originalSrc = postMedia.sourceUrl || 
+                                   postMedia.googleUrl || 
+                                   postMedia.thumbnailUrl || 
+                                   postMedia.url || '';
+                      console.log('[BusinessProfile] Found media in post:', originalSrc);
+                    } else if (post.photos && post.photos.length > 0) {
+                      // Check if photos array exists
+                      const photo = post.photos[0];
+                      originalSrc = photo.sourceUrl || photo.googleUrl || photo.thumbnailUrl || photo.url || '';
+                      console.log('[BusinessProfile] Found photo in post:', originalSrc);
+                    } else {
+                      console.log('[BusinessProfile] No media found in post');
+                    }
+                    
                     const imgSrc = originalSrc;
-                    const created = item.createTime ? new Date(item.createTime) : null;
+                    const created = post.createTime ? new Date(post.createTime) : null;
                     const dateText = created
                       ? `Posted on - ${created.toLocaleString(undefined, {
                           year: 'numeric',
@@ -2195,23 +2288,17 @@ const BusinessProfile = () => {
                           timeZoneName: 'short'
                         })}`
                       : 'Date not available';
-                    // Prefer real text fields for heading; fallback to friendly category label
-                    const rawCategory = item.locationAssociation?.category || '';
-                    const categoryMap = {
-                      COVER: 'Cover photo',
-                      PROFILE: 'Profile photo',
-                      LOGO: 'Logo',
-                      ADDITIONAL: 'Photo'
-                    };
-                    const friendlyCategory = categoryMap[(rawCategory || '').toUpperCase()] || '';
-                    const heading = item.description || item.caption || item.title || item.summary || friendlyCategory || (item.mediaFormat ? String(item.mediaFormat).toString() : 'Photo');
+                    
+                    // Get post content
+                    const heading = post.summary || post.callToAction?.actionType || post.topicType || 'Local Post';
+                    const description = post.event?.title || post.offer?.couponCode || '';
                     
                     return (
-                      <FeedCardItem key={item.name || `${originalSrc}-${index}`}>
+                      <FeedCardItem key={post.name || `post-${index}`}>
                         {imgSrc ? (
                           <FeedImage
                             src={buildProxyUrl(imgSrc) || imgSrc}
-                            alt={`GMB Media ${index + 1}`}
+                            alt={`Local Post ${index + 1}`}
                             referrerPolicy="no-referrer"
                             crossOrigin="anonymous"
                             data-original={imgSrc}
@@ -2256,7 +2343,7 @@ const BusinessProfile = () => {
                 </Box>
               </>
             ) : (
-              <Typography sx={{ color: '#6b7280' }}>No media items found.</Typography>
+              <Typography sx={{ color: '#6b7280' }}>No local posts found.</Typography>
             )}
           </FeedCard>
 

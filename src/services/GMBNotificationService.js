@@ -265,6 +265,42 @@ class GMBNotificationService {
         console.warn('Error fetching recent media for notifications:', error);
       }
 
+      // Check for new local posts
+      try {
+        console.log('[GMBNotificationService] Fetching local posts for account/location:', correctAccountId, locationId);
+        
+        const localPosts = await GMBService.getLocalPosts(accessToken, correctAccountId, locationId);
+        console.log('[GMBNotificationService] Local posts received:', localPosts?.length || 0, 'posts');
+        
+        if (localPosts?.length > 0) {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          
+          const recentPosts = localPosts.filter(post => {
+            if (!post.createTime) return false;
+            const postDate = new Date(post.createTime);
+            return postDate > yesterday;
+          });
+
+          console.log('[GMBNotificationService] Found', recentPosts.length, 'recent local posts');
+          recentPosts.forEach(post => {
+            const notification = {
+              id: `post_${post.name?.split('/').pop() || Date.now()}`,
+              type: 'NEW_LOCAL_POST',
+              title: 'New post published',
+              description: post.summary || post.callToAction?.actionType || 'A new post has been published to your business profile',
+              timestamp: post.createTime,
+              data: post,
+              icon: 'post'
+            };
+            console.log('[GMBNotificationService] Adding local post notification:', notification);
+            notifications.push(notification);
+          });
+        }
+      } catch (error) {
+        console.warn('Error fetching recent local posts for notifications:', error);
+      }
+
       // Sort notifications by timestamp (newest first)
       notifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       

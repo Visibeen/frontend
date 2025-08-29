@@ -5,6 +5,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import DropdownArrowIcon from '../icons/DropdownArrowIcon';
 import EditIcon from '../icons/EditIcon';
+import AnalysisLoadingPopup from '../ProfileStrengthResults/components/AnalysisLoadingPopup';
+import EnhancedScorePopup from '../ProfileStrengthResults/components/EnhancedScorePopup';
 
 const MainContent = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -189,6 +191,9 @@ const ProfileStrengthAnalysis = () => {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [newKeyword, setNewKeyword] = useState('');
+  const [showAnalysisPopup, setShowAnalysisPopup] = useState(false);
+  const [showScorePopup, setShowScorePopup] = useState(false);
+  const [profileScore, setProfileScore] = useState(0);
 
   const accountSelectRef = useRef(null);
   const keywordsSelectRef = useRef(null);
@@ -222,6 +227,297 @@ const ProfileStrengthAnalysis = () => {
   };
 
   const handleContinue = () => {
+    // Show analysis popup instead of navigating immediately
+    setShowAnalysisPopup(true);
+  };
+
+  const handleAnalysisComplete = () => {
+    // Calculate real profile strength score using the same logic as ProfileStrengthResults
+    const calculateProfileScore = () => {
+      const selectedBiz = accounts.find(a => a.name === selectedAccount) || null;
+      const raw = selectedBiz?.raw || location.state?.selected || null;
+      
+      console.log('[ProfileStrengthAnalysis] Starting score calculation...');
+      console.log('[ProfileStrengthAnalysis] Selected business:', selectedBiz);
+      console.log('[ProfileStrengthAnalysis] Raw data:', raw);
+      
+      let score = 0;
+      
+      // 1) Verification status
+      const verificationState = String(raw?.verificationState || '').toUpperCase();
+      const isVerified = verificationState === 'VERIFIED' || raw?.verified === true;
+      const isSoftSuspended = String(raw?.metadata?.placeSuspensionReason || '').toUpperCase().includes('SOFT');
+      const isUnverified = !isVerified && !isSoftSuspended;
+      
+      let verPts = 0;
+      if (isVerified) verPts = 0;
+      else if (isSoftSuspended) verPts = -60;
+      else if (isUnverified) verPts = -100;
+      score += verPts;
+      console.log('[Score] Verification:', { verificationState, isVerified, isSoftSuspended, isUnverified, points: verPts, totalScore: score });
+      
+      // 2) Business name contains city
+      const businessTitle = raw?.title || raw?.name || raw?.businessName || selectedBiz?.name || '';
+      const city = raw?.storefrontAddress?.locality || '';
+      let namePts = 0;
+      if (businessTitle && city && businessTitle.toLowerCase().includes(city.toLowerCase())) {
+        namePts = 20;
+      } else if (businessTitle) {
+        namePts = 10;
+      }
+      score += namePts;
+      console.log('[Score] Business Name:', { businessTitle, city, hasCity: businessTitle && city && businessTitle.toLowerCase().includes(city.toLowerCase()), points: namePts, totalScore: score });
+      
+      // 3) Address scoring
+      let address = selectedBiz?.address || raw?.address || raw?.formattedAddress || '';
+      if (raw?.storefrontAddress) {
+        const sa = raw.storefrontAddress;
+        const parts = [];
+        if (Array.isArray(sa.addressLines) && sa.addressLines.length) parts.push(sa.addressLines.join(', '));
+        if (sa.locality) parts.push(sa.locality);
+        const tail = [sa.administrativeArea, sa.postalCode].filter(Boolean).join(' ');
+        if (tail) parts.push(tail);
+        const full = parts.join(', ').trim();
+        if (full) address = full;
+      }
+      
+      const hasCity = !!city && address.toLowerCase().includes(city.toLowerCase());
+      const keywords = [...selectedKeywords, ...manualKeywords.split(',').map(k => k.trim()).filter(Boolean)]
+        .slice(0, 3)
+        .map(k => k.toLowerCase());
+      const hasKeyword = keywords.some(k => address.toLowerCase().includes(k));
+      const hasAnyAddressFields = !!(raw?.storefrontAddress?.locality || raw?.storefrontAddress?.administrativeArea || raw?.storefrontAddress?.postalCode);
+      
+      let addrPts = 0;
+      if (hasCity && hasKeyword) {
+        addrPts = 20;
+      } else if (address) {
+        addrPts = 12;
+      } else if (!hasAnyAddressFields) {
+        addrPts = 2;
+      }
+      score += addrPts;
+      console.log('[Score] Address:', { address, city, keywords, hasCity, hasKeyword, hasAnyAddressFields, points: addrPts, totalScore: score });
+      
+      // 4) Phone number
+      const hasPhone = !!(raw?.phoneNumbers?.primaryPhone || raw?.phoneNumbers?.additionalPhones?.length);
+      const phonePts = hasPhone ? 100 : 0;
+      score += phonePts;
+      console.log('[Score] Phone:', { hasPhone, points: phonePts, totalScore: score });
+      
+      // 5) Description length
+      const description = raw?.profile?.description || '';
+      const wordCount = description ? (description.trim().split(/\s+/).filter(Boolean).length) : 0;
+      let descPts = 0;
+      if (wordCount > 0 && wordCount <= 400) {
+        descPts = 5;
+      } else if (wordCount >= 700) {
+        descPts = 10;
+      }
+      score += descPts;
+      console.log('[Score] Description:', { description: description.substring(0, 100) + '...', wordCount, points: descPts, totalScore: score });
+      
+      // 6) Website link presence
+      const hasWebsite = !!raw?.websiteUri;
+      const websitePts = hasWebsite ? 5 : 0;
+      score += websitePts;
+      console.log('[Score] Website:', { hasWebsite, websiteUri: raw?.websiteUri, points: websitePts, totalScore: score });
+      
+      // 7) Business hours
+      const hasHours = !!(raw?.regularHours?.periods?.length || raw?.moreHours?.length);
+      const hoursPts = hasHours ? 5 : 0;
+      score += hoursPts;
+      console.log('[Score] Hours:', { hasHours, points: hoursPts, totalScore: score });
+      
+      // 8) Labels
+      const hasLabels = Array.isArray(raw?.labels) && raw.labels.length > 0;
+      const labelPts = hasLabels ? 10 : 0;
+      score += labelPts;
+      console.log('[Score] Labels:', { hasLabels, labels: raw?.labels, points: labelPts, totalScore: score });
+      
+      // 9) Categories scoring
+      const catInfo = raw?.categories || {};
+      const primaryCategory = catInfo?.primaryCategory || catInfo?.primary || null;
+      const additionalCats = Array.isArray(catInfo?.additionalCategories) ? catInfo.additionalCategories : [];
+      
+      let catBasePts = 0;
+      let catExtraPts = 0;
+      if (primaryCategory) catBasePts = 25;
+      const extraCount = Math.max(0, Math.min(additionalCats.length, 2));
+      catExtraPts = extraCount * 5;
+      score += (catBasePts + catExtraPts);
+      console.log('[Score] Categories:', { primaryCategory, additionalCats, catBasePts, catExtraPts, totalCatPts: catBasePts + catExtraPts, totalScore: score });
+      
+      // 10) City mentioned in category name
+      const cityLc = city.toLowerCase();
+      const extractCatNames = () => {
+        const names = [];
+        if (primaryCategory) {
+          names.push(primaryCategory.displayName || primaryCategory.name || primaryCategory);
+        }
+        additionalCats.forEach((c) => {
+          names.push(c?.displayName || c?.name || c);
+        });
+        return names.filter(Boolean);
+      };
+      const catNames = extractCatNames();
+      const hasCityInCategory = !!(cityLc && catNames.some(n => String(n).toLowerCase().includes(cityLc)));
+      const cityCatPts = hasCityInCategory ? 10 : 0;
+      score += cityCatPts;
+      console.log('[Score] City in Category:', { city, categoryNames: catNames, hasCityInCategory, points: cityCatPts, totalScore: score });
+
+      // 11) Social media attached (+5 if present)
+      let socialPts = 0;
+      const socialDomains = ['facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'linkedin.com', 'youtube.com', 't.me', 'telegram.me', 'pinterest.', 'tiktok.com'];
+      const looksSocialUrl = (u) => {
+        if (!u || typeof u !== 'string') return false;
+        const s = u.toLowerCase();
+        return socialDomains.some(d => s.includes(d));
+      };
+      const collectLinks = () => {
+        const out = [];
+        const tl = raw || {};
+        const candidates = [];
+        if (Array.isArray(tl.socialLinks)) candidates.push(...tl.socialLinks);
+        if (Array.isArray(tl?.profile?.socialLinks)) candidates.push(...tl.profile.socialLinks);
+        if (Array.isArray(tl.links)) candidates.push(...tl.links);
+        if (Array.isArray(tl.profiles)) candidates.push(...tl.profiles);
+        if (Array.isArray(tl.additionalUrls)) candidates.push(...tl.additionalUrls);
+        if (Array.isArray(tl?.profile?.urls)) candidates.push(...tl.profile.urls);
+        if (tl.websiteUri) candidates.push(tl.websiteUri);
+        candidates.forEach((v) => {
+          if (!v) return;
+          if (typeof v === 'string') out.push(v);
+          else if (v?.url) out.push(v.url);
+          else if (v?.link) out.push(v.link);
+        });
+        return out.filter(Boolean);
+      };
+      const allLinks = collectLinks();
+      const hasSocial = allLinks.some(looksSocialUrl);
+      socialPts = hasSocial ? 5 : 0;
+      score += socialPts;
+      console.log('[Score] Social Media:', { hasSocial, allLinks, points: socialPts, totalScore: score });
+
+      // 12) Appointments link (+5 if present)
+      let appointmentsPts = 0;
+      const hasApptDirect = !!(
+        raw?.appointmentLinks ||
+        raw?.appointmentLink ||
+        raw?.appointmentsLink ||
+        raw?.profile?.appointmentLink ||
+        raw?.profile?.appointmentUrl ||
+        raw?.metadata?.appointmentLink
+      );
+      const attrs = raw?.attributes || {};
+      const attrKeys = Object.keys(attrs).map(k => k.toLowerCase());
+      const hasApptAttr = attrKeys.some(k => k.includes('appointment') || k.includes('booking'));
+      const hasApptUrlInAttrs = Object.values(attrs).some(v => {
+        if (typeof v === 'string') return /http(s)?:\/\//i.test(v) && (v.toLowerCase().includes('book') || v.toLowerCase().includes('appoint'));
+        if (Array.isArray(v)) return v.some(x => typeof x === 'string' && /http(s)?:\/\//i.test(x) && (x.toLowerCase().includes('book') || x.toLowerCase().includes('appoint')));
+        return false;
+      });
+      const hasAppt = !!(hasApptDirect || hasApptAttr || hasApptUrlInAttrs);
+      appointmentsPts = hasAppt ? 5 : 0;
+      score += appointmentsPts;
+      console.log('[Score] Appointments:', { hasAppt, points: appointmentsPts, totalScore: score });
+
+      // 13) Service area (+5 if present)
+      let serviceAreaPts = 0;
+      const sa = raw?.serviceArea || null;
+      const hasServiceArea = !!(
+        sa && (
+          (Array.isArray(sa?.places) && sa.places.length > 0) ||
+          sa?.placeId || sa?.radius || sa?.businessArea || sa?.regionCode ||
+          Object.keys(sa || {}).length > 0
+        )
+      );
+      serviceAreaPts = hasServiceArea ? 5 : 0;
+      score += serviceAreaPts;
+      console.log('[Score] Service Area:', { hasServiceArea, points: serviceAreaPts, totalScore: score });
+
+      // 14) Book Appointment explicit (+5 if present)
+      let bookApptPts = 0;
+      const linkLooksBook = (u) => typeof u === 'string' && /http(s)?:\/\//i.test(u) && /(book|reserve|booking)/i.test(u);
+      const hasBookByLinks = Array.isArray(allLinks) && allLinks.some(linkLooksBook);
+      const hasBookByFields = !!(
+        raw?.appointmentLinks ||
+        raw?.appointmentLink ||
+        raw?.appointmentsLink ||
+        raw?.profile?.appointmentLink ||
+        raw?.profile?.appointmentUrl ||
+        raw?.metadata?.appointmentLink
+      );
+      const hasBookAppointment = !!(hasBookByLinks || hasBookByFields);
+      bookApptPts = hasBookAppointment ? 5 : 0;
+      score += bookApptPts;
+      console.log('[Score] Book Appointment:', { hasBookAppointment, points: bookApptPts, totalScore: score });
+
+      // 15) Q&A section present (+5 if present)
+      let qaPts = 0;
+      const qnaCandidates = [
+        raw?.qna,
+        raw?.qa,
+        raw?.questions,
+        raw?.questionsAndAnswers,
+        raw?.communityQuestions
+      ];
+      const hasQAByStructure = qnaCandidates.some(v => Array.isArray(v) ? v.length > 0 : (v && typeof v === 'object' && Object.keys(v).length > 0));
+      const hasQASection = !!hasQAByStructure;
+      qaPts = hasQASection ? 5 : 0;
+      score += qaPts;
+      console.log('[Score] Q&A Section:', { hasQASection, points: qaPts, totalScore: score });
+
+      // 16) Reviews vs competitors (simplified - just check if reviews exist)
+      let reviewsPts = 0;
+      const hasReviews = !!(raw?.reviews || raw?.reviewCount || raw?.rating);
+      reviewsPts = hasReviews ? 5 : 0;
+      score += reviewsPts;
+      console.log('[Score] Reviews:', { hasReviews, points: reviewsPts, totalScore: score });
+      
+      // Ensure score is within reasonable bounds (0-300)
+      const baseScore = 150; // Add base score to ensure reasonable range
+      const finalScore = Math.max(0, Math.min(300, score + baseScore));
+      
+      console.log('[Score] FINAL CALCULATION:', {
+        rawScore: score,
+        baseScore: baseScore,
+        finalScore: finalScore,
+        breakdown: {
+          verification: verPts,
+          businessName: namePts,
+          address: addrPts,
+          phone: phonePts,
+          description: descPts,
+          website: websitePts,
+          hours: hoursPts,
+          labels: labelPts,
+          categories: catBasePts + catExtraPts,
+          cityInCategory: cityCatPts,
+          socialMedia: socialPts,
+          appointments: appointmentsPts,
+          serviceArea: serviceAreaPts,
+          bookAppointment: bookApptPts,
+          qaSection: qaPts,
+          reviews: reviewsPts
+        }
+      });
+      
+      return finalScore;
+    };
+    
+    const calculatedScore = calculateProfileScore();
+    setProfileScore(calculatedScore);
+    
+    // Hide analysis popup and show score popup
+    setShowAnalysisPopup(false);
+    setShowScorePopup(true);
+  };
+
+  const handleScorePopupClose = () => {
+    setShowScorePopup(false);
+    
+    // Now navigate to results page with all the data
     // Merge predefined selected + manual keywords (manual split by comma)
     const manualParts = manualKeywords
       .split(',')
@@ -343,7 +639,8 @@ const ProfileStrengthAnalysis = () => {
         business: businessPayload,
         businesses: passedBusinesses,
         locationData: raw,
-        selectedLocation: raw
+        selectedLocation: raw,
+        preCalculatedScore: profileScore // Pass the calculated score to skip re-calculation
       }
     });
   };
@@ -473,6 +770,20 @@ const ProfileStrengthAnalysis = () => {
               
         </ContentSection>
       </MainContent>
+      
+      {/* Analysis Loading Popup */}
+      <AnalysisLoadingPopup
+        open={showAnalysisPopup}
+        onComplete={handleAnalysisComplete}
+      />
+      
+      {/* Enhanced Score Popup */}
+      <EnhancedScorePopup
+        open={showScorePopup}
+        onClose={handleScorePopupClose}
+        score={profileScore}
+        maxScore={300}
+      />
     </DashboardLayout>
   );
 };
