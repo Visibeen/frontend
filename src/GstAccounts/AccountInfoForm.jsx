@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import './AccountInfoForm.css';
-import axios from 'axios';
+import { getSession, getAutoToken, clearSession } from '../utils/authUtils';
+import api from '../services/api';
 const initialFormState = {
   business_name: '',
   industry_type: '',
@@ -50,9 +51,30 @@ const AccountInfoForm = () => {
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const user = (localStorage.getItem('authToken'));
+    
+    // Get session and token using centralized utilities
+    const session = getSession();
+    const authToken = getAutoToken();
+    
+    // Debug token information
+    console.log('[AccountInfoForm] Token Debug Info:', {
+      hasSession: !!session,
+      hasToken: !!authToken,
+      sessionId: session?.id || session?.user?.id,
+      tokenPreview: authToken ? `${authToken.substring(0, 10)}...` : 'No token'
+    });
+    
+    // Check for authentication
+    if (!session || !authToken) {
+      console.error('[AccountInfoForm] Missing authentication data');
+      alert('Authentication required. Please log in again.');
+      clearSession();
+      // Note: Navigation would need to be implemented if this component is within a router context
+      return;
+    }
+    
     const payload = {
-      user_id: user?.id,
+      user_id: session?.id || session?.user?.id,
       business_name: form.business_name,
       industry_type: form.industry_type,
       start_date: form.start_date,
@@ -65,30 +87,36 @@ const AccountInfoForm = () => {
       email: form.email,
       address: form.address,
       website: form.website
-    }
+    };
+    
     try {
-      const token = JSON.parse(localStorage.getItem('userData'));
-      const response = await axios.post(
-        'http://52.44.140.230:8089/api/v1/customer/accounts/create-account',
-        payload,
-        {
-          headers: {
-            Authorization: `${token?.token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      )
+      console.log('[AccountInfoForm] Submitting account info...');
+      
+      // Use centralized API service with automatic token injection
+      const response = await api.post('/customer/accounts/create-account', payload);
+      
+      console.log('[AccountInfoForm] API Response:', response);
       alert('Updated!');
-      console.log('API Response:', response.data);
     } catch (error) {
-      if (error.response) {
-        console.error("Server responded with:", error.response.data);
+      console.error('[AccountInfoForm] API Error:', error);
+      
+      if (error.status === 401) {
+        // Handle authentication error
+        console.log('[AccountInfoForm] Authentication failed, clearing session');
+        clearSession();
+        alert('Your session has expired. Please log in again.');
+        // Note: Navigation would need to be implemented if this component is within a router context
+      } else if (error.status === 400) {
+        // Handle bad request with specific feedback
+        const errorMessage = error.body?.message || error.body?.error || 'Invalid request data. Please check your information and try again.';
+        console.error('[AccountInfoForm] Validation error:', errorMessage);
+        alert(`Error: ${errorMessage}`);
       } else {
-        console.error("Error:", error.message);
+        console.error('[AccountInfoForm] Unexpected error:', error.message);
+        alert('Something went wrong while submitting the form. Please try again.');
       }
-      alert('Something went wrong while submitting the form. Please try again.');
     }
-    alert('Updated!');
+    
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }

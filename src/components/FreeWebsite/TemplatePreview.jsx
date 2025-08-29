@@ -2,6 +2,18 @@ import React from 'react';
 import { Box, Typography, Button, Stack, IconButton } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
+import Template1 from '../Template1/Template1';
+import { mockRootProps } from '../Template1/Template1MockData';
+import Template2 from '../Template2/Template2';
+import { mockRootProps as template2MockData } from '../Template2/Template2MockData';
+import Template3 from '../Template3/Template3';
+import { mockRootProps as template3MockData } from '../Template3/Template3MockData';
+import Template4 from '../Template4/Template4';
+import { mockRootProps as template4MockData } from '../Template4/Template4MockData';
+import Template5 from '../Template5/Template5';
+import { mockRootProps as template5MockData } from '../Template5/Template5MockData';
+import Template6 from '../Template6/Template6';
+import { mockRootProps as template6MockData } from '../Template6/Template6MockData';
 
 const PreviewOverlay = styled(Box)(({ theme }) => ({
   position: 'fixed',
@@ -21,13 +33,12 @@ const PreviewOverlay = styled(Box)(({ theme }) => ({
 const PreviewContainer = styled(Box)(({ theme }) => ({
   backgroundColor: '#ffffff',
   borderRadius: '12px',
-  padding: '24px',
-  maxWidth: '90vw',
-  maxHeight: '90vh',
+  padding: '0px',
+  width: '95vw',
+  height: '95vh',
   overflow: 'auto',
   position: 'relative',
-  // Ensure there is no box shadow
-  boxShadow: 'none'
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
 }));
 
 const PreviewHeader = styled(Stack)(({ theme }) => ({
@@ -74,34 +85,50 @@ const PreviewActions = styled(Stack)(({ theme }) => ({
   justifyContent: 'center'
 }));
 
-const ActionButton = styled(Button)(({ theme }) => ({
-  fontFamily: 'Inter, sans-serif',
-  fontSize: '14px',
-  fontWeight: 600,
-  textTransform: 'none',
-  padding: '12px 24px',
-  borderRadius: '8px',
-  minWidth: '120px'
-}));
 
-const UseTemplateButton = styled(ActionButton)(({ theme }) => ({
-  backgroundColor: '#0B91D6',
-  color: '#ffffff',
-  '&:hover': {
-    backgroundColor: '#0980C2'
-  }
-}));
-
-const ViewLiveButton = styled(ActionButton)(({ theme }) => ({
-  backgroundColor: '#EF232A',
-  color: '#ffffff',
-  '&:hover': {
-    backgroundColor: '#DC2626'
-  }
-}));
 
 const TemplatePreview = ({ template, onClose, onUseTemplate, onViewLive }) => {
   if (!template) return null;
+
+  const renderTemplateContent = () => {
+    // Show actual Template1 component for template ID 1
+    if (template.id === 1) {
+      return <Template1 templateData={mockRootProps} />;
+    }
+    
+    // Show actual Template2 component for template ID 2
+    if (template.id === 2) {
+      return <Template2 templateData={template2MockData} />;
+    }
+    
+    // Show actual Template3 component for template ID 3
+    if (template.id === 3) {
+      return <Template3 templateData={template3MockData} />;
+    }
+    
+    // Show actual Template4 component for template ID 4
+    if (template.id === 4) {
+      return <Template4 templateData={template4MockData} />;
+    }
+    
+    // Show actual Template5 component for template ID 5
+    if (template.id === 5) {
+      return <Template5 templateData={template5MockData} />;
+    }
+    
+    // Show actual Template6 component for template ID 6
+    if (template.id === 6) {
+      return <Template6 templateData={template6MockData} />;
+    }
+    
+    // For other templates, show the image preview
+    return (
+      <PreviewImage 
+        src={template.image} 
+        alt={`Preview of ${template.name}`}
+      />
+    );
+  };
 
   return (
     <PreviewOverlay onClick={onClose}>
@@ -109,23 +136,10 @@ const TemplatePreview = ({ template, onClose, onUseTemplate, onViewLive }) => {
         <CloseButton aria-label="Close preview" onClick={onClose}>
           <CloseIcon fontSize="small" />
         </CloseButton>
-        <PreviewHeader>
-          <PreviewTitle>Preview: {template.name}</PreviewTitle>
-        </PreviewHeader>
         
-        <PreviewImage 
-          src={template.image} 
-          alt={`Preview of ${template.name}`}
-        />
+        {renderTemplateContent()}
         
-        <PreviewActions>
-          <UseTemplateButton onClick={() => onUseTemplate(template)}>
-            Use This Template
-          </UseTemplateButton>
-          <ViewLiveButton onClick={() => onViewLive(template)}>
-            View Live Demo
-          </ViewLiveButton>
-        </PreviewActions>
+
       </PreviewContainer>
     </PreviewOverlay>
   );
