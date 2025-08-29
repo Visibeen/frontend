@@ -57,9 +57,7 @@ class ApiService {
         if (token) {
             return {
                 ...baseHeaders,
-                'Authorization': `Bearer ${token}`,
-                'x-access-token': token,
-                'token': token,
+                'Authorization': `${token?.token}`,
                 ...customHeaders
             };
         }
