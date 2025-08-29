@@ -64,6 +64,11 @@ class GMBService {
     return await tokenManager.getValidAccessToken('google');
   }
 
+  // Public method to get access token (for external services)
+  async getAccessToken(providedToken) {
+    return this._getAccessToken(providedToken);
+  }
+
   // Internal: fetch helper that attaches token and retries once on 401 after refresh
   async _googleFetch(url, options = {}, accessToken) {
     const token = await this._getAccessToken(accessToken);
@@ -546,105 +551,7 @@ class GMBService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error refreshing access token:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Upload media (photo) to a specific location
-   * Note: Google Business Profile API doesn't support direct browser uploads due to CORS restrictions.
-   * This is a mock implementation that simulates successful upload for UI testing.
-   * In production, this would require a server-side proxy or different approach.
-   * @param {string} accessToken - Google OAuth access token
-   * @param {string} accountId - Account ID string (e.g., '12345')
-   * @param {string} locationId - Location ID string (e.g., '67890')
-   * @param {File} file - The image file to upload
-   * @returns {Promise<Object>} Upload result (mocked)
-   */
-  async uploadMedia(accessToken, accountId, locationId, file) {
-    try {
-      if (!accountId || !locationId || !file) {
-        throw new Error('Invalid accountId, locationId, or file');
-      }
-
-      console.log('[GMBService] Mock photo upload initiated:', {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        accountId,
-        locationId
-      });
-
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Create a mock response that matches the expected format
-      const mockResponse = {
-        name: `accounts/${accountId}/locations/${locationId}/media/mock_${Date.now()}`,
-        mediaFormat: 'PHOTO',
-        sourceUrl: URL.createObjectURL(file), // Create a temporary URL for preview
-        thumbnailUrl: URL.createObjectURL(file),
-        googleUrl: URL.createObjectURL(file),
-        locationAssociation: {
-          category: 'ADDITIONAL'
-        },
-        createTime: new Date().toISOString(),
-        category: 'ADDITIONAL'
-      };
-
-      console.log('[GMBService] Mock photo upload completed:', mockResponse);
-      
-      // Show user notification about mock upload
-      if (typeof window !== 'undefined' && window.alert) {
-        setTimeout(() => {
-          alert('Photo upload simulated successfully! Note: This is a mock upload for testing. In production, server-side implementation would be required for Google Business Profile API.');
-        }, 100);
-      }
-
-      return mockResponse;
-    } catch (error) {
-      console.error('Error in mock upload media:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update business profile information using Google Business Information API v1
-   * @param {string} accessToken - Google OAuth access token
-   * @param {string} locationId - Full location name (e.g., 'locations/12345')
-   * @param {Object} updateData - Fields to update
-   * @returns {Promise<Object>} Update result
-   */
-  async updateBusinessProfile(accessToken, locationId, updateData) {
-    try {
-      if (!locationId || !updateData) {
-        throw new Error('Invalid locationId or updateData');
-      }
-
-      // Ensure locationId is in correct format
-      const fullLocationId = locationId.startsWith('locations/') ? locationId : `locations/${locationId}`;
-
-      // Create update mask from the fields being updated
-      const updateMask = Object.keys(updateData).join(',');
-
-      const response = await this._googleFetch(
-        `https://mybusinessbusinessinformation.googleapis.com/v1/${fullLocationId}?updateMask=${updateMask}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify(updateData)
-        },
-        accessToken
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to update business profile');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error updating business profile:', error);
+      console.error('Error refreshing token:', error);
       throw error;
     }
   }
