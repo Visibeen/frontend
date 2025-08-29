@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Stack, Typography, Button, Paper, Rating, LinearProgress, Chip, CircularProgress, Alert, Menu, MenuItem, ListItemText, ListItemIcon, Divider, Modal, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Input } from '@mui/material';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Box, Stack, Typography, Button, Paper, Rating, LinearProgress, Chip, CircularProgress, Alert, Menu, MenuItem, ListItemText, ListItemIcon, Divider, Modal, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Input, Badge } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import GMBService from '../../../services/GMBService';
+import GMBNotificationService from '../../../services/GMBNotificationService';
 import LocationIcon from '../../icons/LocationIcon';
 import VerifiedCheckIcon from '../../icons/VerifiedCheckIcon';
 import StarRatingIcon from '../../icons/StarRatingIcon';
@@ -867,12 +868,58 @@ const BusinessProfile = () => {
   const [showAllGMBFeed, setShowAllGMBFeed] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
   const [showAllSocialFeed, setShowAllSocialFeed] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [newNotificationCount, setNewNotificationCount] = useState(0);
+  const [notificationLoading, setNotificationLoading] = useState(false);
 
   const locationId = searchParams.get('id');
   const open = Boolean(anchorEl);
+
+  // Notification handler
+  const handleNotifications = useCallback((newNotifications, allNotifications) => {
+    console.log('Received notifications:', newNotifications.length, 'new,', allNotifications.length, 'total');
+    setNotifications(allNotifications);
+    if (newNotifications.length > 0) {
+      setNewNotificationCount(prev => prev + newNotifications.length);
+    }
+  }, []);
+
+  // Start notification polling when component mounts
+  useEffect(() => {
+    if (locationId) {
+      const startNotifications = async () => {
+        try {
+          setNotificationLoading(true);
+          const accessToken = await GMBService.getAccessToken();
+          
+          // Add notification listener
+          GMBNotificationService.addListener(handleNotifications);
+          
+          // Get initial notifications
+          const initialNotifications = await GMBNotificationService.getRecentNotifications(accessToken, locationId);
+          setNotifications(initialNotifications);
+          
+          // Start polling for new notifications (every 5 minutes)
+          GMBNotificationService.startPolling(accessToken, locationId, 300000);
+          
+          console.log('Notification system started for location:', locationId);
+        } catch (error) {
+          console.error('Error starting notification system:', error);
+        } finally {
+          setNotificationLoading(false);
+        }
+      };
+      
+      startNotifications();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      GMBNotificationService.removeListener(handleNotifications);
+      GMBNotificationService.stopPolling();
+    };
+  }, [locationId, handleNotifications]);
 
   useEffect(() => {
     const fetchLocationData = async () => {
@@ -1274,61 +1321,8 @@ const BusinessProfile = () => {
     setEditProfileOpen(true);
   };
 
-  const handleSaveProfile = async (formData) => {
-    try {
-      const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
-      
-      if (!locationId) {
-        throw new Error('Missing location information');
-      }
-
-      // Prepare update data based on form fields
-      const updateData = {};
-      if (formData.businessName) updateData.title = formData.businessName;
-      if (formData.description) updateData.profile = { description: formData.description };
-      if (formData.phone) updateData.phoneNumbers = { primaryPhone: formData.phone };
-      if (formData.website) updateData.websiteUri = formData.website;
-
-      // Update business profile using new API
-      const result = await GMBService.updateBusinessProfile(accessToken, locationId, updateData);
-      console.log('Profile updated successfully:', result);
-      
-      // Refresh location data by reloading the page or triggering a re-fetch
-      window.location.reload();
-      setEditProfileOpen(false);
-      
-      return result;
-    } catch (error) {
-      console.error('Error updating business profile:', error);
-      throw error;
-    }
-  };
-
   const handlePhotoUpload = () => {
     setPhotoUploadOpen(true);
-    setSelectedFile(null);
-    setUploading(false);
-  };
-
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    setSelectedFile(file);
-  };
-
-  const handleUploadPhoto = async () => {
-    if (!selectedFile) return;
-    
-    setUploading(true);
-    try {
-      await uploadPhotoToGMB(selectedFile);
-      setPhotoUploadOpen(false);
-      setSelectedFile(null);
-      console.log('Photo uploaded successfully!');
-    } catch (error) {
-      console.error('Failed to upload photo:', error);
-    } finally {
-      setUploading(false);
-    }
   };
 
   const uploadPhotoToGMB = async (file) => {
@@ -1340,7 +1334,7 @@ const BusinessProfile = () => {
         throw new Error('Missing account or location information');
       }
 
-      // Upload photo to GMB using v4 API
+      // Upload photo to GMB
       const result = await GMBService.uploadMedia(accessToken, accountId, locationId, file);
       console.log('Photo uploaded successfully:', result);
       
@@ -1882,14 +1876,22 @@ const BusinessProfile = () => {
                     <Input
                       type="file"
                       accept="image/*"
-                      onChange={handleFileSelect}
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          try {
+                            await uploadPhotoToGMB(file);
+                            setPhotoUploadOpen(false);
+                            // Show success message
+                            console.log('Photo uploaded successfully!');
+                          } catch (error) {
+                            console.error('Failed to upload photo:', error);
+                            // Show error message
+                          }
+                        }
+                      }}
                       sx={{ mt: 2 }}
                     />
-                    {selectedFile && (
-                      <Typography variant="body2" sx={{ mt: 1, color: '#0B91D6' }}>
-                        Selected: {selectedFile.name}
-                      </Typography>
-                    )}
                     <Typography variant="caption" color="textSecondary">
                       Supported formats: JPG, PNG, GIF. Max size: 10MB
                     </Typography>
@@ -1897,14 +1899,6 @@ const BusinessProfile = () => {
                 </DialogContent>
                 <DialogActions>
                   <Button onClick={() => setPhotoUploadOpen(false)}>Cancel</Button>
-                  <Button 
-                    variant="contained" 
-                    onClick={handleUploadPhoto}
-                    disabled={!selectedFile || uploading}
-                    sx={{ backgroundColor: '#0B91D6' }}
-                  >
-                    {uploading ? 'Uploading...' : 'Upload Photo'}
-                  </Button>
                 </DialogActions>
               </Dialog>
 
@@ -2026,29 +2020,81 @@ const BusinessProfile = () => {
             </PerformanceCard>
 
             <PerformanceCard>
-              <SectionTitle>Latest Feed</SectionTitle>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <SectionTitle>Latest Feed</SectionTitle>
+                <Badge 
+                  badgeContent={newNotificationCount} 
+                  color="error" 
+                  sx={{ 
+                    '& .MuiBadge-badge': { 
+                      fontSize: '10px', 
+                      minWidth: '16px', 
+                      height: '16px' 
+                    } 
+                  }}
+                >
+                  <Button 
+                    size="small" 
+                    onClick={() => setNewNotificationCount(0)}
+                    sx={{ 
+                      fontSize: '10px', 
+                      color: '#0B91D6',
+                      textTransform: 'none',
+                      minWidth: 'auto',
+                      p: 0.5
+                    }}
+                  >
+                    {notificationLoading ? 'Loading...' : 'Live Feed'}
+                  </Button>
+                </Badge>
+              </Box>
               <FeedSection>
-                {(showFeedDetails ? mockFeedItems : mockFeedItems.slice(0, 3)).map((item, index) => (
-                  <FeedItem key={index}>
-                    <FeedHeader>
-                      <Box sx={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: item.icon === 'review-red' ? '#EF232A' : '#34A853' }} />
-                      <FeedTitle>{item.title}</FeedTitle>
-                    </FeedHeader>
-                    <FeedDescription>{item.description}</FeedDescription>
-                    {showFeedDetails && (
-                      <Box sx={{ mt: 1, pl: 3 }}>
-                        <Typography sx={{ fontSize: '11px', color: '#0B91D6' }}>2 hours ago</Typography>
-                      </Box>
-                    )}
-                  </FeedItem>
-                ))}
+                {/* Show only real notifications from API */}
+                {notifications.length > 0 ? (
+                  (showFeedDetails ? notifications : notifications.slice(0, 3)).map((notification, index) => {
+                    const formatted = GMBNotificationService.formatNotification(notification);
+                    return (
+                      <FeedItem key={notification.id}>
+                        <FeedHeader>
+                          <Box sx={{ 
+                            width: '18px', 
+                            height: '18px', 
+                            borderRadius: '50%', 
+                            backgroundColor: notification.icon === 'review-red' ? '#EF232A' : 
+                                           notification.icon === 'photo' ? '#0B91D6' : '#34A853' 
+                          }} />
+                          <FeedTitle>{notification.title}</FeedTitle>
+                        </FeedHeader>
+                        <FeedDescription>{notification.description}</FeedDescription>
+                        {showFeedDetails && (
+                          <Box sx={{ mt: 1, pl: 3 }}>
+                            <Typography sx={{ fontSize: '11px', color: '#0B91D6' }}>
+                              {formatted.timeAgo}
+                            </Typography>
+                          </Box>
+                        )}
+                      </FeedItem>
+                    );
+                  })
+                ) : (
+                  /* Show message when no notifications are available */
+                  <Box sx={{ textAlign: 'center', py: 3 }}>
+                    <Typography sx={{ fontSize: '14px', color: '#6b7280', mb: 1 }}>
+                      No recent notifications
+                    </Typography>
+                    <Typography sx={{ fontSize: '12px', color: '#9ca3af' }}>
+                      {notificationLoading ? 'Loading notifications...' : 'New activity will appear here'}
+                    </Typography>
+                  </Box>
+                )}
               </FeedSection>
               {showFeedDetails && (
                 <Box sx={{ mt: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                  <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#121927', mb: 1 }}>Feed Analytics</Typography>
-                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Total activities this week: {mockFeedItems.length}</Typography>
-                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Recent reviews: {reviews.length}</Typography>
-                  <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>• Response rate: 95% within 2 hours</Typography>
+                  <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#121927', mb: 1 }}>Live Feed Analytics</Typography>
+                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Live notifications: {notifications.length}</Typography>
+                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Recent reviews: {notifications.filter(n => n.type === 'NEW_REVIEW').length}</Typography>
+                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• New photos: {notifications.filter(n => n.type === 'NEW_CUSTOMER_MEDIA').length}</Typography>
+                  <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>• Notification polling: {notificationLoading ? 'Connecting...' : 'Active'}</Typography>
                 </Box>
               )}
               <ViewDetailsButton onClick={handleViewFeedDetails}>
