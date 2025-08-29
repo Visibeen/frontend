@@ -37,18 +37,18 @@ const ActionButtons = styled(Stack)(({ theme }) => ({
   justifyContent: 'center'
 }));
 
-const LiveButton = styled(Button)(({ theme }) => ({
-  backgroundColor: '#EF232A',
+const UseTemplateButton = styled(Button)(({ theme }) => ({
+  backgroundColor: '#27ae60',
   color: '#ffffff',
   fontFamily: 'Inter, sans-serif',
   fontSize: '14px',
   fontWeight: 600,
   textTransform: 'capitalize',
-  padding: '8px 24px',
+  padding: '8px 16px',
   borderRadius: '4px',
-  minWidth: '80px',
+  minWidth: '120px',
   '&:hover': {
-    backgroundColor: '#DC2626'
+    backgroundColor: '#229954'
   }
 }));
 
@@ -67,7 +67,7 @@ const PreviewButton = styled(Button)(({ theme }) => ({
   }
 }));
 
-const TemplateCard = ({ template, selected, onClick, onPreview, onLive }) => {
+const TemplateCard = ({ template, selected, onClick, onPreview, onUseTemplate }) => {
   return (
     <TemplateCardContainer selected={selected} onClick={onClick}>
       <TemplateImage 
@@ -79,12 +79,12 @@ const TemplateCard = ({ template, selected, onClick, onPreview, onLive }) => {
       
       {selected && (
         <ActionButtons>
-          <LiveButton onClick={(e) => {
+          <UseTemplateButton onClick={(e) => {
             e.stopPropagation();
-            onLive(template);
+            onUseTemplate(template);
           }}>
-            Live
-          </LiveButton>
+            Use this Template
+          </UseTemplateButton>
           <PreviewButton onClick={(e) => {
             e.stopPropagation();
             onPreview(template);
