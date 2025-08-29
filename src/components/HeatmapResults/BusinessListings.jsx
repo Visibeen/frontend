@@ -179,7 +179,7 @@ const BusinessListings = ({ businesses, businessName }) => {
           <ReviewsRow>
             <ReviewsLabel>Reviews :</ReviewsLabel>
             <StarRatingMapIcon width={88} height={20} />
-            <ReviewsRating>{youBusiness.rating} ({youBusiness.reviews})</ReviewsRating>
+            <ReviewsRating>{youBusiness.rating ? youBusiness.rating.toFixed(2) : 'N/A'} ({youBusiness.reviews || 0})</ReviewsRating>
           </ReviewsRow>
         </YouCard>
       )}
@@ -207,7 +207,7 @@ const BusinessListings = ({ businesses, businessName }) => {
             <BusinessReviewsRow>
               <BusinessReviewsLabel>Reviews :</BusinessReviewsLabel>
               <StarRatingBusinessIcon width={88} height={20} />
-              <BusinessReviewsRating>{business.rating.toFixed(2)} ({business.reviews})</BusinessReviewsRating>
+              <BusinessReviewsRating>{business.rating ? business.rating.toFixed(2) : 'N/A'} ({business.reviews || 0})</BusinessReviewsRating>
             </BusinessReviewsRow>
           </BusinessCard>
         ))}
