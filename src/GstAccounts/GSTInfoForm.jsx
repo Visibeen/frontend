@@ -181,55 +181,55 @@ const GSTInfoForm = () => {
       </tr>
     ))}
   </tbody>
-          </table>
-        </div>
-      </div>
+    </table>
+  </div>
+</div>
 
-      {/* Invoice Details Modal */}
-      {showModal && selectedInvoice && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Invoice Details</h3>
-              <button className="close-btn" onClick={closeModal}>&times;</button>
-            </div>
-            <div className="modal-body">
-              <div className="invoice-detail-row">
-                <span className="detail-label">Invoice ID:</span>
-                <span className="detail-value">{selectedInvoice.id}</span>
-              </div>
-              <div className="invoice-detail-row">
-                <span className="detail-label">Billing Date:</span>
-                <span className="detail-value">{selectedInvoice.billingDate}</span>
-              </div>
-              <div className="invoice-detail-row">
-                <span className="detail-label">Plan:</span>
-                <span className="detail-value">{selectedInvoice.plan}</span>
-              </div>
-              <div className="invoice-detail-row">
-                <span className="detail-label">Amount:</span>
-                <span className="detail-value">${selectedInvoice.amount}</span>
-              </div>
-              <div className="invoice-detail-row">
-                <span className="detail-label">Status:</span>
-                <span className={`detail-value status ${getStatusClass(selectedInvoice.status)}`}>
-                  {selectedInvoice.status}
-                </span>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="modal-download-btn" onClick={() => downloadBill(selectedInvoice)}>
-                Download Invoice
-              </button>
-              <button className="modal-close-btn" onClick={closeModal}>
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+{/* Invoice Details Modal */}
+{showModal && selectedInvoice && (
+<div className="modal-overlay" onClick={closeModal}>
+  <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-header">
+  <h3>Invoice Details</h3>
+  <button className="close-btn" onClick={closeModal}>&times;</button>
+</div>
+<div className="modal-body">
+  <div className="invoice-detail-row">
+    <span className="detail-label">Invoice ID:</span>
+    <span className="detail-value">{selectedInvoice.id}</span>
+  </div>
+ <div className="invoice-detail-row">
+   <span className="detail-label">Billing Date:</span>
+   <span className="detail-value">{selectedInvoice.billingDate}</span>
+ </div>
+ <div className="invoice-detail-row">
+   <span className="detail-label">Plan:</span>
+   <span className="detail-value">{selectedInvoice.plan}</span>
+ </div>
+ <div className="invoice-detail-row">
+   <span className="detail-label">Amount:</span>
+   <span className="detail-value">${selectedInvoice.amount}</span>
+ </div>
+ <div className="invoice-detail-row">
+   <span className="detail-label">Status:</span>
+   <span className={`detail-value status ${getStatusClass(selectedInvoice.status)}`}>
+     {selectedInvoice.status}
+   </span>
+ </div>
+  </div>
+  <div className="modal-footer">
+<button className="modal-download-btn" onClick={() => downloadBill(selectedInvoice)}>
+  Download Invoice
+</button>
+<button className="modal-close-btn" onClick={closeModal}>
+  Close
+</button>
+  </div>
+</div>
+</div>
+)}
+</div>
+);
 };
 
 export default GSTInfoForm;
