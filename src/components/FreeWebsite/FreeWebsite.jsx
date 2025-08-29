@@ -61,7 +61,7 @@ const FreeWebsite = () => {
   const templates = [
     {
       id: 1,
-      name: 'Template 1',
+      name: 'Template 1 folder',
       image: '/images/template1.png',
       category: 'Real Estate'
     },
