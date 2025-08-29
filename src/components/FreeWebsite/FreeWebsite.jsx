@@ -14,7 +14,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
 
 const PageHeader = styled(Stack)(({ theme }) => ({
   gap: '16px',
-  marginLeft: '-590px',
+  marginLeft: '-550px',
 }));
 
 const PageTitle = styled(Typography)(({ theme }) => ({
@@ -105,21 +105,16 @@ const FreeWebsite = () => {
     setPreviewTemplate(template);
   };
 
-  const handleLive = (template) => {
-    // Open live demo in new tab
-    window.open(`/live-demo/${template.id}`, '_blank');
-  };
-
   const handleUseTemplate = (template) => {
     // Handle template selection for website creation
     console.log('Using template:', template);
-    setPreviewTemplate(null);
     // Navigate to website builder or show success message
   };
 
   const handleViewLive = (template) => {
     setPreviewTemplate(null);
-    handleLive(template);
+    // Open live demo in new tab
+    window.open(`/live-demo/${template.id}`, '_blank');
   };
 
   return (
@@ -145,7 +140,7 @@ const FreeWebsite = () => {
             selectedTemplate={selectedTemplate}
             onTemplateSelect={handleTemplateSelect}
             onPreview={handlePreview}
-            onLive={handleLive}
+            onUseTemplate={handleUseTemplate}
           />
         </SectionContainer>
       </PageContainer>

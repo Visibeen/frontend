@@ -15,7 +15,7 @@ const GridRow = styled(Stack)(({ theme }) => ({
   justifyContent: 'flex-start'
 }));
 
-const TemplateGrid = ({ templates, selectedTemplate, onTemplateSelect, onPreview, onLive }) => {
+const TemplateGrid = ({ templates, selectedTemplate, onTemplateSelect, onPreview, onUseTemplate }) => {
   // Split templates into rows of 3
   const templateRows = [];
   for (let i = 0; i < templates.length; i += 3) {
@@ -33,7 +33,7 @@ const TemplateGrid = ({ templates, selectedTemplate, onTemplateSelect, onPreview
               selected={selectedTemplate?.id === template.id}
               onClick={() => onTemplateSelect(template)}
               onPreview={onPreview}
-              onLive={onLive}
+              onUseTemplate={onUseTemplate}
             />
           ))}
         </GridRow>

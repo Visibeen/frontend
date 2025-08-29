@@ -1,16 +1,10 @@
-import React, { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import Example from './src/App.PerformanceDashboard'
-import KombaiWrapper from './KombaiWrapper'
-import ErrorBoundary from '@kombai/react-error-boundary'
-import './src/index.css'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './src/App.ProfileStrengthPopup.jsx';
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <KombaiWrapper>
-        <Example />
-      </KombaiWrapper>
-    </ErrorBoundary>
-  </StrictMode>,
-)
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
