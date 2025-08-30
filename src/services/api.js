@@ -20,9 +20,11 @@ class ApiService {
         
         if (!session) {
             // Fallback to localStorage
-            return (typeof window !== 'undefined') 
+            const fallbackToken = (typeof window !== 'undefined') 
                 ? localStorage.getItem('authToken') || localStorage.getItem('access_token')
                 : null;
+            console.log('[API] No session found, using fallback token:', !!fallbackToken);
+            return fallbackToken;
         }
         
         // Try multiple token field names for flexibility
@@ -40,9 +42,12 @@ class ApiService {
         
         // Fallback to localStorage if no session token
         if (!sessionToken && typeof window !== 'undefined') {
-            return localStorage.getItem('authToken') || localStorage.getItem('access_token');
+            const fallbackToken = localStorage.getItem('authToken') || localStorage.getItem('access_token');
+            console.log('[API] No session token found, using fallback token:', !!fallbackToken);
+            return fallbackToken;
         }
-            
+        
+        console.log('[API] Using session token:', !!sessionToken);
         return sessionToken;
     }
 
@@ -53,13 +58,14 @@ class ApiService {
             'Content-Type': 'application/json',
         };
 
+        // Debug token extraction
+      
+
         // Add token in multiple header formats for maximum compatibility
         if (token) {
             return {
                 ...baseHeaders,
-                'Authorization': `Bearer ${token}`,
-                'x-access-token': token,
-                'token': token,
+                'Authorization': `${token}`,
                 ...customHeaders
             };
         }
@@ -82,6 +88,14 @@ class ApiService {
                 ? { 'Content-Type': 'application/json', ...(options.headers || {}) }
                 : this.prepareHeaders(options.headers)
         };
+
+        // Debug logging
+        console.log('[API] Request Details:', {
+            url,
+            method: config.method || 'GET',
+            headers: config.headers,
+            hasBody: !!config.body
+        });
 
         try {
             let response = await fetch(url, config);

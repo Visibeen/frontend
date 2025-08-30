@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount } from './AccountContext';
-import axios from 'axios';
+import { getSession, getAutoToken, clearSession } from '../../../utils/authUtils';
+import api from '../../../services/api';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import './AccountInfo.css';
 
@@ -18,7 +19,6 @@ const AccountInfo = () => {
     website: accountInfo.website || '',
   });
   
-
   const [loading, setLoading] = useState(false);
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -30,9 +30,43 @@ const AccountInfo = () => {
   const handleSaveAndNext = async (e) => {
     e.preventDefault();
     updateAccountInfo(form);
-    const user = (localStorage.getItem('authToken'));
+    
+    // Get session and token using centralized utilities
+    const session = getSession();
+    const authToken = getAutoToken();
+    
+    // Debug token information
+    console.log('[AccountInfo] Token Debug Info:', {
+      hasSession: !!session,
+      hasToken: !!authToken,
+      sessionId: session?.id || session?.user?.id,
+      sessionKeys: session ? Object.keys(session) : [],
+      sessionUser: session?.user ? Object.keys(session.user) : [],
+      tokenPreview: authToken ? `${authToken.substring(0, 10)}...` : 'No token'
+    });
+    
+    // Check for authentication
+    if (!session || !authToken) {
+      console.error('[AccountInfo] Missing authentication data');
+      alert('Authentication required. Please log in again.');
+      clearSession();
+      navigate('/login');
+      return;
+    }
+    
+    // Extract user ID with multiple fallback strategies
+    const userId = session?.id || session?.user?.id || session?.userId || session?.user_id;
+    
+    if (!userId) {
+      console.error('[AccountInfo] Unable to extract user ID from session:', session);
+      alert('Invalid session data. Please log in again.');
+      clearSession();
+      navigate('/login');
+      return;
+    }
+    
     const payload = {
-      user_id: user?.id,
+      user_id: userId,
       name: form.name,
       business_name: form.business_name,
       address: form.address,
@@ -41,28 +75,38 @@ const AccountInfo = () => {
       alternative_contact_number: form.alternative_contact_number,
       website: form.website,
     };
+    
     try {
       setLoading(true);
-      const token = JSON.parse(localStorage.getItem('userData'));
-      const response = await axios.post(
-        'http://52.44.140.230:8089/api/v1/customer/edms/create-edms',
-        payload,
-        {
-          headers: {
-            Authorization: `${token?.token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      console.log('API Response:', response.data);
+      console.log('[AccountInfo] Submitting EDMS account info...');
+      console.log('[AccountInfo] Payload:', payload);
+      
+      // Use centralized API service with automatic token injection
+      const response = await api.post('/customer/edms/create-edms', payload);
+      
+      console.log('[AccountInfo] API Response:', response);
+      navigate('../upload-logo');
+      
+      console.log('[AccountInfo] API Response:', response);
       navigate('../upload-logo');
     } catch (error) {
-      if (error.response) {
-        console.error("Server responded with:", error.response.data);
+      console.error('[AccountInfo] API Error:', error);
+      
+      if (error.status === 401) {
+        // Handle authentication error
+        console.log('[AccountInfo] Authentication failed, clearing session');
+        clearSession();
+        alert('Your session has expired. Please log in again.');
+        navigate('/login');
+      } else if (error.status === 400) {
+        // Handle bad request with specific feedback
+        const errorMessage = error.body?.message || error.body?.error || 'Invalid request data. Please check your information and try again.';
+        console.error('[AccountInfo] Validation error:', errorMessage);
+        alert(`Error: ${errorMessage}`);
       } else {
-        console.error("Error:", error.message);
+        console.error('[AccountInfo] Unexpected error:', error.message);
+        alert('Something went wrong while submitting the form. Please try again.');
       }
-      alert('Something went wrong while submitting the form. Please try again.');
     } finally {
       setLoading(false);
     }

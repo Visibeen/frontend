@@ -64,6 +64,11 @@ class GMBService {
     return await tokenManager.getValidAccessToken('google');
   }
 
+  // Public method to get access token (for external services)
+  async getAccessToken(providedToken) {
+    return this._getAccessToken(providedToken);
+  }
+
   // Internal: fetch helper that attaches token and retries once on 401 after refresh
   async _googleFetch(url, options = {}, accessToken) {
     const token = await this._getAccessToken(accessToken);
@@ -548,6 +553,55 @@ class GMBService {
     } catch (error) {
       console.error('Error refreshing token:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get local posts for a specific location
+   * Uses GMB v4 localPosts endpoint.
+   * @param {string} accessToken - Google OAuth access token
+   * @param {string} accountId - Account ID string (e.g., '12345')
+   * @param {string} locationId - Location ID string (e.g., '67890')
+   * @returns {Promise<Array>} List of local posts
+   */
+  async getLocalPosts(accessToken, accountId, locationId) {
+    try {
+      if (!accountId || !locationId) {
+        throw new Error('Invalid accountId or locationId for local posts');
+      }
+
+      console.log(`[GMBService] Fetching local posts for account: ${accountId}, location: ${locationId}`);
+
+      const response = await this._googleFetch(
+        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/localPosts`,
+        { method: 'GET' },
+        accessToken
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`[GMBService] Local posts API error:`, {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        
+        if (response.status === 404) {
+          console.warn(`[GMBService] Local posts not found for account ${accountId}, location ${locationId}`);
+          return [];
+        }
+        
+        throw new Error(errorData.error?.message || 'Failed to fetch local posts');
+      }
+
+      const data = await response.json();
+      console.log(`[GMBService] Local posts response:`, data);
+      
+      return Array.isArray(data.localPosts) ? data.localPosts : [];
+    } catch (error) {
+      console.error('Error fetching local posts:', error);
+      // Don't throw error, return empty array to allow other features to work
+      return [];
     }
   }
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './GSTInfoForm.css';
-import axios from 'axios';
+import { getSession, getAutoToken, clearSession } from '../utils/authUtils';
+import api from '../services/api';
 
 const initialFormState = {
   gst_detail: '45241524',
@@ -20,6 +21,8 @@ const invoiceData = [
 
 const GSTInfoForm = () => {
   const [form, setForm] = useState(initialFormState);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -31,33 +34,61 @@ const GSTInfoForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const token = JSON.parse(localStorage.getItem('userData'));
-      const payload = {
-        gst_detail: form.gst_detail,
-        start_date: form.start_date,
-        end_date: form.end_date
-      };
+    
+    // Get session and token using centralized utilities
+    const session = getSession();
+    const authToken = getAutoToken();
+    
+    // Debug token information
+    console.log('[GSTInfoForm] Token Debug Info:', {
+      hasSession: !!session,
+      hasToken: !!authToken,
+      sessionId: session?.id || session?.user?.id,
+      tokenPreview: authToken ? `${authToken.substring(0, 10)}...` : 'No token'
+    });
+    
+    // Check for authentication
+    if (!session || !authToken) {
+      console.error('[GSTInfoForm] Missing authentication data');
+      alert('Authentication required. Please log in again.');
+      clearSession();
+      // Note: Navigation would need to be implemented if this component is within a router context
+      return;
+    }
+    
+    const payload = {
+      user_id: session?.id || session?.user?.id,
+      gst_detail: form.gst_detail,
+      start_date: form.start_date,
+      end_date: form.end_date
+    };
 
-      const response = await axios.post(
-        'http://52.44.140.230:8089/api/v1/customer/gst-information/create-gst-information',
-        payload,
-        {
-          headers: {
-            Authorization: `${token?.token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+    try {
+      console.log('[GSTInfoForm] Submitting GST information...');
+      
+      // Use centralized API service with automatic token injection
+      const response = await api.post('/customer/gst-information/create-gst-information', payload);
+      
+      console.log('[GSTInfoForm] API Response:', response);
       alert('Updated!');
-      console.log('API Response:', response.data);
     } catch (error) {
-      if (error.response) {
-        console.error("Server responded with:", error.response.data);
+      console.error('[GSTInfoForm] API Error:', error);
+      
+      if (error.status === 401) {
+        // Handle authentication error
+        console.log('[GSTInfoForm] Authentication failed, clearing session');
+        clearSession();
+        alert('Your session has expired. Please log in again.');
+        // Note: Navigation would need to be implemented if this component is within a router context
+      } else if (error.status === 400) {
+        // Handle bad request with specific feedback
+        const errorMessage = error.body?.message || error.body?.error || 'Invalid request data. Please check your information and try again.';
+        console.error('[GSTInfoForm] Validation error:', errorMessage);
+        alert(`Error: ${errorMessage}`);
       } else {
-        console.error("Error:", error.message);
+        console.error('[GSTInfoForm] Unexpected error:', error.message);
+        alert('Something went wrong while submitting the form. Please try again.');
       }
-      alert('Something went wrong while submitting the form. Please try again.');
     }
   };
 
@@ -88,6 +119,17 @@ const GSTInfoForm = () => {
   const getStatusClass = (status) => {
     return status === 'Paid' ? 'status-paid' : 'status-pending';
   };
+
+  const viewInvoice = (invoice) => {
+    setSelectedInvoice(invoice);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedInvoice(null);
+  };
+
   return (
     <div className="gst-page-container">
       {/* GST Information Section */}
@@ -97,37 +139,37 @@ const GSTInfoForm = () => {
 
         <form className="gst-info-form" onSubmit={handleSubmit}>
           <div className="form-field">
-  <label>GST detail*</label>
-  <div className="input-with-icon" >
-    <input name="gst_detail" value={form.gst_detail} onChange={handleChange} className="gst-input" />
-    <span className="edit-icon">✏️</span>
-  </div>
-</div>
+            <label>GST detail*</label>
+            <div className="input-with-icon">
+              <input name="gst_detail" value={form.gst_detail} onChange={handleChange} className="gst-input" />
+              <span className="edit-icon">✏️</span>
+            </div>
+          </div>
 
-<div className="form-row">
-  <div className="form-field">
-    <label>Date of Registration*</label>
-    <input name="start_date" value={form.start_date} onChange={handleChange} type="text" />
-  </div>
-  <div className="form-field">
-      <label>End Date*</label>
-      <input name="end_date" value={form.end_date} onChange={handleChange} type="text" />
+          <div className="form-row">
+            <div className="form-field">
+              <label>Date of Registration*</label>
+              <input name="start_date" value={form.start_date} onChange={handleChange} type="text" />
+            </div>
+            <div className="form-field">
+              <label>End Date*</label>
+              <input name="end_date" value={form.end_date} onChange={handleChange} type="text" />
+            </div>
+          </div>
+          <div className="form-actions">
+            <button type="button" className="cancel-btn" onClick={handleCancel}>Cancel</button>
+            <button type="submit" className="update-btn">Update</button>
+          </div>
+        </form>
       </div>
-      </div>
-    <div className="form-actions">
-  <button type="button" className="cancel-btn" onClick={handleCancel}>Cancel</button>
-  <button type="submit" className="update-btn">Update</button>
-    </div>
-  </form>
-</div>
 
-{/* Invoice Section */}
-<div className="invoice-section">
-<div className="invoice-header">
-  <h3>Invoice</h3>
-</div>
-<div className="invoice-table-container">
-<table className="invoice-table">
+      {/* Invoice Section */}
+      <div className="invoice-section">
+        <div className="invoice-header">
+          <h3>Invoice</h3>
+        </div>
+        <div className="invoice-table-container">
+          <table className="invoice-table">
   <thead>
     <tr>
       <th>Invoice ID</th>
@@ -141,26 +183,82 @@ const GSTInfoForm = () => {
   <tbody>
     {invoiceData.map((invoice, index) => (
       <tr key={index}>
-  <td className="invoice-id">{invoice.id}</td>
-  <td>{invoice.billingDate}</td>
-  <td>{invoice.plan}</td>
-  <td>{invoice.amount}</td>
-  <td>
-  <span className={`status ${getStatusClass(invoice.status)}`}>
- {invoice.status}
- </span>
-  </td>
-  <td>
-  <button className="download-btn-small" onClick={() => downloadBill(invoice)} title="Download Bill">Download Bill</button>
- </td>
-</tr>
- ))}
+        <td className="invoice-id">{invoice.id}</td>
+        <td>{invoice.billingDate}</td>
+        <td>{invoice.plan}</td>
+        <td>{invoice.amount}</td>
+        <td>
+          <span className={`status ${getStatusClass(invoice.status)}`}>
+            {invoice.status}
+          </span>
+        </td>
+        <td>
+          <div className="action-buttons">
+            <button className="action-btn view-btn" onClick={() => viewInvoice(invoice)} title="View Invoice">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4.5C7.5 4.5 3.73 7.61 2.73 12C3.73 16.39 7.5 19.5 12 19.5S20.27 16.39 21.27 12C20.27 7.61 16.5 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12S9.24 7 12 7S17 9.24 17 12S14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12S10.34 15 12 15S15 13.66 15 12S13.66 9 12 9Z" fill="currentColor" />
+              </svg>
+            </button>
+            {/* <button className="action-btn download-btn" onClick={() => downloadBill(invoice)} title="Download Invoice">
+              <svg width="30" height="30" viewBox="0 0 29 29" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="currentColor"/>
+                <path d="M12,19L8,15H10.5V12H13.5V15H16L12,19Z" fill="currentColor"/>
+              </svg>
+            </button> */}
+          </div>
+        </td>
+      </tr>
+    ))}
   </tbody>
- </table>
-   </div>
-   </div>
-   </div>
-  );
+    </table>
+  </div>
+</div>
+
+{/* Invoice Details Modal */}
+{showModal && selectedInvoice && (
+<div className="modal-overlay" onClick={closeModal}>
+  <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-header">
+  <h3>Invoice Details</h3>
+  <button className="close-btn" onClick={closeModal}>&times;</button>
+</div>
+<div className="modal-body">
+  <div className="invoice-detail-row">
+    <span className="detail-label">Invoice ID:</span>
+    <span className="detail-value">{selectedInvoice.id}</span>
+  </div>
+ <div className="invoice-detail-row">
+   <span className="detail-label">Billing Date:</span>
+   <span className="detail-value">{selectedInvoice.billingDate}</span>
+ </div>
+ <div className="invoice-detail-row">
+   <span className="detail-label">Plan:</span>
+   <span className="detail-value">{selectedInvoice.plan}</span>
+ </div>
+ <div className="invoice-detail-row">
+   <span className="detail-label">Amount:</span>
+   <span className="detail-value">${selectedInvoice.amount}</span>
+ </div>
+ <div className="invoice-detail-row">
+   <span className="detail-label">Status:</span>
+   <span className={`detail-value status ${getStatusClass(selectedInvoice.status)}`}>
+     {selectedInvoice.status}
+   </span>
+ </div>
+  </div>
+  <div className="modal-footer">
+<button className="modal-download-btn" onClick={() => downloadBill(selectedInvoice)}>
+  Download Invoice
+</button>
+<button className="modal-close-btn" onClick={closeModal}>
+  Close
+</button>
+  </div>
+</div>
+</div>
+)}
+</div>
+);
 };
 
 export default GSTInfoForm;

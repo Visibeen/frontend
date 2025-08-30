@@ -14,7 +14,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
 
 const PageHeader = styled(Stack)(({ theme }) => ({
   gap: '16px',
-  marginLeft: '-590px',
+  marginLeft: '-550px',
 }));
 
 const PageTitle = styled(Typography)(({ theme }) => ({
@@ -61,7 +61,7 @@ const FreeWebsite = () => {
   const templates = [
     {
       id: 1,
-      name: 'Template 1',
+      name: 'Template 1 folder',
       image: '/images/template1.png',
       category: 'Real Estate'
     },
@@ -105,21 +105,58 @@ const FreeWebsite = () => {
     setPreviewTemplate(template);
   };
 
-  const handleLive = (template) => {
-    // Open live demo in new tab
-    window.open(`/live-demo/${template.id}`, '_blank');
-  };
-
-  const handleUseTemplate = (template) => {
-    // Handle template selection for website creation
-    console.log('Using template:', template);
-    setPreviewTemplate(null);
-    // Navigate to website builder or show success message
+  const handleUseTemplate = async (template) => {
+    try {
+      console.log('Using template with GMB data:', template);
+      
+      // Show loading state
+      setSelectedTemplate({ ...template, loading: true });
+      
+      // Import the GMB Website Service
+      const { default: GMBWebsiteService } = await import('../../services/GMBWebsiteService');
+      
+      // Create website with real GMB data
+      const result = await GMBWebsiteService.createWebsiteWithGMBData(template.id);
+      
+      if (result.success) {
+        console.log('Successfully created website with GMB data:', result);
+        
+        // Store the real template data for preview
+        const updatedTemplate = {
+          ...template,
+          realData: result.templateData,
+          gmbData: result.gmbData,
+          loading: false
+        };
+        
+        // Update preview with real data
+        setPreviewTemplate(updatedTemplate);
+        
+        // Show success message
+        alert('Website created successfully with your Google My Business data!');
+      } else {
+        console.warn('Failed to create website with GMB data:', result.error);
+        
+        // Fallback to mock data with warning
+        alert(`Could not fetch your GMB data: ${result.error}\n\nShowing template with sample data instead.`);
+        setPreviewTemplate(template);
+      }
+      
+    } catch (error) {
+      console.error('Error using template:', error);
+      
+      // Fallback to mock data
+      alert(`Error creating website: ${error.message}\n\nShowing template with sample data instead.`);
+      setPreviewTemplate(template);
+    } finally {
+      setSelectedTemplate(null);
+    }
   };
 
   const handleViewLive = (template) => {
     setPreviewTemplate(null);
-    handleLive(template);
+    // Open live demo in new tab
+    window.open(`/live-demo/${template.id}`, '_blank');
   };
 
   return (
@@ -145,7 +182,7 @@ const FreeWebsite = () => {
             selectedTemplate={selectedTemplate}
             onTemplateSelect={handleTemplateSelect}
             onPreview={handlePreview}
-            onLive={handleLive}
+            onUseTemplate={handleUseTemplate}
           />
         </SectionContainer>
       </PageContainer>

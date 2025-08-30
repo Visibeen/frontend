@@ -26,6 +26,7 @@ import AccountInfoForm from './GstAccounts/AccountInfoForm.jsx';
 import DashboardLayout from './components/Layouts/DashboardLayout.jsx';
 import GMBDataFetcher from './components/gmb_accounts/GMBDataFetcher.jsx';
 import ProfileStrengthAnalysis from './components/ProfileStrengthAnalysis/ProfileStrengthAnalysis.jsx';
+import ProfileStrengthResults from './components/ProfileStrengthResults/ProfileStrengthResults.jsx';
 import ReviewsManagement from './components/ReviewsManagement/ReviewsManagement.jsx';
 import SetAutoReply from './components/SetAutoReply/SetAutoReply.jsx';
 import HeatmapResultsPage from './components/HeatmapResults/HeatmapResultsPage.jsx';
@@ -35,7 +36,9 @@ import { getSession } from './utils/authUtils.js';
 import AutoTokenManager from './utils/autoTokenUtils.js';
 import { AppProvider } from './contexts/AppContext';
 import 'leaflet/dist/leaflet.css';
+import HeatmapPage from './components/Heatmap/HeatmapPage';
 import Holidays from './components/edms/Holidays';
+
 
 
 
@@ -95,8 +98,10 @@ function App() {
         <Route path="/free-website" element={<FreeWebsite />} />
         <Route path="/profile-strength-analysis" element={<ProfileStrengthAnalysis />} />
         <Route path="/profile-strength" element={<ProfileStrengthPage />} />
+        <Route path="/profile-strength-results" element={<ProfileStrengthResults />} />
         <Route path="/heatmap-results" element={<HeatmapResultsPage />} />
         <Route path="/holidays" element={<Holidays />} />
+        <Route path="/src/heatmap/heatmap-pages" element={<HeatmapPage/>}/>
         <Route path="/reviews-management" element={
           <DashboardLayout>
             <ReviewsManagement />
