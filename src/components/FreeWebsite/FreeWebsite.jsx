@@ -105,10 +105,52 @@ const FreeWebsite = () => {
     setPreviewTemplate(template);
   };
 
-  const handleUseTemplate = (template) => {
-    // Handle template selection for website creation
-    console.log('Using template:', template);
-    // Navigate to website builder or show success message
+  const handleUseTemplate = async (template) => {
+    try {
+      console.log('Using template with GMB data:', template);
+      
+      // Show loading state
+      setSelectedTemplate({ ...template, loading: true });
+      
+      // Import the GMB Website Service
+      const { default: GMBWebsiteService } = await import('../../services/GMBWebsiteService');
+      
+      // Create website with real GMB data
+      const result = await GMBWebsiteService.createWebsiteWithGMBData(template.id);
+      
+      if (result.success) {
+        console.log('Successfully created website with GMB data:', result);
+        
+        // Store the real template data for preview
+        const updatedTemplate = {
+          ...template,
+          realData: result.templateData,
+          gmbData: result.gmbData,
+          loading: false
+        };
+        
+        // Update preview with real data
+        setPreviewTemplate(updatedTemplate);
+        
+        // Show success message
+        alert('Website created successfully with your Google My Business data!');
+      } else {
+        console.warn('Failed to create website with GMB data:', result.error);
+        
+        // Fallback to mock data with warning
+        alert(`Could not fetch your GMB data: ${result.error}\n\nShowing template with sample data instead.`);
+        setPreviewTemplate(template);
+      }
+      
+    } catch (error) {
+      console.error('Error using template:', error);
+      
+      // Fallback to mock data
+      alert(`Error creating website: ${error.message}\n\nShowing template with sample data instead.`);
+      setPreviewTemplate(template);
+    } finally {
+      setSelectedTemplate(null);
+    }
   };
 
   const handleViewLive = (template) => {

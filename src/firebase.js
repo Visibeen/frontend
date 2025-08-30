@@ -3,14 +3,20 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithPhoneNumber, RecaptchaVerifier, signOut } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCevniqH3WI6ccRWWMyIqgiuNwnvWuH1jM",
-  authDomain: "my-app-aaa08.firebaseapp.com",
-  projectId: "my-app-aaa08",
-  storageBucket: "my-app-aaa08.firebasestorage.app",
-  messagingSenderId: "385177856380",
-  appId: "1:385177856380:web:b4c0808c1e67237c461cf9"
+  apiKey: "AIzaSyBCPP1SVNsTCbgkyYUJXnpyr_dmk9PTU3E",
+  authDomain: "visibeen-b4696.firebaseapp.com",
+  projectId: "visibeen-b4696",
+  storageBucket: "visibeen-b4696.firebasestorage.app",
+  messagingSenderId: "617228925126",
+  appId: "1:617228925126:web:d701b275df4c9762c5bfc7",
 };
-
+// apiKey: "AIzaSyBCPP1SVNsTCbgkyYUJXnpyr_dmk9PTU3E",
+//   authDomain: "visibeen-b4696.firebaseapp.com",
+//   projectId: "visibeen-b4696",
+//   storageBucket: "visibeen-b4696.firebasestorage.app",
+//   messagingSenderId: "617228925126",
+//   appId: "1:617228925126:web:d701b275df4c9762c5bfc7",
+//   measurementId: "G-62SN948MB6"
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();

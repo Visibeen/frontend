@@ -91,34 +91,42 @@ const TemplatePreview = ({ template, onClose, onUseTemplate, onViewLive }) => {
   if (!template) return null;
 
   const renderTemplateContent = () => {
+    // Use real GMB data if available, otherwise use mock data
+    const templateData1 = template.realData || mockRootProps;
+    const templateData2 = template.realData || template2MockData;
+    const templateData3 = template.realData || template3MockData;
+    const templateData4 = template.realData || template4MockData;
+    const templateData5 = template.realData || template5MockData;
+    const templateData6 = template.realData || template6MockData;
+
     // Show actual Template1 component for template ID 1
     if (template.id === 1) {
-      return <Template1 templateData={mockRootProps} />;
+      return <Template1 templateData={templateData1} />;
     }
     
     // Show actual Template2 component for template ID 2
     if (template.id === 2) {
-      return <Template2 templateData={template2MockData} />;
+      return <Template2 templateData={templateData2} />;
     }
     
     // Show actual Template3 component for template ID 3
     if (template.id === 3) {
-      return <Template3 templateData={template3MockData} />;
+      return <Template3 templateData={templateData3} />;
     }
     
     // Show actual Template4 component for template ID 4
     if (template.id === 4) {
-      return <Template4 templateData={template4MockData} />;
+      return <Template4 templateData={templateData4} />;
     }
     
     // Show actual Template5 component for template ID 5
     if (template.id === 5) {
-      return <Template5 templateData={template5MockData} />;
+      return <Template5 templateData={templateData5} />;
     }
     
     // Show actual Template6 component for template ID 6
     if (template.id === 6) {
-      return <Template6 templateData={template6MockData} />;
+      return <Template6 templateData={templateData6} />;
     }
     
     // For other templates, show the image preview
