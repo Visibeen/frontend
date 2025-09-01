@@ -6,6 +6,7 @@ import api from '../services/api';
 const initialFormState = {
   gst_detail: '',
   gst: '',
+  gst_name:'',
   gst_address: '',
   supply_state: ''
 };
@@ -83,6 +84,7 @@ const GSTInfoForm = () => {
       user_id: session?.id || session?.user?.id,
       gst_detail: form.gst_detail,
       gst: form.gst,
+      gst_name: form.gst_name,
       gst_address: form.gst_address,
       supply_state: form.supply_state
     };
@@ -172,7 +174,7 @@ const GSTInfoForm = () => {
 
           <div className="form-field">
             <label>GST Name</label>
-            <input name="gst" value={form.gst} onChange={handleChange} type="text" />
+            <input name="gst_name" value={form.gst_name} onChange={handleChange} type="text" />
           </div>
 
           <div className="form-field">

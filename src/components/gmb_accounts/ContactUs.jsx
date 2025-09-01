@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { getSession, getAutoToken } from '../../utils/authUtils';
 import GMBWebsiteService from '../../services/GMBWebsiteService';
+import GMBService from '../../services/GMBService';
 import {
   Box,
   Stack,
@@ -188,6 +189,51 @@ const ContactUs = () => {
     }));
   };
 
+  const handleSwitchAccount = async () => {
+    try {
+      if (!selectedAccount) return alert('Please select an account to switch');
+      // Find selected account object
+      const accountObj = accounts.find(a => a.name === selectedAccount) || accounts.find(a => a.accountName === selectedAccount);
+      const token = getAutoToken();
+
+      // Immediately set Full Name from account display name if available
+      if (accountObj && accountObj.accountName) {
+        setFormData(prev => ({ ...prev, name: accountObj.accountName }));
+      }
+
+      // If token available, fetch locations for this account and use the first location to autofill business and phone
+      if (token && accountObj?.name) {
+        try {
+          const locations = await GMBService.getLocations(token, accountObj.name);
+          const primaryLocation = locations && locations.length ? locations[0] : null;
+          if (primaryLocation) {
+            setFormData(prev => ({
+              ...prev,
+              business_name: primaryLocation.title || primaryLocation.name || prev.business_name,
+              phone_number: (primaryLocation.phoneNumbers && primaryLocation.phoneNumbers.primaryPhone) || primaryLocation.primaryPhone || prev.phone_number
+            }));
+          }
+        } catch (err) {
+          console.debug('[ContactUs] error fetching locations for selected account', err);
+        }
+      } else {
+        // Fallback: try to use session-stored primary location for that account
+        const session = getSession() || {};
+        const sessPrimary = session?.gmbPrimaryLocation;
+        if (sessPrimary) {
+          setFormData(prev => ({
+            ...prev,
+            business_name: sessPrimary.title || sessPrimary.name || prev.business_name,
+            phone_number: (sessPrimary.phoneNumbers && sessPrimary.phoneNumbers.primaryPhone) || sessPrimary.primaryPhone || prev.phone_number
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('[ContactUs] handleSwitchAccount error', err);
+      alert('Unable to switch account. See console for details.');
+    }
+  };
+
   // Autofill from session on mount (async IIFE with mounted guard)
   React.useEffect(() => {
     let mounted = true;
@@ -270,6 +316,22 @@ const ContactUs = () => {
         <FormContainer>
           <form onSubmit={handleSubmit}>
             <FormStack>
+              {/* Account selector + switch button */}
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <FormControl sx={{ flex: 1 }}>
+                  <StyledSelect
+                    value={selectedAccount}
+                    onChange={(e) => setSelectedAccount(e.target.value)}
+                    displayEmpty
+                  >
+                    <MenuItem value="">Select account</MenuItem>
+                    {accounts.map((a, i) => (
+                      <MenuItem key={i} value={a.name || a.accountName}>{a.accountName || a.name}</MenuItem>
+                    ))}
+                  </StyledSelect>
+                </FormControl>
+                <Button variant="outlined" onClick={handleSwitchAccount}>Switch Profile</Button>
+              </Box>
               {/* Name Field */}
               <Box>
                 <RequiredLabel>Name*</RequiredLabel>
