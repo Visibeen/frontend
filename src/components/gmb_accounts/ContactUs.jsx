@@ -190,63 +190,7 @@ const ContactUs = () => {
     }));
   };
 
-  const handleSwitchAccount = async () => {
-    try {
-      // If user selected a specific location, use it directly
-      if (selectedLocation) {
-        const locObj = locations.find(l => l.name === selectedLocation || l.title === selectedLocation || (l.name || l.title) === selectedLocation);
-        if (locObj) {
-          setFormData(prev => ({
-            ...prev,
-            business_name: locObj.title || locObj.name || prev.business_name,
-            phone_number: (locObj.phoneNumbers && locObj.phoneNumbers.primaryPhone) || locObj.primaryPhone || prev.phone_number
-          }));
-        }
-        // set name from primary account if available
-        const accountObj = accounts && accounts.length ? accounts[0] : null;
-        if (accountObj && accountObj.accountName) {
-          setFormData(prev => ({ ...prev, name: accountObj.accountName }));
-        }
-        return;
-      }
-
-      // No specific location selected: fallback to primary account's first location
-      const accountObj = accounts && accounts.length ? accounts[0] : null;
-      if (accountObj && accountObj.accountName) {
-        setFormData(prev => ({ ...prev, name: accountObj.accountName }));
-      }
-
-      const autoToken = getAutoToken();
-      if (autoToken && accountObj?.name) {
-        try {
-        const locs = await GMBService.getLocations(autoToken, accountObj.name);
-          const primaryLocation = Array.isArray(locs) && locs.length ? locs[0] : null;
-          if (primaryLocation) {
-            setFormData(prev => ({
-              ...prev,
-              business_name: primaryLocation.title || primaryLocation.name || prev.business_name,
-              phone_number: (primaryLocation.phoneNumbers && primaryLocation.phoneNumbers.primaryPhone) || primaryLocation.primaryPhone || prev.phone_number
-            }));
-          }
-        } catch (err) {
-          console.debug('[ContactUs] error fetching primary location on switch', err);
-        }
-      } else {
-        const session = getSession() || {};
-        const sessPrimary = session?.gmbPrimaryLocation;
-        if (sessPrimary) {
-          setFormData(prev => ({
-            ...prev,
-            business_name: sessPrimary.title || sessPrimary.name || prev.business_name,
-            phone_number: (sessPrimary.phoneNumbers && sessPrimary.phoneNumbers.primaryPhone) || sessPrimary.primaryPhone || prev.phone_number
-          }));
-        }
-      }
-    } catch (err) {
-      console.error('[ContactUs] handleSwitchAccount error', err);
-      alert('Unable to switch profile. See console for details.');
-    }
-  };
+  // Removed handleSwitchAccount; selection now auto-applies on change
 
   // Autofill from session on mount (async IIFE with mounted guard)
   React.useEffect(() => {
@@ -351,16 +295,35 @@ const ContactUs = () => {
                 <FormControl sx={{ flex: 1 }}>
                   <StyledSelect
                     value={selectedLocation}
-                    onChange={(e) => setSelectedLocation(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedLocation(value);
+                      // Auto-apply selected profile without clicking the button
+                      if (value !== '') {
+                        const index = Number(value);
+                        const locObj = locations[index];
+                        if (locObj) {
+                          setFormData(prev => ({
+                            ...prev,
+                            business_name: locObj.title || locObj.name || prev.business_name,
+                            phone_number: (locObj.phoneNumbers && locObj.phoneNumbers.primaryPhone) || locObj.primaryPhone || prev.phone_number
+                          }));
+                        }
+                        const accountObj = accounts && accounts.length ? accounts[0] : null;
+                        if (accountObj && accountObj.accountName) {
+                          setFormData(prev => ({ ...prev, name: accountObj.accountName }));
+                        }
+                      }
+                    }}
                     displayEmpty
                   >
-                    <MenuItem value="">Business Profile</MenuItem>
+                    <MenuItem value="">Select Profile</MenuItem>
                     {locations.map((loc, idx) => (
-                      <MenuItem key={idx} value={loc.name || loc.title || idx}>{loc.title || loc.name || `Location ${idx + 1}`}</MenuItem>
+                      <MenuItem key={idx} value={idx}>{loc.title || loc.name || `Location ${idx + 1}`}</MenuItem>
                     ))}
                   </StyledSelect>
                 </FormControl>
-                <Button variant="outlined" onClick={handleSwitchAccount}>Switch Profile</Button>
+                {/* Switch Profile button removed; selection auto-applies */}
               </Box>
               {/* Name Field */}
               <Box>

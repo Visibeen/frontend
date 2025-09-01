@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount } from './AccountContext';
 import { getSession, getAutoToken, clearSession } from '../../../utils/authUtils';
+import GMBService from '../../../services/GMBService';
 import GMBWebsiteService from '../../../services/GMBWebsiteService';
 import api from '../../../services/api';
 import DashboardLayout from '../../Layouts/DashboardLayout';
@@ -23,7 +24,10 @@ const AccountInfo = () => {
     website: accountInfo.website || '',
   });
 
-  const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
+  const [accounts, setAccounts] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState('');
   useEffect(() => {
     try {
       const session = getSession();
@@ -48,6 +52,23 @@ const AccountInfo = () => {
         alternative_contact_number: sessionValues.alternative_contact_number || prev.alternative_contact_number,
         website: sessionValues.website || prev.website
       }));
+
+            (async () => {
+        try {
+          const token = getAutoToken();
+          if (!token) return;
+
+          const accs = await GMBService.getAccounts(token);
+          setAccounts(accs || []);
+
+          if (accs && accs.length > 0) {
+            const locs = await GMBService.getLocations(token, accs[0].name);
+            setLocations(locs || []);
+          }
+        } catch (err) {
+          console.debug('[AccountInfo] GMB account/location fetch error', err);
+        }
+      })();
 
       (async () => {
         try {
@@ -183,12 +204,43 @@ const AccountInfo = () => {
   return (
     <div className="container">
       <h2>Account Information</h2>
-      <h6>Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing</h6>
+            <h6>Fill in your account details or select a Google Business Profile to auto-fill the form.</h6>
+        <div className="input-container" style={{ marginBottom: '20px' }}>
+          <label>Business Profile</label>
+          <select
+            name="selectedLocation"
+            value={selectedLocation}
+            onChange={(e) => {
+              const index = e.target.value;
+              setSelectedLocation(index);
+              if (index !== '') {
+                const loc = locations[index];
+                if (loc) {
+                  const gmbAddress = loc?.storefrontAddress || loc?.address || {};
+                  setForm(prev => ({
+                    ...prev,
+                    business_name: loc.title || loc.name || '',
+                    address: (typeof gmbAddress === 'string' ? gmbAddress : (gmbAddress.addressLines ? gmbAddress.addressLines.join(', ') : '')) || '',
+                    contact_number: (loc.phoneNumbers?.primaryPhone || loc.primaryPhone) || '',
+                    website: loc.websiteUri || '',
+                    name: accounts[0]?.accountName || prev.name
+                  }));
+                }
+              }
+            }}
+            className="input-style-for-select"
+          >
+            <option value="">Select a Business Profile to auto-fill</option>
+            {locations.map((loc, idx) => (
+              <option key={idx} value={idx}>{loc.title || loc.name}</option>
+            ))}
+          </select>
+        </div>
       <form onSubmit={handleSaveAndNext}>
         <div className="form-fields-column">
           <div className="input-container">
             <label>Full Name <span className="required">*</span></label>
-            <input type="text" name="name" placeholder="Enter your full name" value={form.name} onChange={handleChange} required />
+                        <input type="text" name="name" placeholder="Enter your full name" value={form.name} onChange={handleChange} required />
             <i className="fas fa-pencil-alt pencil-icon"></i>
           </div>
           <div className="input-container">
@@ -207,17 +259,17 @@ const AccountInfo = () => {
             <i className="fas fa-pencil-alt pencil-icon"></i>
           </div>
           <div className="input-container">
-            <label>Contact Number <span className="required">*</span></label>
-            <input type="tel" name="contact_number" placeholder="Enter your contact number" value={form.contact_number} onChange={handleChange} required />
+            <label>Contact Number <span className="required"></span></label>
+            <input type="tel" name="contact_number" placeholder="Enter your contact number" value={form.contact_number} onChange={handleChange} />
             <i className="fas fa-pencil-alt pencil-icon"></i>
           </div>
           <div className="input-container">
-            <label>Alternative Contact Number <span className="required">*</span></label>
-            <input type="tel" name="alternative_contact_number" placeholder="Enter your alternative contact number" value={form.alternative_contact_number} onChange={handleChange} required />
+            <label>Alternative Contact Number <span className="required"></span></label>
+            <input type="tel" name="alternative_contact_number" placeholder="Enter your alternative contact number" value={form.alternative_contact_number} onChange={handleChange} />
             <i className="fas fa-pencil-alt pencil-icon"></i>
           </div>
           <div className="input-container">
-            <label>Website URL <span className="required">*</span></label>
+            <label>Website URL <span className="required"></span></label>
             <input type="url" name="website" placeholder="Enter your website URL (e.g., https://www.yourwebsite.com)" value={form.website} onChange={handleChange} required />
             <i className="fas fa-pencil-alt pencil-icon"></i>
           </div>
