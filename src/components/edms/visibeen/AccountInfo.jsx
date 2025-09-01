@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount } from './AccountContext';
 import { getSession, getAutoToken, clearSession } from '../../../utils/authUtils';
+import GMBWebsiteService from '../../../services/GMBWebsiteService';
 import api from '../../../services/api';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import './AccountInfo.css';
@@ -9,17 +10,77 @@ import './AccountInfo.css';
 const AccountInfo = () => {
   const navigate = useNavigate();
   const { accountInfo, updateAccountInfo } = useAccount();
+  const _session_now = getSession();
+  const _gmbTitleSeed = _session_now?.gmbPrimaryLocationTitle || _session_now?.gmbPrimaryLocation?.title || _session_now?.gmbData?.locations?.[0]?.title || _session_now?.locations?.[0]?.title || _session_now?.gmbLocations?.[0]?.title || '';
+  const _gmbAccountNameSeed = _session_now?.gmbPrimaryAccountName || _session_now?.gmbAccounts?.[0]?.accountName || _session_now?.user?.accountName || _session_now?.accountName || '';
   const [form, setForm] = useState({
-    name: accountInfo.name || '',
-    business_name: accountInfo.business_name || '',
+    name: accountInfo.name || _gmbAccountNameSeed || '',
+    business_name: accountInfo.business_name || _gmbTitleSeed || '',
     address: accountInfo.address || '',
     email: accountInfo.email || '',
     contact_number: accountInfo.contact_number || '',
     alternative_contact_number: accountInfo.alternative_contact_number || '',
     website: accountInfo.website || '',
   });
-  
+
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    try {
+      const session = getSession();
+      const user = session?.user || session || {};
+      const sessionValues = {
+        // Prefer GMB account-level accountName for Full Name
+        name: user?.gmbPrimaryAccountName || session?.gmbPrimaryAccountName || user?.accountName || session?.accountName || (session?.gmbAccounts?.[0]?.accountName) || '',
+        business_name: user?.business_name || user?.company || session?.business_name || session?.gmbPrimaryLocationTitle || session?.gmbPrimaryLocation?.title || session?.gmbData?.locations?.[0]?.title || session?.locations?.[0]?.title || session?.gmbLocations?.[0]?.title || '',
+        address: user.address || session?.address || '',
+        email: user.email || session?.email || '',
+        contact_number: user.contact_number || user.phone || session?.phone || session?.contact_number || '',
+        alternative_contact_number: user.alternative_contact_number || user.alt_phone || session?.alternative_contact_number || '',
+        website: user.website || session?.website || ''
+      };
+
+      setForm(prev => ({
+        name: sessionValues.name || prev.name,
+        business_name: sessionValues.business_name || prev.business_name,
+        address: sessionValues.address || prev.address,
+        email: sessionValues.email || prev.email,
+        contact_number: sessionValues.contact_number || prev.contact_number,
+        alternative_contact_number: sessionValues.alternative_contact_number || prev.alternative_contact_number,
+        website: sessionValues.website || prev.website
+      }));
+
+      (async () => {
+        try {
+          const token = getAutoToken() || (typeof window !== 'undefined' && localStorage.getItem('googleAccessToken'));
+          console.debug('[AccountInfo][debug] token for GMB fetch:', !!token ? (token.substring ? token.substring(0, 8) + '...' : 'token') : token);
+          const needGMB = (!sessionValues.business_name || !sessionValues.address || !sessionValues.contact_number) && !!token;
+          if (!needGMB) return;
+
+          const primaryLocation = await GMBWebsiteService.getPrimaryLocation(token);
+          console.debug('[AccountInfo][debug] primaryLocation fetched:', primaryLocation);
+          if (!primaryLocation) return;
+
+          const gmbAddress = primaryLocation?.storefrontAddress || primaryLocation?.address || {};
+          const gmbPhone = primaryLocation?.phoneNumbers?.primaryPhone || primaryLocation?.primaryPhone || '';
+          const gmbName = primaryLocation?.title || primaryLocation?.name || '';
+
+          setForm(prev => ({
+            name: user?.gmbPrimaryAccountName || user?.accountName || session?.gmbPrimaryAccountName || session?.accountName || prev.name,
+            business_name: gmbName || prev.business_name,
+            address: (typeof gmbAddress === 'string' ? gmbAddress : (gmbAddress.addressLines ? gmbAddress.addressLines.join(', ') : '')) || prev.address,
+            email: user?.email || prev.email,
+            contact_number: gmbPhone || prev.contact_number,
+            alternative_contact_number: prev.alternative_contact_number,
+            website: primaryLocation?.websiteUri || prev.website
+          }));
+        } catch (err) {
+          console.debug('[AccountInfo] GMB autofill error', err);
+        }
+      })();
+    } catch (err) {
+      console.debug('[AccountInfo] autofill error', err);
+    }
+  }, [accountInfo]);
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({
@@ -30,12 +91,10 @@ const AccountInfo = () => {
   const handleSaveAndNext = async (e) => {
     e.preventDefault();
     updateAccountInfo(form);
-    
-    // Get session and token using centralized utilities
+
     const session = getSession();
     const authToken = getAutoToken();
-    
-    // Debug token information
+
     console.log('[AccountInfo] Token Debug Info:', {
       hasSession: !!session,
       hasToken: !!authToken,
@@ -44,7 +103,7 @@ const AccountInfo = () => {
       sessionUser: session?.user ? Object.keys(session.user) : [],
       tokenPreview: authToken ? `${authToken.substring(0, 10)}...` : 'No token'
     });
-    
+
     // Check for authentication
     if (!session || !authToken) {
       console.error('[AccountInfo] Missing authentication data');
@@ -53,10 +112,10 @@ const AccountInfo = () => {
       navigate('/login');
       return;
     }
-    
+
     // Extract user ID with multiple fallback strategies
     const userId = session?.id || session?.user?.id || session?.userId || session?.user_id;
-    
+
     if (!userId) {
       console.error('[AccountInfo] Unable to extract user ID from session:', session);
       alert('Invalid session data. Please log in again.');
@@ -64,7 +123,7 @@ const AccountInfo = () => {
       navigate('/login');
       return;
     }
-    
+
     const payload = {
       user_id: userId,
       name: form.name,
@@ -75,23 +134,23 @@ const AccountInfo = () => {
       alternative_contact_number: form.alternative_contact_number,
       website: form.website,
     };
-    
+
     try {
       setLoading(true);
       console.log('[AccountInfo] Submitting EDMS account info...');
       console.log('[AccountInfo] Payload:', payload);
-      
+
       // Use centralized API service with automatic token injection
       const response = await api.post('/customer/edms/create-edms', payload);
-      
+
       console.log('[AccountInfo] API Response:', response);
       navigate('../upload-logo');
-      
+
       console.log('[AccountInfo] API Response:', response);
       navigate('../upload-logo');
     } catch (error) {
       console.error('[AccountInfo] API Error:', error);
-      
+
       if (error.status === 401) {
         // Handle authentication error
         console.log('[AccountInfo] Authentication failed, clearing session');
