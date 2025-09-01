@@ -17,6 +17,18 @@ class GMBService {
     this.clientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET;
     this.projectId = process.env.REACT_APP_GMB_PROJECT_ID;
     this.apiKey = process.env.REACT_APP_GMB_API_KEY;
+    
+    // Log configuration for debugging (without exposing secrets)
+    if (process.env.REACT_APP_DEBUG_MODE === 'true') {
+      console.log('🔧 GMBService Configuration:', {
+        hasClientId: !!this.clientId,
+        hasClientSecret: !!this.clientSecret,
+        hasProjectId: !!this.projectId,
+        hasApiKey: !!this.apiKey,
+        projectId: this.projectId || '(not set - will work without it)'
+      });
+    }
+    
     // Register refresher once
     registerGoogleRefresher();
   }
@@ -75,11 +87,25 @@ class GMBService {
     const headers = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
-      'X-Goog-User-Project': this.projectId,
       ...(options.headers || {}),
     };
 
+    // Only include X-Goog-User-Project if project ID is configured and valid
+    // This header requires specific Google Cloud permissions
+    if (this.projectId && this.projectId !== 'undefined' && this.projectId.trim()) {
+      headers['X-Goog-User-Project'] = this.projectId;
+    }
+
     let res = await fetch(url, { ...options, headers });
+    
+    // Handle specific permission errors for X-Goog-User-Project
+    if (res.status === 403 && this.projectId) {
+      console.warn('Permission denied with X-Goog-User-Project header. Retrying without it...');
+      const headersWithoutProject = { ...headers };
+      delete headersWithoutProject['X-Goog-User-Project'];
+      res = await fetch(url, { ...options, headers: headersWithoutProject });
+    }
+    
     if (res.status === 401) {
       // try refresh
       const newToken = await tokenManager.getValidAccessToken('google');
@@ -87,6 +113,10 @@ class GMBService {
         ...headers,
         Authorization: `Bearer ${newToken}`,
       };
+      // Remove project header if it caused issues before
+      if (this.projectId && headers['X-Goog-User-Project']) {
+        delete retryHeaders['X-Goog-User-Project'];
+      }
       res = await fetch(url, { ...options, headers: retryHeaders });
     }
     return res;
@@ -127,6 +157,7 @@ class GMBService {
 
   /**
    * Get Google OAuth token using Firebase Authentication
+   * Enhanced with better refresh token handling and storage
    * @returns {Promise<string>} The access token
    */
   async getGoogleToken() {
@@ -134,11 +165,12 @@ class GMBService {
       // Add required GMB scopes to the provider
       oauthConfig.google.scopes.forEach((s) => provider.addScope(s));
       
-      // Request access token directly from Google
+      // Request access token directly from Google with enhanced parameters
       provider.setCustomParameters({
         'access_type': 'offline',
-        'prompt': 'consent',
-        'client_id': this.clientId
+        'prompt': 'consent', // Force consent to ensure refresh token
+        'client_id': this.clientId,
+        'include_granted_scopes': true
       });
 
       const result = await signInWithPopup(auth, provider);
@@ -146,22 +178,38 @@ class GMBService {
       // Get the OAuth access token (not Firebase ID token)
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const googleAccessToken = credential?.accessToken || '';
+      const refreshToken = credential?.refreshToken || null;
       
       // Store token using enhanced auto management
       if (googleAccessToken) {
         console.log('🔐 Google OAuth token received, setting up auto-management...');
         
-        // Store in TokenManager with metadata
-        tokenManager.set('google', { 
-          access_token: googleAccessToken, 
+        // Calculate expiration time (Google tokens typically expire in 1 hour)
+        const expiresIn = 3600; // 1 hour in seconds
+        const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
+        
+        // Store in TokenManager with complete metadata
+        const tokenData = {
+          access_token: googleAccessToken,
           token_type: 'Bearer',
+          expires_in: expiresIn,
+          expires_at: expiresAt,
           created_at: Date.now(),
-          refresh_token: credential?.refreshToken || null
-        });
+          scope: oauthConfig.google.scopes.join(' '),
+          refresh_token: refreshToken
+        };
+        
+        tokenManager.set('google', tokenData);
         
         // Sync to legacy storage for backward compatibility
         localStorage.setItem('googleAccessToken', googleAccessToken);
         sessionStorage.setItem('googleAccessToken', googleAccessToken);
+        
+        // Store refresh token securely if available
+        if (refreshToken) {
+          localStorage.setItem('googleRefreshToken', refreshToken);
+          console.log('✅ Refresh token stored for automatic renewal');
+        }
         
         // Start auto token management if not already running
         AutoTokenManager.autoSetupGoogleToken();
@@ -174,6 +222,76 @@ class GMBService {
       console.error('Error getting Google token:', error);
       throw error;
     }
+  }
+
+  /**
+   * Initialize OAuth2 flow with authorization code exchange
+   * Alternative to Firebase popup flow for server-side apps
+   * @param {string} authorizationCode - Authorization code from OAuth callback
+   * @returns {Promise<Object>} Token data
+   */
+  async exchangeAuthorizationCode(authorizationCode) {
+    try {
+      const params = new URLSearchParams({
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+        code: authorizationCode,
+        grant_type: 'authorization_code',
+        redirect_uri: oauthConfig.google.redirectUri
+      });
+
+      const response = await fetch(oauthConfig.google.tokenEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error_description || 'Failed to exchange authorization code');
+      }
+
+      const tokenData = await response.json();
+      
+      // Calculate expiration timestamp
+      if (tokenData.expires_in) {
+        tokenData.expires_at = Math.floor(Date.now() / 1000) + tokenData.expires_in;
+      }
+      tokenData.created_at = Date.now();
+      
+      // Store tokens
+      tokenManager.set('google', tokenData);
+      
+      if (tokenData.refresh_token) {
+        localStorage.setItem('googleRefreshToken', tokenData.refresh_token);
+      }
+      
+      console.log('✅ Authorization code exchanged successfully');
+      return tokenData;
+    } catch (error) {
+      console.error('Error exchanging authorization code:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate OAuth2 authorization URL for manual redirect flow
+   * @returns {string} Authorization URL
+   */
+  generateAuthorizationUrl() {
+    const params = new URLSearchParams({
+      client_id: this.clientId,
+      redirect_uri: oauthConfig.google.redirectUri,
+      scope: oauthConfig.google.scopes.join(' '),
+      response_type: 'code',
+      access_type: 'offline',
+      prompt: 'consent',
+      include_granted_scopes: 'true'
+    });
+
+    return `${oauthConfig.google.authEndpoint}?${params.toString()}`;
   }
 
   /**
@@ -190,8 +308,30 @@ class GMBService {
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to fetch GMB accounts');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error?.message || 'Failed to fetch GMB accounts';
+        
+        // Enhanced error handling for common permission issues
+        if (response.status === 403) {
+          if (errorMessage.includes('does not have required permission') || 
+              errorMessage.includes('serviceusage.services.use')) {
+            throw new Error(
+              'Google Cloud project permission error. This can be resolved by:\n' +
+              '1. Using your personal Google account instead of the project service account\n' +
+              '2. Ensuring your Google account has access to Google My Business\n' +
+              '3. Removing the project ID from environment variables if not needed\n' +
+              '4. Contacting your Google Cloud administrator to grant the required permissions\n\n' +
+              `Original error: ${errorMessage}`
+            );
+          }
+          throw new Error(`Permission denied: ${errorMessage}`);
+        }
+        
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please reconnect your Google account.');
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -530,12 +670,18 @@ class GMBService {
    */
   async refreshAccessToken(refreshToken) {
     try {
+      const headers = {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      };
+      
+      // Only include X-Goog-User-Project if project ID is configured
+      if (this.projectId && this.projectId !== 'undefined' && this.projectId.trim()) {
+        headers['X-Goog-User-Project'] = this.projectId;
+      }
+      
       const response = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-Goog-User-Project': this.projectId
-        },
+        headers,
         body: new URLSearchParams({
           client_id: this.clientId,
           client_secret: this.clientSecret,
@@ -546,6 +692,29 @@ class GMBService {
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // If permission denied with project header, try without it
+        if (response.status === 403 && headers['X-Goog-User-Project']) {
+          console.warn('Permission denied with X-Goog-User-Project in refresh. Retrying without it...');
+          const headersWithoutProject = { ...headers };
+          delete headersWithoutProject['X-Goog-User-Project'];
+          
+          const retryResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: headersWithoutProject,
+            body: new URLSearchParams({
+              client_id: this.clientId,
+              client_secret: this.clientSecret,
+              refresh_token: refreshToken,
+              grant_type: 'refresh_token'
+            })
+          });
+          
+          if (retryResponse.ok) {
+            return await retryResponse.json();
+          }
+        }
+        
         throw new Error(errorData.error_description || 'Failed to refresh token');
       }
 
