@@ -7,11 +7,12 @@ import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 
 const FooterContainer = styled(Box)(({ theme }) => ({
   background: '#1B365D',
+  width: '100px',
   padding: '16px 20px',
   borderRadius: '0 0 8px 8px',
   color: '#ffffff',
   position: 'relative',
-  minHeight: '80px',
+  minHeight: '20px',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',

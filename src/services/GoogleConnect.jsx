@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, provider, signInWithPopup } from '../firebase';
 import { GoogleAuthProvider } from 'firebase/auth';
-import { getSession } from '../utils/authUtils';
+import { getSession, setSession } from '../utils/authUtils';
+import GMBWebsiteService from './GMBWebsiteService';
 import tokenManager from '../auth/TokenManager';
 import api from './api';
 import logo from '../../assets/VisibeenLogo.png';
@@ -112,7 +113,33 @@ function GoogleConnect() {
             if (data) {
                 // Navigate based on actual GMB access
                 if (hasGMBAccess) {
-                    console.log('User has GMB access, redirecting to dashboard');
+                    console.log('User has GMB access, persisting primary location to session and redirecting to dashboard');
+                    // Persist primary location title into session for client-side autofill
+                    try {
+                        const sessionNow = getSession() || {};
+                        // Try to fetch primary location details for richer autofill data
+                        let primaryLocation = null;
+                        try {
+                            const tokenToUse = googleAccessToken || (typeof window !== 'undefined' && localStorage.getItem('googleAccessToken'));
+                            if (tokenToUse) {
+                                primaryLocation = await GMBWebsiteService.getPrimaryLocation(tokenToUse);
+                            }
+                        } catch (locErr) {
+                            console.debug('[GoogleConnect] Could not fetch primary location:', locErr);
+                        }
+
+                        const newSession = Object.assign({}, sessionNow, {
+                            gmbAccounts: hasGMBAccess ? gmbData.accounts : [],
+                            // accountName is the account-level display name (PERSONAL name)
+                            gmbPrimaryAccountName: (gmbData.accounts && gmbData.accounts[0] && gmbData.accounts[0].accountName) || sessionNow?.gmbPrimaryAccountName || '',
+                            gmbPrimaryLocation: primaryLocation || (gmbData.locations && gmbData.locations[0]) || null,
+                            gmbPrimaryLocationTitle: (primaryLocation && (primaryLocation.title || primaryLocation.name)) || (gmbData.locations && gmbData.locations[0] && (gmbData.locations[0].title || gmbData.locations[0].name)) || ''
+                        });
+
+                        try { setSession(newSession); } catch (e) { console.debug('[GoogleConnect] setSession failed', e); }
+                    } catch (err) {
+                        console.debug('[GoogleConnect] session persistence error', err);
+                    }
                     navigate('/dashboard');
                 } else {
                     console.log('User does not have GMB access, redirecting to account not found');

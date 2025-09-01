@@ -25,16 +25,34 @@ export const AccountProvider = ({ children }) => {
   const [isLogoUploaded, setIsLogoUploaded] = useState(false);
   const [selectedFontStyle, setSelectedFontStyle] = useState('Modern'); // Default font style
 
+  // Normalize incoming account info to the shape used across EDMS UI
+  const normalizeAccountInfo = (src = {}) => ({
+    name: src.name || src.full_name || '',
+    businessName: src.businessName || src.business_name || src.company || '',
+    address: src.address || src.business_address || '',
+    email: src.email || '',
+    contact: src.contact || src.contact_number || src.phone || src.phone_number || '',
+    altContact: src.altContact || src.alternative_contact_number || src.alt_phone || '',
+    website: src.website || src.website_url || ''
+  });
+
   const updateAccountInfo = (newInfo) => {
-    setAccountInfo(newInfo);
+    const normalized = normalizeAccountInfo(newInfo);
+    setAccountInfo(normalized);
     // Also save to localStorage for persistence
-    localStorage.setItem('accountInfo', JSON.stringify(newInfo));
+    localStorage.setItem('accountInfo', JSON.stringify(normalized));
   };
 
   const loadAccountInfo = useCallback(() => {
     const saved = localStorage.getItem('accountInfo');
     if (saved) {
-      setAccountInfo(JSON.parse(saved));
+      try {
+        const parsed = JSON.parse(saved);
+        setAccountInfo(normalizeAccountInfo(parsed));
+      } catch (_) {
+        // If parsing fails, clear the bad entry to avoid repeated errors
+        localStorage.removeItem('accountInfo');
+      }
     }
     
     // Load logo from localStorage

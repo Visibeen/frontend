@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAccount } from './AccountContext';
 import './FestivalSpecialEDMs.css';
+import TemplateFooterVariants from './components/TemplateFooterVariants';
 
 const templateData = [
   // Holi
@@ -65,6 +66,7 @@ const FestivalSpecialEDMs = () => {
   const [shareOpen, setShareOpen] = useState(false);
   const [selectedDesign, setSelectedDesign] = useState('premium'); // Add design state
   const [mainImg, setMainImg] = useState(templateData[initialTemplateIndex >= 0 ? initialTemplateIndex : 0][1]);
+  const [selectedFooterId, setSelectedFooterId] = useState(1);
   const [logoPosition, setLogoPosition] = useState(50); // Logo position (0-100)
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const [customFooterColor, setCustomFooterColor] = useState('#4A90E2'); // Custom footer color
@@ -76,6 +78,19 @@ const FestivalSpecialEDMs = () => {
   useEffect(() => {
     setMainImg(templateData[currentTemplate][1]);
   }, [currentTemplate]);
+
+  // Read selected footer id from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('visibeen.selectedFooterId');
+      const parsed = raw != null ? parseInt(raw, 10) : NaN;
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        setSelectedFooterId(parsed);
+      }
+    } catch (e) {
+      console.debug('[FestivalSpecialEDMs] could not read selected footer id', e);
+    }
+  }, []);
 
   // Logo interaction functions
   const handleLogoMouseDown = (e) => {
@@ -344,7 +359,7 @@ const FestivalSpecialEDMs = () => {
   };
 
   // Component to display image with account info overlay
-  const ImageWithAccountInfo = ({ imageSrc, isUploadedLogo = false, imageIndex = 0, isMainPreview = false }) => {
+  const ImageWithAccountInfo = ({ imageSrc, isUploadedLogo = false, imageIndex = 0, isMainPreview = false, showFooterOverlay = true }) => {
     // Create attractive footer design based on image colors
     const createAttractiveImageBasedDesign = (imageIndex) => {
       const selectedFont = getFontFamily(selectedFontStyle);
@@ -452,7 +467,8 @@ const FestivalSpecialEDMs = () => {
           </div>
         )}
         
-        {/* Dynamic Footer Design */}
+        {/* Dynamic Footer Design (toggleable) */}
+        {showFooterOverlay && (
         <div style={{
           position: 'absolute',
           bottom: '0',
@@ -548,6 +564,7 @@ const FestivalSpecialEDMs = () => {
             )}
           </div>
         </div>
+        )}
       </div>
     );
   };
@@ -582,13 +599,23 @@ const FestivalSpecialEDMs = () => {
               // Set the clicked image as the main preview
               setMainImg(img);
             }}>
-              <ImageWithAccountInfo imageSrc={require(`./${img}`)} imageIndex={idx} isMainPreview={false} />
+              <div style={{ position: 'relative' }}>
+                <ImageWithAccountInfo imageSrc={require(`./${img}`)} imageIndex={idx} isMainPreview={false} showFooterOverlay={false} />
+                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+                  <TemplateFooterVariants designId={selectedFooterId} accountInfo={accountInfo} />
+                </div>
+              </div>
             </div>
           ))}
         </div>
         {/* Large Preview */}
         <div className="large-preview">
-          <ImageWithAccountInfo imageSrc={require(`./${mainImg}`)} imageIndex={templateData[currentTemplate].indexOf(mainImg)} isMainPreview={true} />
+          <div style={{ position: 'relative' }}>
+            <ImageWithAccountInfo imageSrc={require(`./${mainImg}`)} imageIndex={templateData[currentTemplate].indexOf(mainImg)} isMainPreview={true} showFooterOverlay={false} />
+            <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+              <TemplateFooterVariants designId={selectedFooterId} accountInfo={accountInfo} />
+            </div>
+          </div>
         </div>
         {/* Action Buttons */}
         <div className="action-buttons">
