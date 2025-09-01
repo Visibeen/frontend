@@ -45,23 +45,39 @@ function GoogleConnect() {
             }
 
             // Verify GMB access by calling Google My Business API
-            const gmbResponse = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts`, {
-                headers: {
-                    'Authorization': `Bearer ${googleAccessToken}`,
-                    'Content-Type': 'application/json',
-                    'X-Goog-User-Project': process.env.REACT_APP_GMB_PROJECT_ID
-                }
-            });
-
-            const gmbData = await gmbResponse.json();
-            console.log('GMB API Response:', gmbData);
-
             let hasGMBAccess = false;
-            if (gmbResponse.ok && gmbData.accounts && gmbData.accounts.length > 0) {
-                hasGMBAccess = true;
-                console.log('User has GMB accounts:', gmbData.accounts.length);
-            } else {
-                console.log('No GMB accounts found or API error:', gmbData.error);
+            let gmbData = { accounts: [] };
+            
+            try {
+                const gmbResponse = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts`, {
+                    headers: {
+                        'Authorization': `Bearer ${googleAccessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (gmbResponse.ok) {
+                    gmbData = await gmbResponse.json();
+                    if (gmbData.accounts && gmbData.accounts.length > 0) {
+                        hasGMBAccess = true;
+                        console.log('User has GMB accounts:', gmbData.accounts.length);
+                    } else {
+                        console.log('User authenticated but has no GMB accounts');
+                    }
+                } else {
+                    // Handle different error scenarios gracefully
+                    const errorData = await gmbResponse.json().catch(() => ({}));
+                    if (gmbResponse.status === 403) {
+                        console.log('User does not have GMB API access or no GMB accounts');
+                    } else if (gmbResponse.status === 401) {
+                        console.log('Authentication failed - token may be invalid');
+                    } else {
+                        console.log('GMB API error:', errorData.error || `Status: ${gmbResponse.status}`);
+                    }
+                }
+            } catch (apiError) {
+                console.log('GMB API call failed:', apiError.message);
+                // Continue with hasGMBAccess = false
             }
 
             // Link Google account to current user with GMB verification
