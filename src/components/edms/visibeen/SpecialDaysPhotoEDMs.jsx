@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useAccount } from './AccountContext';
 import './SpecialDaysPhotoEDMs.css';
 import ImageWithAccountInfo from './ImageWithAccountInfo';
+import TemplateFooterVariants from './components/TemplateFooterVariants';
 
 const templateData = [
   // World Refugee Day
@@ -66,6 +67,7 @@ const SpecialDaysPhotoEDMs = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [mainImg, setMainImg] = useState(templateData[initialTemplateIndex >= 0 ? initialTemplateIndex : 0][1]);
+  const [selectedFooterId, setSelectedFooterId] = useState(1);
   const [logoPosition, setLogoPosition] = useState(50); // Logo position (0-100)
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const [customFooterColor, setCustomFooterColor] = useState('#4A90E2'); // Custom footer color
@@ -77,6 +79,19 @@ const SpecialDaysPhotoEDMs = () => {
   useEffect(() => {
     setMainImg(templateData[currentTemplate][1]);
   }, [currentTemplate]);
+
+  // Read selected footer id from localStorage (persisted by SelectDesign)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('visibeen.selectedFooterId');
+      const parsed = raw != null ? parseInt(raw, 10) : NaN;
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        setSelectedFooterId(parsed);
+      }
+    } catch (e) {
+      console.debug('[SpecialDaysPhotoEDMs] could not read selected footer id', e);
+    }
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -350,21 +365,31 @@ const SpecialDaysPhotoEDMs = () => {
               // Set the clicked image as the main preview
               setMainImg(img);
             }}>
-              <ImageWithAccountInfo imageSrc={require(`./${img}`)} imageIndex={idx} isMainPreview={false} 
-                 logoPosition={logoPosition} isDraggingLogo={isDraggingLogo} 
-                 handleLogoMouseDown={handleLogoMouseDown} handleLogoMouseMove={handleLogoMouseMove} handleLogoMouseUp={handleLogoMouseUp}
-                 customFooterColor={customFooterColor} getFontFamily={getFontFamily}
-              />
+              <div style={{ position: 'relative' }}>
+                <ImageWithAccountInfo imageSrc={require(`./${img}`)} imageIndex={idx} isMainPreview={false} 
+                   logoPosition={logoPosition} isDraggingLogo={isDraggingLogo} 
+                   handleLogoMouseDown={handleLogoMouseDown} handleLogoMouseMove={handleLogoMouseMove} handleLogoMouseUp={handleLogoMouseUp}
+                   customFooterColor={customFooterColor} getFontFamily={getFontFamily} showFooterOverlay={false}
+                />
+                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+                  <TemplateFooterVariants designId={selectedFooterId} accountInfo={accountInfo} primaryColor={customFooterColor} />
+                </div>
+              </div>
             </div>
           ))}
         </div>
         {/* Large Preview */}
         <div className="large-preview">
-          <ImageWithAccountInfo imageSrc={require(`./${mainImg}`)} imageIndex={templateData[currentTemplate].indexOf(mainImg)} isMainPreview={true} 
-              logoPosition={logoPosition} isDraggingLogo={isDraggingLogo} 
-              handleLogoMouseDown={handleLogoMouseDown} handleLogoMouseMove={handleLogoMouseMove} handleLogoMouseUp={handleLogoMouseUp}
-              customFooterColor={customFooterColor} getFontFamily={getFontFamily}
-          />
+          <div style={{ position: 'relative' }}>
+            <ImageWithAccountInfo imageSrc={require(`./${mainImg}`)} imageIndex={templateData[currentTemplate].indexOf(mainImg)} isMainPreview={true} 
+                logoPosition={logoPosition} isDraggingLogo={isDraggingLogo} 
+                handleLogoMouseDown={handleLogoMouseDown} handleLogoMouseMove={handleLogoMouseMove} handleLogoMouseUp={handleLogoMouseUp}
+                customFooterColor={customFooterColor} getFontFamily={getFontFamily} showFooterOverlay={false}
+            />
+            <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+              <TemplateFooterVariants designId={selectedFooterId} accountInfo={accountInfo} primaryColor={customFooterColor} />
+            </div>
+          </div>
         </div>
         {/* Action Buttons */}
         <div className="action-buttons">

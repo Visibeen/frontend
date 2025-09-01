@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { getSession, getAutoToken } from '../../utils/authUtils';
+import GMBWebsiteService from '../../services/GMBWebsiteService';
+import GMBService from '../../services/GMBService';
 import {
   Box,
   Stack,
@@ -165,11 +168,19 @@ const ContactUs = () => {
     name: '',
     business_category: '',
     business_name: '',
+    complaint_type: '',
     email: '',
     phone_number: '',
     date_and_time: '',
     message: '',
   });
+
+  // Local UI state for ticket types
+  const [ticketTypes] = useState(['Service', 'Billing', 'Technical', 'Other']);
+  const [complaint_type, setTicketType] = useState('');
+  const [accounts, setAccounts] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -178,6 +189,75 @@ const ContactUs = () => {
       [name]: value
     }));
   };
+
+  // Removed handleSwitchAccount; selection now auto-applies on change
+
+  // Autofill from session on mount (async IIFE with mounted guard)
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+  const session = getSession() || {};
+          const autoToken = getAutoToken();
+
+        // Support multiple session shapes for GMB data
+        const gmbAccounts = session?.gmbAccounts || session?.gmbData?.accounts || [];
+        const gmbPrimaryAccountName = session?.gmbPrimaryAccountName || (gmbAccounts[0] && gmbAccounts[0].accountName) || '';
+        const gmbPrimaryLocation = session?.gmbPrimaryLocation || (session?.gmbData && session.gmbData.locations && session.gmbData.locations[0]) || null;
+
+        if (!mounted) return;
+        setAccounts(gmbAccounts || []);
+        // Populate locations dropdown from session or by fetching via GMB API for the primary account
+        try {
+          const primaryAccount = gmbAccounts && gmbAccounts.length ? gmbAccounts[0] : null;
+            if (primaryAccount && autoToken && primaryAccount.name) {
+              const locs = await GMBService.getLocations(autoToken, primaryAccount.name);
+            if (mounted) setLocations(Array.isArray(locs) ? locs : []);
+          } else {
+            // try session-stored primary location
+            const sessPrimary = session?.gmbPrimaryLocation;
+            if (sessPrimary) {
+              if (mounted) setLocations([sessPrimary]);
+            }
+          }
+        } catch (locErr) {
+          console.debug('[ContactUs] failed to populate locations', locErr);
+        }
+        setFormData(prev => ({
+          ...prev,
+          name: prev.name || session?.user?.displayName || session?.user?.name || gmbPrimaryAccountName || '',
+          business_name: prev.business_name || (gmbPrimaryLocation && (gmbPrimaryLocation.title || gmbPrimaryLocation.name)) || session?.business_name || session?.gmbPrimaryLocationTitle || '',
+          phone_number: prev.phone_number || (gmbPrimaryLocation && (gmbPrimaryLocation.phoneNumbers?.primaryPhone || gmbPrimaryLocation.primaryPhone)) || session?.phone || session?.user?.phone || '',
+          email: prev.email || session?.user?.email || session?.email || ''
+        }));
+
+        // If still missing, fetch primary location via GMB API using token
+        const currentSession = getSession() || {};
+        const needsBusiness = !currentSession?.business_name && !currentSession?.gmbPrimaryLocationTitle;
+        const needsPhone = !currentSession?.phone && !currentSession?.user?.phone;
+
+        if ((needsBusiness || needsPhone) && autoToken) {
+          try {
+            const primaryLocation = await GMBWebsiteService.getPrimaryLocation(autoToken);
+            if (!mounted) return;
+            if (primaryLocation) {
+              setFormData(prev => ({
+                ...prev,
+                business_name: prev.business_name || primaryLocation.title || primaryLocation.name || prev.business_name,
+                phone_number: prev.phone_number || primaryLocation.phoneNumbers?.primaryPhone || primaryLocation.primaryPhone || prev.phone_number
+              }));
+            }
+          } catch (gErr) {
+            console.debug('[ContactUs] GMB primaryLocation fetch failed', gErr);
+          }
+        }
+      } catch (err) {
+        console.debug('[ContactUs] autofill error', err);
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -210,6 +290,41 @@ const ContactUs = () => {
         <FormContainer>
           <form onSubmit={handleSubmit}>
             <FormStack>
+              {/* Account selector + switch button */}
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <FormControl sx={{ flex: 1 }}>
+                  <StyledSelect
+                    value={selectedLocation}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedLocation(value);
+                      // Auto-apply selected profile without clicking the button
+                      if (value !== '') {
+                        const index = Number(value);
+                        const locObj = locations[index];
+                        if (locObj) {
+                          setFormData(prev => ({
+                            ...prev,
+                            business_name: locObj.title || locObj.name || prev.business_name,
+                            phone_number: (locObj.phoneNumbers && locObj.phoneNumbers.primaryPhone) || locObj.primaryPhone || prev.phone_number
+                          }));
+                        }
+                        const accountObj = accounts && accounts.length ? accounts[0] : null;
+                        if (accountObj && accountObj.accountName) {
+                          setFormData(prev => ({ ...prev, name: accountObj.accountName }));
+                        }
+                      }
+                    }}
+                    displayEmpty
+                  >
+                    <MenuItem value="">Select Profile</MenuItem>
+                    {locations.map((loc, idx) => (
+                      <MenuItem key={idx} value={idx}>{loc.title || loc.name || `Location ${idx + 1}`}</MenuItem>
+                    ))}
+                  </StyledSelect>
+                </FormControl>
+                {/* Switch Profile button removed; selection auto-applies */}
+              </Box>
               {/* Name Field */}
               <Box>
                 <RequiredLabel>Name*</RequiredLabel>
@@ -237,28 +352,20 @@ const ContactUs = () => {
                   required
                 />
               </Box>
-
-              {/* Business Category Field */}
               <Box>
-                <RequiredLabel>Business Category*</RequiredLabel>
+                <RequiredLabel>Complaint Type*</RequiredLabel>
                 <FormControl fullWidth>
                   <StyledSelect
-                    name="business_category"
-                    value={formData.business_category}
-                    onChange={handleInputChange}
+                    name="complaint_type"
+                    value={complaint_type}
+                    onChange={(e) => setTicketType(e.target.value)}
                     displayEmpty
                     required
                   >
                     <MenuItem value="" disabled>
-                      <Typography sx={{ color: '#A0A0AA', fontSize: '14px' }}>
-                        Select category
-                      </Typography>
+                      <Typography sx={{ color: '#A0A0AA', fontSize: '14px' }}>Select issue type</Typography>
                     </MenuItem>
-                    <MenuItem value="restaurant">Restaurant</MenuItem>
-                    <MenuItem value="retail">Retail</MenuItem>
-                    <MenuItem value="services">Services</MenuItem>
-                    <MenuItem value="healthcare">Healthcare</MenuItem>
-                    <MenuItem value="education">Education</MenuItem>
+                    {ticketTypes.map((t, i) => <MenuItem key={i} value={t}>{t}</MenuItem>)}
                   </StyledSelect>
                 </FormControl>
               </Box>
@@ -292,14 +399,14 @@ const ContactUs = () => {
                 />
               </Box>
 
-              {/* Call Time Field */}
+              {/* Preferred Date & Time */}
               <Box>
-                <OptionalLabel>Choose when to call*</OptionalLabel>
+                <OptionalLabel>Preferred Time*</OptionalLabel>
                 <TimePickerContainer>
                   <TimePickerField
                     fullWidth
                     name="date_and_time"
-                    type="date"
+                    type="datetime-local"
                     value={formData.date_and_time}
                     onChange={handleInputChange}
                     required
@@ -333,6 +440,5 @@ const ContactUs = () => {
       </Container>
     </DashboardLayout>
   );
-};
-
+}
 export default ContactUs;

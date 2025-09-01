@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAccount } from './AccountContext';
 
-const ImageWithAccountInfo = ({ imageSrc, isUploadedLogo = false, imageIndex = 0, isMainPreview = false, logoPosition, isDraggingLogo, handleLogoMouseDown, handleLogoMouseMove, handleLogoMouseUp, customFooterColor, getFontFamily }) => {
+const ImageWithAccountInfo = ({ imageSrc, isUploadedLogo = false, imageIndex = 0, isMainPreview = false, logoPosition, isDraggingLogo, handleLogoMouseDown, handleLogoMouseMove, handleLogoMouseUp, customFooterColor, getFontFamily, showFooterOverlay = true }) => {
   const { uploadedLogo, isLogoUploaded, accountInfo, selectedFontStyle } = useAccount();
 
   // Create attractive footer design based on image colors
@@ -111,7 +111,8 @@ const ImageWithAccountInfo = ({ imageSrc, isUploadedLogo = false, imageIndex = 0
         </div>
       )}
       
-      {/* Dynamic Footer Design */}
+      {/* Dynamic Footer Design (toggleable) */}
+      {showFooterOverlay && (
       <div style={{
         position: 'absolute',
         bottom: '0',
@@ -207,6 +208,7 @@ const ImageWithAccountInfo = ({ imageSrc, isUploadedLogo = false, imageIndex = 0
           )}
         </div>
       </div>
+      )}
     </div>
   );
 };
