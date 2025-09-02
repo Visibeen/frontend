@@ -1,3 +1,38 @@
+/* Hide scrollbars */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+html::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome, Safari, Opera */
+}
+
+body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Hide scrollbars for all elements */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome, Safari, Opera */
+}
+
 /* Layout */
 /* .container {
   display: flex;
@@ -41,16 +76,17 @@
 }
 
 #img {
-  width: 600px;
+  max-width: 100%;
   height: auto;
-  margin-left: -600px;
+  margin-left: 0;
   margin-bottom: 50px;
   margin-top: -40px;
   position: relative;
 }
 
 .logo {
-  width: 300px;
+  max-width: 300px;
+  width: 100%;
   height: auto;
   margin-bottom: 40px;
   z-index: 2;
@@ -91,14 +127,15 @@
   z-index: 2;
   position: relative;
   margin-top: auto;
-   margin-left: -400px;
+  margin-left: 0;
   margin-bottom: auto;
+  padding: 0 20px;
 }
 
 .left-content h2 {
   font-size: 32px;
   font-weight: 700;
-  margin-left: -55px;
+  margin-left: 0;
   margin-bottom: 24px;
   line-height: 1.1;
 }
@@ -106,21 +143,20 @@
 .left-content p {
   font-size: 24px;
   font-weight: 300;
-   margin-left: 100px;
+  margin-left: 0;
   margin-bottom: 60px;
   opacity: 0.95;
-  /* position: fixed; */
-
+}
 
 .services-test {
   font-size: 16px;
   opacity: 0.8;
   margin-top: 10px;
   z-index: 2;
-  margin-left: -650px;
+  margin-left: 0;
   position: relative;
   font-weight: 300;
-  margin-bottom: 300px;
+  margin-bottom: 50px;
 }
 
 .service {
@@ -214,7 +250,7 @@
   }
   
   .left-content span {
-    margin-left: -22px;
+    margin-left: 0;
   }
   
   .form-group label {
@@ -256,6 +292,15 @@ body {
     margin: 0;
     font-family: 'Segoe UI', sans-serif;
     background-color: #f8f8f8;
+    overflow-x: hidden;
+  }
+  
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    overflow-x: hidden;
   }
   
   .form-group input::placeholder {
@@ -764,7 +809,9 @@ body {
   }
   
   .get-edms-container {
-    padding: 147px 197.5px 50px;
+    padding: 147px 20px 50px;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   
   @media (max-width: 1200px) {
@@ -824,7 +871,8 @@ body {
     background: #ffffff;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    padding: 18px 18px 22px 18px;
+    padding: 18px;
+    box-sizing: border-box;
   }
   
   .edm-field { margin-bottom: 14px; }
@@ -1001,8 +1049,10 @@ body {
   
   
   .page-wrapper {
-    padding: 147px 197.5px 50px;
+    padding: 147px 20px 50px;
     text-align: center;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   
   .footer-logo {
@@ -1018,7 +1068,8 @@ body {
   }
   
   .card, .card1 {
-    width: 620px;
+    max-width: 620px;
+    width: 100%;
     margin: 0 auto;
     background: #fff;
     padding: 40px;

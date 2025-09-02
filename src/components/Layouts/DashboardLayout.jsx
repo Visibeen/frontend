@@ -3,6 +3,7 @@ import { Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import DashboardSidebar from './DashboardSidebar';
 import Footer from './Footer';
+import UserAccountDropdown from '../UserAccountDropdown/UserAccountDropdown';
 import logo from '../../assets/VisibeenLogo.png';
 
 const DashboardContainer = styled(Box)(({ theme }) => ({
@@ -17,6 +18,7 @@ const HeaderSection = styled(Box)(({ theme }) => ({
   backgroundColor: '#0B91D6',
   display: 'flex',
   alignItems: 'center',
+  justifyContent: 'space-between',
   height: '80px',
   padding: '0 30px'
 }));
@@ -43,6 +45,7 @@ const DashboardLayout = ({ children }) => {
     <DashboardContainer>
       <HeaderSection>
         <HeaderLogo src={logo} alt="Visibeen" />
+        <UserAccountDropdown />
       </HeaderSection>
       <MainSection>
         <DashboardSidebar />
