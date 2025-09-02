@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Stack, Typography, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
+import UserAccountDropdown from '../UserAccountDropdown/UserAccountDropdown';
+import { getSession } from '../../utils/authUtils';
 import logo from '../../assets/VisibeenLogo.png';
 
 const HeaderContainer = styled(Box)(({ theme }) => ({
@@ -72,6 +74,12 @@ const LoginButton = styled(Button)(({ theme }) => ({
 
 const Header = () => {
   const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const session = getSession();
+    setIsLoggedIn(!!session && !!session.token);
+  }, []);
 
   const handleLoginClick = () => {
     navigate('/login');
@@ -93,9 +101,13 @@ const Header = () => {
           <NavLink>Blog</NavLink>
         </Navigation>
 
-        <LoginButton onClick={handleLoginClick}>
-          Login
-        </LoginButton>
+        {isLoggedIn ? (
+          <UserAccountDropdown />
+        ) : (
+          <LoginButton onClick={handleLoginClick}>
+            Login
+          </LoginButton>
+        )}
       </HeaderContent>
     </HeaderContainer>
   );
