@@ -335,6 +335,164 @@ const AppointmentsValue = styled(Typography)(({ theme }) => ({
   marginTop: '10px'
 }));
 
+// Products and Services Section Styles
+const ProductsServicesSection = styled(Box)(({ theme }) => ({
+  marginTop: '24px',
+  padding: '20px',
+  backgroundColor: '#ffffff',
+  borderRadius: '8px',
+  border: '1px solid #e5e7eb'
+}));
+
+const ProductsServicesTitle = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '18px',
+  fontWeight: 600,
+  color: '#121927',
+  marginBottom: '16px'
+}));
+
+const TabsContainer = styled(Box)(({ theme }) => ({
+  borderBottom: '1px solid #e5e7eb',
+  marginBottom: '20px'
+}));
+
+const TabButton = styled(Button)(({ theme, active }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '14px',
+  fontWeight: 500,
+  color: active ? '#0B91D6' : '#6b7280',
+  textTransform: 'none',
+  padding: '8px 16px',
+  marginRight: '24px',
+  borderBottom: active ? '2px solid #0B91D6' : '2px solid transparent',
+  borderRadius: 0,
+  minWidth: 'auto',
+  '&:hover': {
+    backgroundColor: 'transparent',
+    color: '#0B91D6'
+  }
+}));
+
+const ProductsGrid = styled(Box)(({ theme }) => ({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+  gap: '16px',
+  marginTop: '16px'
+}));
+
+const ProductCard = styled(Box)(({ theme }) => ({
+  backgroundColor: '#ffffff',
+  borderRadius: '8px',
+  border: '1px solid #e5e7eb',
+  overflow: 'hidden',
+  transition: 'box-shadow 0.2s ease',
+  '&:hover': {
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+  }
+}));
+
+const ProductImage = styled('img')(({ theme }) => ({
+  width: '100%',
+  height: '120px',
+  objectFit: 'cover',
+  backgroundColor: '#f3f4f6'
+}));
+
+const ProductContent = styled(Box)(({ theme }) => ({
+  padding: '12px'
+}));
+
+const ProductTitle = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '14px',
+  fontWeight: 500,
+  color: '#121927',
+  marginBottom: '4px'
+}));
+
+const ProductPrice = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '14px',
+  fontWeight: 600,
+  color: '#0B91D6'
+}));
+
+const ProductsViewAllButton = styled(Button)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '14px',
+  fontWeight: 500,
+  color: '#0B91D6',
+  textTransform: 'none',
+  padding: '8px 16px',
+  border: '1px solid #0B91D6',
+  borderRadius: '6px',
+  backgroundColor: 'transparent',
+  marginTop: '16px',
+  alignSelf: 'flex-start',
+  '&:hover': {
+    backgroundColor: '#0B91D6',
+    color: '#ffffff'
+  }
+}));
+
+const SectionHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '16px'
+}));
+
+// Modal Styles
+const ModalContainer = styled(Modal)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '20px'
+}));
+
+const ModalContent = styled(Box)(({ theme }) => ({
+  backgroundColor: '#ffffff',
+  borderRadius: '12px',
+  padding: '24px',
+  maxWidth: '800px',
+  width: '100%',
+  maxHeight: '80vh',
+  overflow: 'auto',
+  outline: 'none',
+  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+}));
+
+const ModalHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '24px',
+  paddingBottom: '16px',
+  borderBottom: '1px solid #e5e7eb'
+}));
+
+const ModalTitle = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '20px',
+  fontWeight: 600,
+  color: '#121927'
+}));
+
+const CloseButton = styled(IconButton)(({ theme }) => ({
+  color: '#6b7280',
+  '&:hover': {
+    backgroundColor: '#f3f4f6',
+    color: '#121927'
+  }
+}));
+
+const ModalProductsGrid = styled(Box)(({ theme }) => ({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+  gap: '20px'
+}));
+
 const ProfileStrengthCard = styled(Paper)(({ theme }) => ({
   borderRadius: '12px',
   border: '0.6px solid #F6F0F0',
@@ -874,9 +1032,88 @@ const BusinessProfile = () => {
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [localPosts, setLocalPosts] = useState([]);
   const [localPostsLoading, setLocalPostsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('products');
+  const [productsModalOpen, setProductsModalOpen] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [services, setServices] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [servicesLoading, setServicesLoading] = useState(false);
 
   const locationId = searchParams.get('id');
   const open = Boolean(anchorEl);
+
+  // Mock data for products and services
+  const mockProducts = [
+    {
+      id: 1,
+      title: 'Lorem ipsum dolor',
+      price: '$20',
+      image: '/api/placeholder/200/120'
+    },
+    {
+      id: 2,
+      title: 'Lorem ipsum dolor',
+      price: '$20',
+      image: '/api/placeholder/200/120'
+    },
+    {
+      id: 3,
+      title: 'Product Three',
+      price: '$25',
+      image: '/api/placeholder/200/120'
+    },
+    {
+      id: 4,
+      title: 'Product Four',
+      price: '$30',
+      image: '/api/placeholder/200/120'
+    },
+    {
+      id: 5,
+      title: 'Product Five',
+      price: '$15',
+      image: '/api/placeholder/200/120'
+    },
+    {
+      id: 6,
+      title: 'Product Six',
+      price: '$35',
+      image: '/api/placeholder/200/120'
+    }
+  ];
+
+  const mockServices = [
+    {
+      id: 1,
+      title: 'Consultation Service',
+      price: '$50',
+      image: '/api/placeholder/200/120'
+    },
+    {
+      id: 2,
+      title: 'Premium Service',
+      price: '$100',
+      image: '/api/placeholder/200/120'
+    },
+    {
+      id: 3,
+      title: 'Basic Service',
+      price: '$30',
+      image: '/api/placeholder/200/120'
+    },
+    {
+      id: 4,
+      title: 'Advanced Service',
+      price: '$150',
+      image: '/api/placeholder/200/120'
+    },
+    {
+      id: 5,
+      title: 'Express Service',
+      price: '$75',
+      image: '/api/placeholder/200/120'
+    }
+  ];
 
   // Notification handler
   const handleNotifications = useCallback((newNotifications, allNotifications) => {
@@ -982,6 +1219,167 @@ const BusinessProfile = () => {
       GMBNotificationService.stopPolling();
     };
   }, [locationId, handleNotifications, fetchLocalPosts]);
+
+  // Fetch products and services from GMB API
+  const fetchProductsAndServices = async () => {
+    if (!locationId) return;
+    
+    try {
+      const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
+      
+      // Fetch products
+      setProductsLoading(true);
+      try {
+        console.log('[BusinessProfile] Fetching products for location:', locationId);
+        const productsData = await GMBService.getProducts(locationId, accessToken);
+        console.log('[BusinessProfile] Products fetched:', productsData);
+        
+        // Transform API data to match our component structure
+        const transformedProducts = productsData.map((product, index) => ({
+          id: product.name?.split('/').pop() || index + 1,
+          title: product.productId || product.name || `Product ${index + 1}`,
+          price: product.price?.amount ? `$${product.price.amount}` : 'Price on request',
+          image: product.media?.[0]?.sourceUrl || '/api/placeholder/200/120',
+          description: product.description || ''
+        }));
+        
+        setProducts(transformedProducts);
+      } catch (error) {
+        console.warn('Error fetching products:', error);
+        setProducts([]);
+      } finally {
+        setProductsLoading(false);
+      }
+
+      // Fetch services
+      setServicesLoading(true);
+      try {
+        console.log('[BusinessProfile] Fetching services for location:', locationId);
+        const servicesData = await GMBService.getServices(locationId, accessToken);
+        console.log('[BusinessProfile] Services fetched:', servicesData);
+        
+        // Transform API data to match our component structure
+        const transformedServices = servicesData.map((service, index) => ({
+          id: service.name?.split('/').pop() || index + 1,
+          title: service.serviceId || service.name || `Service ${index + 1}`,
+          price: service.price?.amount ? `$${service.price.amount}` : 'Price on request',
+          image: service.media?.[0]?.sourceUrl || '/api/placeholder/200/120',
+          description: service.description || ''
+        }));
+        
+        setServices(transformedServices);
+      } catch (error) {
+        console.warn('Error fetching services:', error);
+        setServices([]);
+      } finally {
+        setServicesLoading(false);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching products and services:', error);
+      setProductsLoading(false);
+      setServicesLoading(false);
+    }
+  };
+
+  const fetchAvailableProfiles = async () => {
+    setProfilesLoading(true);
+    try {
+      const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
+      console.log('[Switch Account] Starting to fetch profiles...');
+      const accounts = await GMBService.getAccounts(accessToken);
+      console.log('[Switch Account] Found accounts:', accounts.length);
+      
+      if (accounts.length === 0) {
+        setAvailableProfiles([]);
+        return;
+      }
+
+      // Fetch locations for ALL accounts (same as dashboard logic)
+      const allLocations = [];
+      for (const acct of accounts) {
+        try {
+          if (!acct?.name) continue;
+          console.log('[Switch Account] Fetching locations for account:', acct.name);
+          const locs = await GMBService.getLocations(accessToken, acct.name);
+          console.log('[Switch Account] Found locations for account:', acct.name, locs?.length || 0);
+          if (Array.isArray(locs) && locs.length) {
+            // Attach account context to each location
+            locs.forEach(l => allLocations.push({ account: acct, loc: l }));
+          }
+        } catch (e) {
+          console.warn('Failed to fetch locations for account', acct?.name, e?.message || e);
+        }
+      }
+      console.log('[Switch Account] Total locations found:', allLocations.length);
+
+      if (allLocations.length === 0) {
+        // Fallback: present accounts as rows if no locations are returned (same as dashboard)
+        const fallback = accounts.map((account) => {
+          let mappedStatus = 'unverified';
+          const verificationState = account.verificationState;
+          if (verificationState === 'VERIFIED') mappedStatus = 'verified';
+          else if (verificationState === 'PENDING_VERIFICATION' || verificationState === 'PENDING') mappedStatus = 'pending_verification';
+          else if (verificationState === 'SUSPENDED') mappedStatus = 'suspended';
+          
+          return {
+            id: account.name?.split('/').pop(),
+            name: account.accountName || 'Business Account',
+            address: 'Account level - no location data',
+            status: mappedStatus,
+            locationId: account.name?.split('/').pop(),
+            isCurrentLocation: account.name?.split('/').pop() === locationId
+          };
+        });
+        setAvailableProfiles(fallback);
+        return;
+      }
+
+      // Normalize locations to same format as dashboard
+      const normalized = await Promise.all(allLocations.map(async ({ account, loc }) => {
+        const id = loc.name?.split('/').pop();
+        const address = loc.storefrontAddress?.addressLines?.join(', ') ||
+                        loc.storefrontAddress?.locality ||
+                        loc.storefrontAddress?.administrativeArea ||
+                        'Address not available';
+                
+        // Fetch verification via VoiceOfMerchantState API (same as dashboard)
+        let simplifiedStatus = 'unknown';
+        let hasVOM = false;
+        try {
+          const vom = await GMBService.getVoiceOfMerchantState(id, accessToken);
+          simplifiedStatus = vom?.simplifiedStatus || 'unknown';
+          hasVOM = vom?.raw?.hasVoiceOfMerchant === true;
+        } catch (e) {
+          console.warn('VOM fetch failed for', id, e?.message || e);
+        }
+
+        // Map to UI status (same logic as dashboard)
+        const status = (
+          (hasVOM || simplifiedStatus === 'verified') ? 'verified' :
+          simplifiedStatus === 'suspended' ? 'suspended' :
+          simplifiedStatus === 'pending_verification' ? 'pending_verification' :
+          'unverified'
+        );
+
+        return {
+          id,
+          name: loc.title || account?.accountName || 'Business Location',
+          address,
+          status,
+          locationId: id,
+          isCurrentLocation: id === locationId
+        };
+      }));
+
+      console.log('[Switch Account] Final normalized profiles:', normalized);
+      setAvailableProfiles(normalized);
+    } catch (err) {
+      console.error('Error fetching available profiles:', err);
+    } finally {
+      setProfilesLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchLocationData = async () => {
@@ -1146,14 +1544,20 @@ const BusinessProfile = () => {
         }
 
         setLoading(false);
-      } catch (err) {
-        console.error('Error fetching location data:', err);
-        setError(err.message || 'Failed to fetch location data');
+      } catch (error) {
+        console.error('Error in main data fetch:', error);
+        setError('Failed to load business profile data');
         setLoading(false);
       }
     };
 
     fetchLocationData();
+    
+    // Fetch available profiles for the dropdown
+    fetchAvailableProfiles();
+    
+    // Fetch products and services
+    fetchProductsAndServices();
   }, [locationId]);
 
   if (loading) {
@@ -1265,105 +1669,6 @@ const BusinessProfile = () => {
   const handleProfileSwitch = (profile) => {
     navigate(`/business-profile?id=${profile.locationId}`);
     setAnchorEl(null);
-  };
-
-  const fetchAvailableProfiles = async () => {
-    setProfilesLoading(true);
-    try {
-      const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
-      console.log('[Switch Account] Starting to fetch profiles...');
-      const accounts = await GMBService.getAccounts(accessToken);
-      console.log('[Switch Account] Found accounts:', accounts.length);
-      
-      if (accounts.length === 0) {
-        setAvailableProfiles([]);
-        return;
-      }
-
-      // Fetch locations for ALL accounts (same as dashboard logic)
-      const allLocations = [];
-      for (const acct of accounts) {
-        try {
-          if (!acct?.name) continue;
-          console.log('[Switch Account] Fetching locations for account:', acct.name);
-          const locs = await GMBService.getLocations(accessToken, acct.name);
-          console.log('[Switch Account] Found locations for account:', acct.name, locs?.length || 0);
-          if (Array.isArray(locs) && locs.length) {
-            // Attach account context to each location
-            locs.forEach(l => allLocations.push({ account: acct, loc: l }));
-          }
-        } catch (e) {
-          console.warn('Failed to fetch locations for account', acct?.name, e?.message || e);
-        }
-      }
-      console.log('[Switch Account] Total locations found:', allLocations.length);
-
-      if (allLocations.length === 0) {
-        // Fallback: present accounts as rows if no locations are returned (same as dashboard)
-        const fallback = accounts.map((account) => {
-          let mappedStatus = 'unverified';
-          const verificationState = account.verificationState;
-          if (verificationState === 'VERIFIED') mappedStatus = 'verified';
-          else if (verificationState === 'PENDING_VERIFICATION' || verificationState === 'PENDING') mappedStatus = 'pending_verification';
-          else if (verificationState === 'SUSPENDED') mappedStatus = 'suspended';
-          
-          return {
-            id: account.name?.split('/').pop(),
-            name: account.accountName || 'Business Account',
-            address: 'Account level - no location data',
-            status: mappedStatus,
-            locationId: account.name?.split('/').pop(),
-            isCurrentLocation: account.name?.split('/').pop() === locationId
-          };
-        });
-        setAvailableProfiles(fallback);
-        return;
-      }
-
-      // Normalize locations to same format as dashboard
-      const normalized = await Promise.all(allLocations.map(async ({ account, loc }) => {
-        const id = loc.name?.split('/').pop();
-        const address = loc.storefrontAddress?.addressLines?.join(', ') ||
-                        loc.storefrontAddress?.locality ||
-                        loc.storefrontAddress?.administrativeArea ||
-                        'Address not available';
-                
-        // Fetch verification via VoiceOfMerchantState API (same as dashboard)
-        let simplifiedStatus = 'unknown';
-        let hasVOM = false;
-        try {
-          const vom = await GMBService.getVoiceOfMerchantState(id, accessToken);
-          simplifiedStatus = vom?.simplifiedStatus || 'unknown';
-          hasVOM = vom?.raw?.hasVoiceOfMerchant === true;
-        } catch (e) {
-          console.warn('VOM fetch failed for', id, e?.message || e);
-        }
-
-        // Map to UI status (same logic as dashboard)
-        const status = (
-          (hasVOM || simplifiedStatus === 'verified') ? 'verified' :
-          simplifiedStatus === 'suspended' ? 'suspended' :
-          simplifiedStatus === 'pending_verification' ? 'pending_verification' :
-          'unverified'
-        );
-
-        return {
-          id,
-          name: loc.title || account?.accountName || 'Business Location',
-          address,
-          status,
-          locationId: id,
-          isCurrentLocation: id === locationId
-        };
-      }));
-
-      console.log('[Switch Account] Final normalized profiles:', normalized);
-      setAvailableProfiles(normalized);
-    } catch (err) {
-      console.error('Error fetching available profiles:', err);
-    } finally {
-      setProfilesLoading(false);
-    }
   };
 
   // Handler functions for button clicks
@@ -1507,12 +1812,12 @@ const BusinessProfile = () => {
               <HeaderLink onClick={goToHeatmap}>Open Heatmap</HeaderLink>
             </HeaderLeft>
             <SwitchAccountButton
-              onClick={() => {
-                navigate('/dashboard');
+              onClick={(event) => {
+                setAnchorEl(event.currentTarget);
               }}
             >
               <SwitchAccountIcon width={17} height={15} color="#121927" />
-              Switch Account
+              Switch Profile
             </SwitchAccountButton>
             <Menu
               anchorEl={anchorEl}
@@ -2008,6 +2313,69 @@ const BusinessProfile = () => {
                 <AppointmentsLabel>Appointments:</AppointmentsLabel>
                 <AppointmentsValue>facebook.com, linkedin.com, e2egroup.in</AppointmentsValue>
               </AppointmentsSection>
+
+              <ProductsServicesSection>
+                <SectionHeader>
+                  <ProductsServicesTitle>Products & Services</ProductsServicesTitle>
+                  <ProductsViewAllButton onClick={() => setProductsModalOpen(true)}>
+                    View All
+                  </ProductsViewAllButton>
+                </SectionHeader>
+                <TabsContainer>
+                  <TabButton 
+                    active={activeTab === 'products'} 
+                    onClick={() => setActiveTab('products')}
+                  >
+                    Products
+                  </TabButton>
+                  <TabButton 
+                    active={activeTab === 'services'} 
+                    onClick={() => setActiveTab('services')}
+                  >
+                    Services
+                  </TabButton>
+                </TabsContainer>
+                
+                <ProductsGrid>
+                  {(productsLoading || servicesLoading) ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '120px', gridColumn: '1 / -1' }}>
+                      <CircularProgress size={24} />
+                    </Box>
+                  ) : (activeTab === 'products' ? products : services).length > 0 ? (
+                    (activeTab === 'products' ? products : services).slice(0, 2).map((item) => (
+                      <ProductCard key={item.id}>
+                        <ProductImage 
+                          src={item.image} 
+                          alt={item.title}
+                          onError={(e) => {
+                            e.target.style.backgroundColor = '#f3f4f6';
+                            e.target.style.display = 'flex';
+                            e.target.style.alignItems = 'center';
+                            e.target.style.justifyContent = 'center';
+                            e.target.innerHTML = '<span style="color: #9ca3af; font-size: 12px;">No Image</span>';
+                          }}
+                        />
+                        <ProductContent>
+                          <ProductTitle>{item.title}</ProductTitle>
+                          <ProductPrice>{item.price}</ProductPrice>
+                        </ProductContent>
+                      </ProductCard>
+                    ))
+                  ) : (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      minHeight: '120px', 
+                      gridColumn: '1 / -1',
+                      color: '#6b7280',
+                      fontSize: '14px'
+                    }}>
+                      No {activeTab} available
+                    </Box>
+                  )}
+                </ProductsGrid>
+              </ProductsServicesSection>
             </BusinessProfileCard>
 
             <ProfileStrengthCard>
@@ -2369,6 +2737,45 @@ const BusinessProfile = () => {
           </FeedCard>
         </ContentWrapper>
       </PageContainer>
+
+      {/* Products/Services Modal */}
+      <ModalContainer
+        open={productsModalOpen}
+        onClose={() => setProductsModalOpen(false)}
+      >
+        <ModalContent>
+          <ModalHeader>
+            <ModalTitle>
+              All {activeTab === 'products' ? 'Products' : 'Services'}
+            </ModalTitle>
+            <CloseButton onClick={() => setProductsModalOpen(false)}>
+              <CloseIcon />
+            </CloseButton>
+          </ModalHeader>
+          
+          <ModalProductsGrid>
+            {(activeTab === 'products' ? products : services).map((item) => (
+              <ProductCard key={item.id}>
+                <ProductImage 
+                  src={item.image} 
+                  alt={item.title}
+                  onError={(e) => {
+                    e.target.style.backgroundColor = '#f3f4f6';
+                    e.target.style.display = 'flex';
+                    e.target.style.alignItems = 'center';
+                    e.target.style.justifyContent = 'center';
+                    e.target.innerHTML = '<span style="color: #9ca3af; font-size: 12px;">No Image</span>';
+                  }}
+                />
+                <ProductContent>
+                  <ProductTitle>{item.title}</ProductTitle>
+                  <ProductPrice>{item.price}</ProductPrice>
+                </ProductContent>
+              </ProductCard>
+            ))}
+          </ModalProductsGrid>
+        </ModalContent>
+      </ModalContainer>
     </DashboardLayout>
   );
 };
