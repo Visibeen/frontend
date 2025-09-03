@@ -1601,31 +1601,19 @@ const BusinessProfile = () => {
     'Address not available';
   const primaryPhone = locationData?.phoneNumbers?.primaryPhone || 'Not available';
   const websiteUrl = locationData?.websiteUri || 'Not available';
-  // Create Google Maps URL using the correct CID
   const createMapsUrl = () => {
-    // Map GMB location IDs to actual Google Maps CIDs
-    const locationToCidMap = {
-      '2506931426698722357': '9011343252259629974', // Your actual business CID
-    };
-    
-    if (locationData?.name) {
-      const locationId = locationData.name.split('/').pop();
-      const actualCid = locationToCidMap[locationId];
-      
-      if (actualCid) {
-        return `https://maps.google.com/maps?cid=${actualCid}`;
-      }
+    const placeId = locationData?.metadata?.placeId || locationData?.placeId || '';
+    if (placeId && String(placeId).trim()) {
+      return `https://www.google.com/maps/place/?q=place_id:${placeId}`;
     }
-    
-    // Fallback to address search
-    const encodedAddress = encodeURIComponent(businessAddress);
-    return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    const encodedAddress = encodeURIComponent(businessAddress || '');
+    return encodedAddress
+      ? `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`
+      : '';
   };
   const mapsUri = createMapsUrl();
-  // Determine verification status using VoiceOfMerchantState flags and simplified status
   const isVerified = verificationState.isVerified;
 
-  // Build Heatmap link handler now that we have businessTitle and locationData
   const currentPlaceId = locationData?.metadata?.placeId || locationData?.placeId || '';
   const goToHeatmap = () => {
     const qs = new URLSearchParams();
