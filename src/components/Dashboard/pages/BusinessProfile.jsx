@@ -12,6 +12,9 @@ import AddPhotoIcon from '../../icons/AddPhotoIcon';
 import WebsiteGlobeIcon from '../../icons/WebsiteGlobeIcon';
 import DirectionsIcon from '../../icons/DirectionsIcon';
 import ShareIcon from '../../icons/ShareIcon';
+import FacebookIcon from '../../icons/FacebookIcon';
+import TwitterIcon from '../../icons/TwitterIcon';
+import WhatsAppIcon from '../../icons/WhatsAppIcon';
 import QRCodeIcon from '../../icons/QRCodeIcon';
 import SwitchAccountIcon from '../../icons/SwitchAccountIcon';
 import ProfileGaugeIcon from '../../icons/ProfileGaugeIcon';
@@ -1032,6 +1035,9 @@ const BusinessProfile = () => {
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [localPosts, setLocalPosts] = useState([]);
   const [localPostsLoading, setLocalPostsLoading] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrProviderIndex, setQrProviderIndex] = useState(0);
+  const [shareAnchorEl, setShareAnchorEl] = useState(null);
   const [activeTab, setActiveTab] = useState('products');
   const [productsModalOpen, setProductsModalOpen] = useState(false);
   const [products, setProducts] = useState([]);
@@ -1629,6 +1635,60 @@ const BusinessProfile = () => {
     navigate(`/profile-strength?${qs.toString()}`);
   };
 
+  // Build review link for QR code with robust fallbacks
+  const safeReviewLink = (() => {
+    if (currentPlaceId) {
+      return `https://search.google.com/local/writereview?placeid=${currentPlaceId}`;
+    }
+    if (mapsUri) {
+      return mapsUri;
+    }
+    const encodedAddress = encodeURIComponent(businessAddress || '');
+    if (encodedAddress) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    }
+    return '';
+  })();
+
+  const qrProviders = [
+    (url) => `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`,
+    (url) => `https://quickchart.io/qr?text=${encodeURIComponent(url)}&size=220`
+  ];
+  const qrSrc = safeReviewLink ? qrProviders[qrProviderIndex](safeReviewLink) : ''
+  const shareUrl = mapsUri || window.location.href;
+  const shareText = `${businessTitle} on Google`; 
+  const openShareMenu = (event) => setShareAnchorEl(event.currentTarget);
+  const closeShareMenu = () => setShareAnchorEl(null);
+  const handleNativeShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: businessTitle, text: shareText, url: shareUrl });
+      } else {
+        window.open(shareUrl, '_blank');
+      }
+    } catch (_) {}
+    closeShareMenu();
+  };
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Link copied to clipboard');
+    } catch (_) {
+      // fallback
+    }
+    closeShareMenu();
+  };
+  const handleSharePlatform = (platform) => {
+    const encodedUrl = encodeURIComponent(shareUrl);
+    const encodedText = encodeURIComponent(shareText);
+    let url = '';
+    if (platform === 'whatsapp') url = `https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}`;
+    if (platform === 'facebook') url = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+    if (platform === 'twitter') url = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    closeShareMenu();
+  };
+
   // Calculate real reviews data - handle new GMBService format
   const reviews = Array.isArray(reviewsData?.reviews) ? reviewsData.reviews : (reviewsData?.reviews?.reviews || []);
   // Map Google's enum star ratings (e.g., 'FIVE') to numeric values
@@ -1921,6 +1981,31 @@ const BusinessProfile = () => {
           {/* Main Grid - Business Profile + Profile Strength */}
           <MainGrid>
             <BusinessProfileCard>
+              <Dialog open={qrOpen} onClose={() => setQrOpen(false)}>
+                <DialogTitle>Review us on Google</DialogTitle>
+                <DialogContent>
+                  {qrSrc ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                      <img
+                        src={qrSrc}
+                        alt="Review QR"
+                        width={220}
+                        height={220}
+                        onError={() => setQrProviderIndex((i) => (i + 1) % 2)}
+                      />
+                      <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>{safeReviewLink}</Typography>
+                    </Box>
+                  ) : (
+                    <Typography sx={{ fontSize: '14px' }}>Review link unavailable.</Typography>
+                  )}
+                </DialogContent>
+                <DialogActions>
+                  {safeReviewLink && (
+                    <Button onClick={() => window.open(safeReviewLink, '_blank', 'noopener,noreferrer')}>Open link</Button>
+                  )}
+                  <Button onClick={() => setQrOpen(false)}>Close</Button>
+                </DialogActions>
+              </Dialog>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                 <BusinessTitle>
                   {businessTitle}
@@ -1963,7 +2048,7 @@ const BusinessProfile = () => {
 
               <ReviewsRow>
                 <ReviewsLabel>Reviews :</ReviewsLabel>
-                <StarRatingIcon width={500} height={24} color="#F59E0B" />
+                <StarRatingIcon width={100} height={24} color="#F59E0B" />
                 <ReviewsRating>{averageRating.toFixed(2)} ({totalReviews} reviews)</ReviewsRating>
               </ReviewsRow>
 
@@ -2204,7 +2289,7 @@ const BusinessProfile = () => {
                     />
                     <TextField
                       label="Phone Number"
-                      defaultValue={locationData?.primaryPhone || 'Not available'}
+                      defaultValue={locationData?.phoneNumbers.primaryPhone || 'Not available'}
                       fullWidth
                       variant="outlined"
                     />
@@ -2297,12 +2382,40 @@ const BusinessProfile = () => {
                   Directions
                   <ActionSubtext>{mapsUri ? 'Open in Maps' : 'Search Address'}</ActionSubtext>
                 </ActionButton>
-                <ActionButton>
+                <ActionButton onClick={openShareMenu}>
                   <ShareIcon width={15} height={15} color="#121927" />
                   Share
                   <ActionSubtext>Link address</ActionSubtext>
                 </ActionButton>
-                <ActionButton>
+                <Menu
+                  anchorEl={shareAnchorEl}
+                  open={Boolean(shareAnchorEl)}
+                  onClose={closeShareMenu}
+                >
+                  <MenuItem onClick={handleNativeShare}>
+                    {/* Share */}
+                  </MenuItem>
+                  <MenuItem onClick={() => handleSharePlatform('whatsapp')}>
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <WhatsAppIcon width={16} height={16} />
+                    </ListItemIcon>
+                    <ListItemText primary="WhatsApp" />
+                  </MenuItem>
+                  <MenuItem onClick={() => handleSharePlatform('facebook')}>
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <FacebookIcon width={16} height={16} />
+                    </ListItemIcon>
+                    <ListItemText primary="Facebook" />
+                  </MenuItem>
+                  <MenuItem onClick={() => handleSharePlatform('twitter')}>
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <TwitterIcon width={16} height={16} />
+                    </ListItemIcon>
+                    <ListItemText primary="Twitter" />
+                  </MenuItem>
+                  <MenuItem onClick={handleCopyLink}>Copy link</MenuItem>
+                </Menu>
+                <ActionButton onClick={() => setQrOpen(true)}>
                   <QRCodeIcon width={15} height={15} color="#121927" />
                   Review QR
                   <ActionSubtext>Shot link</ActionSubtext>
@@ -2560,6 +2673,7 @@ const BusinessProfile = () => {
                 <ReviewsStatValue>{reviewsData?.totalReviewCount || reviews.length || 0}</ReviewsStatValue>
                 <ReviewsStatLabel>Total Reviews</ReviewsStatLabel>
               </ReviewsStat>
+              <StatsDivider />
               <ReviewsStat>
                 <ReviewsStatValue>{reviews.filter(review => {
                   const reviewDate = new Date(review.createTime);
@@ -2569,6 +2683,7 @@ const BusinessProfile = () => {
                 }).length}</ReviewsStatValue>
                 <ReviewsStatLabel>Reviews In Last 7 Days</ReviewsStatLabel>
               </ReviewsStat>
+              <StatsDivider />
               <ReviewsStat>
                 <ReviewsStatValue>{reviews.filter(review => {
                   const reviewDate = new Date(review.createTime);
