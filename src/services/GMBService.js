@@ -107,17 +107,27 @@ class GMBService {
     }
     
     if (res.status === 401) {
-      // try refresh
+      // Try refresh once
       const newToken = await tokenManager.getValidAccessToken('google');
       const retryHeaders = {
         ...headers,
         Authorization: `Bearer ${newToken}`,
       };
-      // Remove project header if it caused issues before
       if (this.projectId && headers['X-Goog-User-Project']) {
         delete retryHeaders['X-Goog-User-Project'];
       }
       res = await fetch(url, { ...options, headers: retryHeaders });
+      // If still unauthorized, clear tokens and redirect to login
+      if (res.status === 401 && typeof window !== 'undefined') {
+        try {
+          tokenManager.remove('google');
+          localStorage.removeItem('googleAccessToken');
+          sessionStorage.removeItem('googleAccessToken');
+        } catch (_) {}
+        window.alert('Your Google session has expired. Please log in again.');
+        window.location.href = '/login';
+        return res;
+      }
     }
     return res;
   }
