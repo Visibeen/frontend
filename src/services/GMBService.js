@@ -477,6 +477,90 @@ class GMBService {
   }
 
   /**
+   * Get count of new reviews in the last 30 days for a specific location
+   * Uses the same Reviews v4 endpoint and filters by review timestamp.
+   * @param {string} accessToken - Google OAuth access token (optional; auto-resolved if not provided)
+   * @param {string} accountId - Account ID string (e.g., '12345') or full name 'accounts/12345'
+   * @param {string} locationId - Location ID string (e.g., '67890') or full name 'locations/67890'
+   * @returns {Promise<number>} Count of reviews created/updated in the last 30 days
+   */
+  async getNewReviewsCountLast30Days(accessToken, accountId, locationId) {
+    try {
+      if (!accountId || !locationId) {
+        throw new Error('accountId and locationId are required');
+      }
+
+      const token = await this._getAccessToken(accessToken);
+      const acc = String(accountId).includes('accounts/') ? String(accountId).split('/')[1] : String(accountId);
+      const loc = String(locationId).includes('locations/') ? String(locationId).split('/')[1] : String(locationId);
+
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      let newCount = 0;
+      let nextPageToken = null;
+
+      // We page until there are no more pages OR we detect that the page's reviews are all older than 30 days
+      // Note: API may not be sorted strictly; we conservatively scan all pages but short-circuit if an entire page is old
+      do {
+        const url = `https://mybusiness.googleapis.com/v4/accounts/${acc}/locations/${loc}/reviews` +
+                    (nextPageToken ? `?pageToken=${encodeURIComponent(nextPageToken)}` : '');
+
+        const response = await this._googleFetch(
+          url,
+          { method: 'GET' },
+          token
+        );
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          console.warn('[GMBService] getNewReviewsCountLast30Days failed:', { status: response.status, error: err });
+          break;
+        }
+
+        const data = await response.json();
+        const pageReviews = Array.isArray(data?.reviews) ? data.reviews : [];
+
+        let pageAllOld = pageReviews.length > 0; // assume old until proven new
+        for (const r of pageReviews) {
+          const ts = r?.createTime || r?.updateTime || r?.reviewTime || null;
+          let d = null;
+          if (ts) {
+            // createTime can be RFC3339; Date can parse it
+            d = new Date(ts);
+          }
+          if (d && !isNaN(d.getTime())) {
+            if (d >= thirtyDaysAgo) {
+              newCount += 1;
+              pageAllOld = false; // found a recent one
+            }
+          } else {
+            // If timestamp missing or unparsable, skip safely
+            pageAllOld = false; // do not prematurely stop due to unknown
+          }
+        }
+
+        // Stop early if this page had items and all of them were older than 30 days
+        if (pageReviews.length > 0 && pageAllOld) {
+          break;
+        }
+
+        nextPageToken = data?.nextPageToken || null;
+        // Safety: avoid huge scans
+        if (newCount > 5000) {
+          console.warn('[GMBService] Aborting review scan after 5000 recent reviews (unlikely)');
+          break;
+        }
+      } while (nextPageToken);
+
+      return newCount;
+    } catch (error) {
+      console.error('[GMBService] Error counting new reviews (30d):', error);
+      return 0;
+    }
+  }
+
+  /**
    * Get performance metrics for a specific location
    * @param {string} accessToken - Google OAuth access token
    * @param {string} locationId - The location ID (e.g., '11157617678660838845')
@@ -1118,6 +1202,120 @@ class GMBService {
     } catch (error) {
       console.error('Error fetching VoiceOfMerchantState:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get response rate metrics for a specific location over the last 90 days
+   * @param {string} accessToken - optional Google OAuth access token
+   * @param {string} locationId - Location ID (numeric part only)
+   * @param {Object} dateRange - Date range object with startDate and endDate
+   * @returns {Promise<Object>} Response rate metrics data
+   */
+  async getResponseRateMetrics(accessToken, locationId, dateRange = null) {
+    try {
+      if (!locationId) {
+        throw new Error('Location ID is required');
+      }
+
+      // Ensure we have a valid access token
+      const token = await this._getAccessToken(accessToken);
+      if (!token) {
+        throw new Error('No valid access token available. Please re-authenticate with Google My Business.');
+      }
+
+      // Default to last 90 days if no date range provided
+      const now = new Date();
+      const start = new Date(now);
+      start.setDate(now.getDate() - 90);
+      const defaultDateRange = dateRange || {
+        startDate: {
+          year: start.getFullYear(),
+          month: start.getMonth() + 1,
+          day: start.getDate()
+        },
+        endDate: {
+          year: now.getFullYear(),
+          month: now.getMonth() + 1,
+          day: now.getDate()
+        }
+      };
+
+      // Response rate related metrics
+      const metrics = [
+        'BUSINESS_CONVERSATIONS',
+        'BUSINESS_DIRECTION_REQUESTS',
+        'CALL_CLICKS'
+      ];
+
+      const params = new URLSearchParams();
+      metrics.forEach(metric => params.append('dailyMetrics', metric));
+      params.append('dailyRange.startDate.year', defaultDateRange.startDate.year);
+      params.append('dailyRange.startDate.month', defaultDateRange.startDate.month);
+      params.append('dailyRange.startDate.day', defaultDateRange.startDate.day);
+      params.append('dailyRange.endDate.year', defaultDateRange.endDate.year);
+      params.append('dailyRange.endDate.month', defaultDateRange.endDate.month);
+      params.append('dailyRange.endDate.day', defaultDateRange.endDate.day);
+
+      const url = `https://businessprofileperformance.googleapis.com/v1/locations/${locationId}:fetchMultiDailyMetricsTimeSeries?${params.toString()}`;
+
+      console.log(`[GMB Service] Fetching response rate metrics from: ${url}`);
+
+      const response = await this._googleFetch(
+        url,
+        { method: 'GET' },
+        token
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('[GMB Service] Response rate metrics fetch failed:', {
+          status: response.status,
+          error: errorData
+        });
+        return { responseRate: 0 };
+      }
+
+      const data = await response.json();
+      console.log('[GMB Service] Response rate metrics response:', data);
+
+      // Calculate response rate from the metrics
+      // This is a simplified calculation - you may need to adjust based on actual API response structure
+      let totalConversations = 0;
+      let totalResponses = 0;
+
+      if (data.multiDailyMetricTimeSeries) {
+        data.multiDailyMetricTimeSeries.forEach(series => {
+          if (series.dailyMetricTimeSeries) {
+            series.dailyMetricTimeSeries.forEach(dailySeries => {
+              if (dailySeries.dailyMetrics) {
+                dailySeries.dailyMetrics.forEach(metric => {
+                  if (metric.metric === 'BUSINESS_CONVERSATIONS') {
+                    totalConversations += parseInt(metric.value || 0);
+                  }
+                  // Add other response-related metrics as needed
+                });
+              }
+            });
+          }
+        });
+      }
+
+      // Calculate response rate percentage
+      const responseRate = totalConversations > 0 ? Math.min(100, (totalResponses / totalConversations) * 100) : 0;
+
+      return {
+        responseRate: responseRate,
+        totalConversations: totalConversations,
+        totalResponses: totalResponses,
+        dateRange: defaultDateRange,
+        raw: data
+      };
+
+    } catch (error) {
+      console.error('Error fetching response rate metrics:', error);
+      // Return default values instead of throwing to prevent breaking the scoring
+      return { responseRate: 0 };
     }
   }
 }

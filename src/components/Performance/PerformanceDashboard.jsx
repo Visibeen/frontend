@@ -34,7 +34,8 @@ const PerformanceDashboard = ({
   error = null,
   onExportToPDF,
   onTimeRangeChange,
-  selectedTimeRange = '6 Month'
+  selectedTimeRange = '6 Month',
+  currentProfile = null
 }) => {
   const [dashboardData, setDashboardData] = useState(mockQuery);
   const [isLoading, setIsLoading] = useState(loading);
@@ -123,6 +124,7 @@ const PerformanceDashboard = ({
       <PhotoEngagementTable 
         photoEngagementData={dashboardData.photoEngagementData}
       />
+      
       
       <CompetitorSummaryTable 
         competitorSummary={dashboardData.competitorSummary}
