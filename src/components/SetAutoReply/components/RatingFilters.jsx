@@ -55,19 +55,23 @@ const KeywordsInput = styled('input')(({ theme }) => ({
 }));
 
 const RatingFilters = ({ ratingOptions, selectedRatings, keywords, onRatingToggle, onKeywordsChange }) => {
+  const safeOptions = Array.isArray(ratingOptions) ? ratingOptions : [];
+  const safeSelected = Array.isArray(selectedRatings) ? selectedRatings : [];
+  const safeKeywords = typeof keywords === 'string' ? keywords : '';
+
   const handleRatingClick = (rating) => {
-    onRatingToggle(rating);
+    if (typeof onRatingToggle === 'function') onRatingToggle(rating);
   };
 
   return (
     <FiltersContainer>
       <FiltersLabel>Select Ratings</FiltersLabel>
       <ChipsContainer>
-        {ratingOptions.map((option) => (
+        {safeOptions.map((option) => (
           <RatingChip
             key={option.value}
             label={option.label}
-            selected={selectedRatings.includes(option.label)}
+            selected={safeSelected.includes(option.label)}
             onClick={() => handleRatingClick(option.label)}
             clickable
           />
@@ -76,8 +80,8 @@ const RatingFilters = ({ ratingOptions, selectedRatings, keywords, onRatingToggl
       <KeywordsInput
         type="text"
         placeholder="Select keywords"
-        value={keywords}
-        onChange={(e) => onKeywordsChange(e.target.value)}
+        value={safeKeywords}
+        onChange={(e) => onKeywordsChange && onKeywordsChange(e.target.value)}
       />
     </FiltersContainer>
   );

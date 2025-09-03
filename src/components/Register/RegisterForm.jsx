@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Box, Stack, Typography, TextField, Button, Link } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../../firebase';
+import { signInWithGoogleOnce } from '../../utils/googlePopupAuth';
 import { setSession } from '../../utils/authUtils';
 import GoogleButton from '../Login/GoogleButton';
 import FormDivider from '../Login/FormDivider';
@@ -197,7 +197,12 @@ const RegisterForm = () => {
 
   const handleGoogleRegister = async () => {
     try {
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithGoogleOnce(auth, provider, (p) => {
+        p.setCustomParameters({
+          prompt: 'consent',
+          include_granted_scopes: 'true'
+        });
+      });
       const user = result.user;
 
       const res = await fetch('http://52.44.140.230:8089/api/v1/customer/auth/signUp', {

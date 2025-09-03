@@ -4,8 +4,9 @@
  * using the client ID and secret from the .env file
  */
 
-import { auth, provider, signInWithPopup } from '../firebase';
+import { auth, provider } from '../firebase';
 import { GoogleAuthProvider } from 'firebase/auth';
+import { signInWithGoogleOnce } from '../utils/googlePopupAuth';
 import oauthConfig from '../config/oauth';
 import tokenManager from '../auth/TokenManager';
 import { registerGoogleRefresher } from '../auth/googleRefresher';
@@ -183,7 +184,12 @@ class GMBService {
         'include_granted_scopes': true
       });
 
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithGoogleOnce(auth, provider, (p) => {
+        p.setCustomParameters({
+          prompt: 'consent',
+          include_granted_scopes: 'true'
+        });
+      });
       
       // Get the OAuth access token (not Firebase ID token)
       const credential = GoogleAuthProvider.credentialFromResult(result);
