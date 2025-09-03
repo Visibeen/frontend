@@ -7,7 +7,7 @@ const PostService = {
       headers: {}
     };
     if (token) {
-      config.headers.Authorization = `${token?.token}`;
+      config.headers.Authorization = `${token}`;
     }
     const res = await axios.post(url, payload, config);
     return res.data;

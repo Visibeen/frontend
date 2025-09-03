@@ -72,15 +72,17 @@ const BenchmarkingTable = ({ reputationData }) => {
     topCompetitor: { rating: 4.4, responseRate: 48, negativeRatio: 44, reviewCount: 60 }
   };
 
-  // Helper function to safely format numbers and avoid NaN
+  // Helpers: safe parsing and consistent formatting
   const safeNumber = (value, defaultValue = 0) => {
     const num = Number(value);
     return isNaN(num) ? defaultValue : num;
   };
 
+  const clamp = (n, min = 0, max = 100) => Math.min(max, Math.max(min, n));
+  const numberFormatter = new Intl.NumberFormat();
   const safeRating = (value) => safeNumber(value, 4.0).toFixed(1);
-  const safePercentage = (value) => `${Math.round(safeNumber(value, 0))}%`;
-  const safeCount = (value) => Math.max(0, Math.round(safeNumber(value, 0))).toString();
+  const safePercentage = (value) => `${clamp(Math.round(safeNumber(value, 0)), 0, 100)}%`;
+  const safeCount = (value) => numberFormatter.format(Math.max(0, Math.round(safeNumber(value, 0))));
 
   const tableData = [
     {

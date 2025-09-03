@@ -67,34 +67,37 @@ const SetAutoReply = ({
   lengthOptions,
   emojiOptions
 } = {}) => {
-  const [replyMode, setReplyMode] = useState(initialReplyMode || mockRootProps.replyMode);
-  const [selectedSource, setSelectedSource] = useState(initialSource || mockRootProps.selectedSource);
-  const [selectedRatings, setSelectedRatings] = useState(initialRatings || mockRootProps.selectedRatings);
-  const [keywords, setKeywords] = useState(initialKeywords || mockRootProps.keywords);
-  const [selectedTime, setSelectedTime] = useState(initialTime || mockRootProps.selectedTime);
-  const [replyText, setReplyText] = useState(initialReplyText || mockRootProps.replyText);
-  const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage || mockRootProps.selectedLanguage);
-  const [selectedTone, setSelectedTone] = useState(initialTone || mockRootProps.selectedTone);
-  const [selectedLength, setSelectedLength] = useState(initialLength || mockRootProps.selectedLength);
-  const [selectedEmoji, setSelectedEmoji] = useState(initialEmoji || mockRootProps.selectedEmoji);
+  const [replyMode, setReplyMode] = useState(initialReplyMode || mockRootProps?.replyMode || 'Reply with Ai');
+  const [selectedSource, setSelectedSource] = useState(initialSource || mockRootProps?.selectedSource || 'All');
+  const [selectedRatings, setSelectedRatings] = useState(
+    Array.isArray(initialRatings) ? initialRatings : (Array.isArray(mockRootProps?.selectedRatings) ? mockRootProps.selectedRatings : [])
+  );
+  const [keywords, setKeywords] = useState(typeof initialKeywords === 'string' ? initialKeywords : (mockRootProps?.keywords || ''));
+  const [selectedTime, setSelectedTime] = useState(initialTime || mockRootProps?.selectedTime || 'Any time');
+  const [replyText, setReplyText] = useState(initialReplyText || mockRootProps?.replyText || '');
+  const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage || mockRootProps?.selectedLanguage || 'English');
+  const [selectedTone, setSelectedTone] = useState(initialTone || mockRootProps?.selectedTone || 'Professional');
+  const [selectedLength, setSelectedLength] = useState(initialLength || mockRootProps?.selectedLength || 'Short');
+  const [selectedEmoji, setSelectedEmoji] = useState(initialEmoji || mockRootProps?.selectedEmoji || 'Few');
 
   const handleRatingToggle = (rating) => {
-    setSelectedRatings(prev => 
-      prev.includes(rating) 
-        ? prev.filter(r => r !== rating)
-        : [...prev, rating]
-    );
+    setSelectedRatings(prev => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      return safePrev.includes(rating)
+        ? safePrev.filter(r => r !== rating)
+        : [...safePrev, rating];
+    });
   };
 
   const handleCancel = () => {
     console.log('Cancel clicked');
     // Reset form or navigate back
-    setReplyMode(initialReplyMode);
-    setSelectedSource(initialSource);
-    setSelectedRatings(initialRatings);
-    setKeywords(initialKeywords);
-    setSelectedTime(initialTime);
-    setReplyText(initialReplyText);
+    setReplyMode(initialReplyMode || mockRootProps?.replyMode || 'Reply with Ai');
+    setSelectedSource(initialSource || mockRootProps?.selectedSource || 'All');
+    setSelectedRatings(Array.isArray(initialRatings) ? initialRatings : []);
+    setKeywords(typeof initialKeywords === 'string' ? initialKeywords : '');
+    setSelectedTime(initialTime || mockRootProps?.selectedTime || 'Any time');
+    setReplyText(initialReplyText || '');
   };
 
   const handleSave = () => {

@@ -156,55 +156,32 @@ const GSTInfoForm = () => {
     setSelectedInvoice(null);
   };
 
+  const buildPaymentLink = (invoice) => {
+    if (invoice?.paymentLink) return invoice.paymentLink;
+    const explicit = process.env.REACT_APP_RAZORPAY_PAYMENT_LINK;
+    if (explicit) {
+      const u = new URL(explicit, window.location.origin);
+      if (invoice?.id) u.searchParams.set('invoiceId', invoice.id);
+      if (invoice?.amount) u.searchParams.set('amount', String(invoice.amount));
+      return u.toString();
+    }
+    const base = (process.env.REACT_APP_API_BASE_URL || '').replace(/\/$/, '');
+    if (base) {
+      return `${base}/payments/razorpay?invoiceId=${encodeURIComponent(invoice?.id || '')}&amount=${encodeURIComponent(String(invoice?.amount || ''))}`;
+    }
+    // Fallback to a generic Razorpay short link pattern if nothing is configured
+    const fallbackShortLink = 'https://rzp.io/l/visibeen-pay';
+    const u2 = new URL(fallbackShortLink);
+    if (invoice?.id) u2.searchParams.set('invoiceId', invoice.id);
+    if (invoice?.amount) u2.searchParams.set('amount', String(invoice.amount));
+    return u2.toString();
+  };
+
   return (
     <div className="gst-page-container">
-      {/* GST Information Section */}
-      <div className="gst-info-section">
-        <h2>GST Information</h2>
-        <p>Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing</p>
+      {/* GST Information Section removed as requested */}
 
-        <form className="gst-info-form" onSubmit={handleSubmit}>
-          <div className="form-field">
-            <label>GST Detail*</label>
-            <div className="input-with-icon">
-              <input name="gst_detail" value={form.gst_detail} onChange={handleChange} className="gst-input" />
-              <span className="edit-icon">✏️</span>
-            </div>
-          </div>
-
-          <div className="form-field">
-            <label>GST Name</label>
-            <input name="gst_name" value={form.gst_name} onChange={handleChange} type="text" />
-          </div>
-
-          <div className="form-field">
-            <label>GST Address</label>
-            <input name="gst_address" value={form.gst_address} onChange={handleChange} type="text" />
-          </div>
-
-          <div className="form-field">
-            <label>Supply State</label>
-            <input name="supply_state" value={form.supply_state} onChange={handleChange} type="text" />
-          </div>
-
-          {/* <div className="form-row"> */}
-            {/* <div className="form-field">
-              <label>Date of Registration*</label>
-              <input name="start_date" value={form.start_date} onChange={handleChange} type="text" />
-            </div> */}
-            {/* <div className="form-field">
-              <label>End Date*</label>
-              <input name="end_date" value={form.end_date} onChange={handleChange} type="text" />
-            </div> */}
-          {/* </div> */}
-          <div className="form-actions">
-            <button type="button" className="cancel-btn" onClick={handleCancel}>Cancel</button>
-            <button type="submit" className="update-btn">Update</button>
-          </div>
-        </form>
-      </div>
-
-      {/* Invoice Section */}
+      {/* Invoice Section (Plan column removed; show Pay Now for pending) */}
       <div className="invoice-section">
         <div className="invoice-header">
           <h3>Invoice</h3>
@@ -239,12 +216,18 @@ const GSTInfoForm = () => {
                 <path d="M12 4.5C7.5 4.5 3.73 7.61 2.73 12C3.73 16.39 7.5 19.5 12 19.5S20.27 16.39 21.27 12C20.27 7.61 16.5 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12S9.24 7 12 7S17 9.24 17 12S14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12S10.34 15 12 15S15 13.66 15 12S13.66 9 12 9Z" fill="currentColor" />
               </svg>
             </button>
-            {/* Download button intentionally removed for now */}
-            {/* {invoice.status === 'Pending' && invoice.paymentLink && (
-              <button className="action-btn paynow-btn" onClick={() => window.open(invoice.paymentLink, '_blank')} title="Pay Now">
+            {invoice.status === 'Pending' && (
+              <button
+                className="action-btn paynow-btn"
+                onClick={() => {
+                  const link = buildPaymentLink(invoice);
+                  if (link) window.open(link, '_blank', 'noopener,noreferrer');
+                }}
+                title="Pay Now"
+              >
                 Pay Now
               </button>
-            )} */}
+            )}
           </div>
         </td>
       </tr>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { saveReviewsSnapshot, saveBusinessProfileSnapshot } from '../../../utils/yourDataStore';
 import { Box, Stack, Typography, Button, Paper, Rating, LinearProgress, Chip, CircularProgress, Alert, Menu, MenuItem, ListItemText, ListItemIcon, Divider, Modal, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Input, Badge } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -12,6 +13,9 @@ import AddPhotoIcon from '../../icons/AddPhotoIcon';
 import WebsiteGlobeIcon from '../../icons/WebsiteGlobeIcon';
 import DirectionsIcon from '../../icons/DirectionsIcon';
 import ShareIcon from '../../icons/ShareIcon';
+import FacebookIcon from '../../icons/FacebookIcon';
+import TwitterIcon from '../../icons/TwitterIcon';
+import WhatsAppIcon from '../../icons/WhatsAppIcon';
 import QRCodeIcon from '../../icons/QRCodeIcon';
 import SwitchAccountIcon from '../../icons/SwitchAccountIcon';
 import ProfileGaugeIcon from '../../icons/ProfileGaugeIcon';
@@ -1032,6 +1036,9 @@ const BusinessProfile = () => {
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [localPosts, setLocalPosts] = useState([]);
   const [localPostsLoading, setLocalPostsLoading] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrProviderIndex, setQrProviderIndex] = useState(0);
+  const [shareAnchorEl, setShareAnchorEl] = useState(null);
   const [activeTab, setActiveTab] = useState('products');
   const [productsModalOpen, setProductsModalOpen] = useState(false);
   const [products, setProducts] = useState([]);
@@ -1180,6 +1187,78 @@ const BusinessProfile = () => {
     }
   }, [locationId]);
 
+  // Persist a Business Profile snapshot for "Your Data"
+  useEffect(() => {
+    try {
+      if (!locationData) return;
+      const loc = locationData;
+
+      const name = loc?.title || loc?.locationName || '';
+      const address = loc?.storefrontAddress?.addressLines?.join(', ') || '';
+      const number = loc?.phoneNumbers?.primaryPhone || '';
+      const primaryCategory = loc?.categories?.primaryCategory;
+      const additionalCategories = Array.isArray(loc?.categories?.additionalCategories) ? loc.categories.additionalCategories : [];
+      const category = [primaryCategory?.displayName || primaryCategory?.name, ...additionalCategories.map(c => c?.displayName || c?.name)].filter(Boolean).join(' | ');
+      const serviceArea = loc?.serviceArea?.places || loc?.serviceArea?.region || loc?.serviceArea?.placeInfos || undefined;
+      const city = loc?.storefrontAddress?.locality || '';
+      const hasPrimaryCategory = !!(primaryCategory?.displayName || primaryCategory?.name);
+      const hasServiceArea = !!(
+        loc?.serviceArea && (
+          (Array.isArray(loc?.serviceArea?.places) && loc.serviceArea.places.length > 0) ||
+          loc?.serviceArea?.region ||
+          loc?.serviceArea?.placeInfos
+        )
+      );
+      // City in Category: strictly true only if structured locality is present
+      const cityInCategory = !!city;
+      console.log('[BusinessProfile] CityInCategory check (strict locality rule):', {
+        cityValue: city,
+        hasLocality: !!city,
+        cityInCategory
+      });
+      const description = loc?.profile?.description || '';
+      const websiteLink = loc?.websiteUri || '';
+      const bookAppointment = loc?.appointmentUrl || loc?.profile?.appointmentLink || '';
+      const timings = (loc?.regularHours?.periods?.length || loc?.moreHours?.length) ? 'Available' : '';
+      const photos = Array.isArray(mediaItems) ? mediaItems.length : undefined;
+      const attributes = Array.isArray(loc?.attributes) ? loc.attributes.map(a => a?.name || a?.displayName).filter(Boolean).join(' | ') : '';
+      const labels = Array.isArray(loc?.labels) ? loc.labels.join(' | ') : '';
+      const pinToMapLocation = (loc?.latlng?.latitude && loc?.latlng?.longitude) ? `${loc.latlng.latitude}, ${loc.latlng.longitude}` : '';
+      const gmbPosts = Array.isArray(localPosts) ? localPosts.length : undefined;
+      // Derive verification status from location metadata
+      const verified = (
+        loc?.metadata?.verified === true ||
+        String(loc?.metadata?.verificationState || '').toUpperCase() === 'VERIFIED'
+      );
+
+      const productsStr = Array.isArray(products) && products.length ? products.map(p => p.title).join(' | ') : '';
+      const servicesStr = Array.isArray(services) && services.length ? services.map(s => s.title).join(' | ') : '';
+
+      saveBusinessProfileSnapshot({
+        name,
+        address,
+        number,
+        category,
+        products: productsStr,
+        services: servicesStr,
+        serviceArea,
+        cityInCategory,
+        description,
+        websiteLink,
+        bookAppointment,
+        timings,
+        photos,
+        attributes,
+        labels,
+        pinToMapLocation,
+        gmbPosts,
+        verified,
+      });
+    } catch (_) {
+      // non-blocking
+    }
+  }, [locationData, products, services, localPosts, mediaItems]);
+
   // Start notification polling when component mounts
   useEffect(() => {
     if (locationId) {
@@ -1258,13 +1337,10 @@ const BusinessProfile = () => {
         const servicesData = await GMBService.getServices(locationId, accessToken);
         console.log('[BusinessProfile] Services fetched:', servicesData);
         
-        // Transform API data to match our component structure
+        // Transform API data to match our component structure (services: name only)
         const transformedServices = servicesData.map((service, index) => ({
           id: service.name?.split('/').pop() || index + 1,
-          title: service.serviceId || service.name || `Service ${index + 1}`,
-          price: service.price?.amount ? `$${service.price.amount}` : 'Price on request',
-          image: service.media?.[0]?.sourceUrl || '/api/placeholder/200/120',
-          description: service.description || ''
+          title: (service.serviceId || service.name || `Service ${index + 1}`).replace(/_/g, ' ')
         }));
         
         setServices(transformedServices);
@@ -1496,6 +1572,59 @@ const BusinessProfile = () => {
           const reviews = await GMBService.getReviews(undefined, targetAccount.name, targetLocation.name);
           setReviewsData(reviews);
           console.log('Reviews data fetched successfully:', { count: reviews.length });
+          // Persist to Your Data store
+          const arr = Array.isArray(reviews?.reviews) ? reviews.reviews : (Array.isArray(reviews) ? reviews : []);
+          const count = (typeof reviews?.totalReviewCount === 'number' && reviews.totalReviewCount >= 0) ? reviews.totalReviewCount : arr.length;
+          const ratingNums = arr
+            .map(r => (typeof r?.rating === 'number' ? r.rating : (typeof r?.starRating === 'number' ? r.starRating : undefined)))
+            .filter(n => typeof n === 'number');
+          const avg = (typeof reviews?.averageRating === 'number' && reviews.averageRating > 0)
+            ? reviews.averageRating
+            : (ratingNums.length ? (ratingNums.reduce((s,n)=>s+n,0)/ratingNums.length) : undefined);
+          saveReviewsSnapshot({ totalReviewCount: count, averageRating: avg });
+
+          // Compute response rates from Business Profile page as well
+          try {
+            const now = Date.now();
+            const THIRTY_D_MS = 30 * 24 * 60 * 60 * 1000;
+            const NINETY_D_MS = 90 * 24 * 60 * 60 * 1000;
+            const getTime = (r) => {
+              const t = r?.updateTime || r?.createTime;
+              const ms = t ? Date.parse(t) : NaN;
+              return Number.isFinite(ms) ? ms : undefined;
+            };
+            const hasReply = (r) => !!(r?.reviewReply && (r.reviewReply.comment || r.reviewReply.updateTime));
+
+            const recent30 = arr.filter(r => {
+              const ms = getTime(r);
+              return ms !== undefined && (now - ms <= THIRTY_D_MS);
+            });
+            const rate30 = recent30.length ? (recent30.filter(hasReply).length / recent30.length) * 100 : 0;
+
+            const recent90 = arr.filter(r => {
+              const ms = getTime(r);
+              return ms !== undefined && (now - ms <= NINETY_D_MS);
+            });
+            const rate90 = recent90.length ? (recent90.filter(hasReply).length / recent90.length) * 100 : 0;
+
+            // Volatility: coefficient of variation of weekly review counts over last 90d
+            const weeks = 13; // ~90 days
+            const weekMs = 7 * 24 * 60 * 60 * 1000;
+            const buckets = new Array(weeks).fill(0);
+            recent90.forEach(r => {
+              const ms = getTime(r);
+              if (ms === undefined) return;
+              const diff = now - ms;
+              const idx = Math.floor(diff / weekMs);
+              if (idx >= 0 && idx < weeks) buckets[idx] += 1;
+            });
+            const mean = buckets.reduce((s,n)=>s+n,0) / (buckets.length || 1);
+            const variance = buckets.length ? buckets.reduce((s,n)=>s + Math.pow(n - mean, 2), 0) / buckets.length : 0;
+            const stdDev = Math.sqrt(variance);
+            const volatility = mean > 0 ? (stdDev / mean) * 100 : 0; // percent
+
+            saveBusinessProfileSnapshot({ responseRate30d: rate30, responseRate90d: rate90, volatility });
+          } catch (_) { /* non-blocking */ }
         } catch (reviewsError) {
           console.warn('Error fetching reviews:', reviewsError);
           setReviewsData({ reviews: [] });
@@ -1595,31 +1724,19 @@ const BusinessProfile = () => {
     'Address not available';
   const primaryPhone = locationData?.phoneNumbers?.primaryPhone || 'Not available';
   const websiteUrl = locationData?.websiteUri || 'Not available';
-  // Create Google Maps URL using the correct CID
   const createMapsUrl = () => {
-    // Map GMB location IDs to actual Google Maps CIDs
-    const locationToCidMap = {
-      '2506931426698722357': '9011343252259629974', // Your actual business CID
-    };
-    
-    if (locationData?.name) {
-      const locationId = locationData.name.split('/').pop();
-      const actualCid = locationToCidMap[locationId];
-      
-      if (actualCid) {
-        return `https://maps.google.com/maps?cid=${actualCid}`;
-      }
+    const placeId = locationData?.metadata?.placeId || locationData?.placeId || '';
+    if (placeId && String(placeId).trim()) {
+      return `https://www.google.com/maps/place/?q=place_id:${placeId}`;
     }
-    
-    // Fallback to address search
-    const encodedAddress = encodeURIComponent(businessAddress);
-    return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    const encodedAddress = encodeURIComponent(businessAddress || '');
+    return encodedAddress
+      ? `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`
+      : '';
   };
   const mapsUri = createMapsUrl();
-  // Determine verification status using VoiceOfMerchantState flags and simplified status
   const isVerified = verificationState.isVerified;
 
-  // Build Heatmap link handler now that we have businessTitle and locationData
   const currentPlaceId = locationData?.metadata?.placeId || locationData?.placeId || '';
   const goToHeatmap = () => {
     const qs = new URLSearchParams();
@@ -1627,6 +1744,60 @@ const BusinessProfile = () => {
     if (currentPlaceId) qs.set('placeId', currentPlaceId);
     if (businessAddress) qs.set('address', businessAddress);
     navigate(`/profile-strength?${qs.toString()}`);
+  };
+
+  // Build review link for QR code with robust fallbacks
+  const safeReviewLink = (() => {
+    if (currentPlaceId) {
+      return `https://search.google.com/local/writereview?placeid=${currentPlaceId}`;
+    }
+    if (mapsUri) {
+      return mapsUri;
+    }
+    const encodedAddress = encodeURIComponent(businessAddress || '');
+    if (encodedAddress) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    }
+    return '';
+  })();
+
+  const qrProviders = [
+    (url) => `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`,
+    (url) => `https://quickchart.io/qr?text=${encodeURIComponent(url)}&size=220`
+  ];
+  const qrSrc = safeReviewLink ? qrProviders[qrProviderIndex](safeReviewLink) : ''
+  const shareUrl = mapsUri || window.location.href;
+  const shareText = `${businessTitle} on Google`; 
+  const openShareMenu = (event) => setShareAnchorEl(event.currentTarget);
+  const closeShareMenu = () => setShareAnchorEl(null);
+  const handleNativeShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: businessTitle, text: shareText, url: shareUrl });
+      } else {
+        window.open(shareUrl, '_blank');
+      }
+    } catch (_) {}
+    closeShareMenu();
+  };
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Link copied to clipboard');
+    } catch (_) {
+      // fallback
+    }
+    closeShareMenu();
+  };
+  const handleSharePlatform = (platform) => {
+    const encodedUrl = encodeURIComponent(shareUrl);
+    const encodedText = encodeURIComponent(shareText);
+    let url = '';
+    if (platform === 'whatsapp') url = `https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}`;
+    if (platform === 'facebook') url = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+    if (platform === 'twitter') url = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    closeShareMenu();
   };
 
   // Calculate real reviews data - handle new GMBService format
@@ -1921,6 +2092,31 @@ const BusinessProfile = () => {
           {/* Main Grid - Business Profile + Profile Strength */}
           <MainGrid>
             <BusinessProfileCard>
+              <Dialog open={qrOpen} onClose={() => setQrOpen(false)}>
+                <DialogTitle>Review us on Google</DialogTitle>
+                <DialogContent>
+                  {qrSrc ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                      <img
+                        src={qrSrc}
+                        alt="Review QR"
+                        width={220}
+                        height={220}
+                        onError={() => setQrProviderIndex((i) => (i + 1) % 2)}
+                      />
+                      <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>{safeReviewLink}</Typography>
+                    </Box>
+                  ) : (
+                    <Typography sx={{ fontSize: '14px' }}>Review link unavailable.</Typography>
+                  )}
+                </DialogContent>
+                <DialogActions>
+                  {safeReviewLink && (
+                    <Button onClick={() => window.open(safeReviewLink, '_blank', 'noopener,noreferrer')}>Open link</Button>
+                  )}
+                  <Button onClick={() => setQrOpen(false)}>Close</Button>
+                </DialogActions>
+              </Dialog>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                 <BusinessTitle>
                   {businessTitle}
@@ -1963,7 +2159,7 @@ const BusinessProfile = () => {
 
               <ReviewsRow>
                 <ReviewsLabel>Reviews :</ReviewsLabel>
-                <StarRatingIcon width={500} height={24} color="#F59E0B" />
+                <StarRatingIcon width={100} height={24} color="#F59E0B" />
                 <ReviewsRating>{averageRating.toFixed(2)} ({totalReviews} reviews)</ReviewsRating>
               </ReviewsRow>
 
@@ -2204,7 +2400,7 @@ const BusinessProfile = () => {
                     />
                     <TextField
                       label="Phone Number"
-                      defaultValue={locationData?.primaryPhone || 'Not available'}
+                      defaultValue={locationData?.phoneNumbers.primaryPhone || 'Not available'}
                       fullWidth
                       variant="outlined"
                     />
@@ -2297,12 +2493,40 @@ const BusinessProfile = () => {
                   Directions
                   <ActionSubtext>{mapsUri ? 'Open in Maps' : 'Search Address'}</ActionSubtext>
                 </ActionButton>
-                <ActionButton>
+                <ActionButton onClick={openShareMenu}>
                   <ShareIcon width={15} height={15} color="#121927" />
                   Share
                   <ActionSubtext>Link address</ActionSubtext>
                 </ActionButton>
-                <ActionButton>
+                <Menu
+                  anchorEl={shareAnchorEl}
+                  open={Boolean(shareAnchorEl)}
+                  onClose={closeShareMenu}
+                >
+                  <MenuItem onClick={handleNativeShare}>
+                    {/* Share */}
+                  </MenuItem>
+                  <MenuItem onClick={() => handleSharePlatform('whatsapp')}>
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <WhatsAppIcon width={16} height={16} />
+                    </ListItemIcon>
+                    <ListItemText primary="WhatsApp" />
+                  </MenuItem>
+                  <MenuItem onClick={() => handleSharePlatform('facebook')}>
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <FacebookIcon width={16} height={16} />
+                    </ListItemIcon>
+                    <ListItemText primary="Facebook" />
+                  </MenuItem>
+                  <MenuItem onClick={() => handleSharePlatform('twitter')}>
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <TwitterIcon width={16} height={16} />
+                    </ListItemIcon>
+                    <ListItemText primary="Twitter" />
+                  </MenuItem>
+                  <MenuItem onClick={handleCopyLink}>Copy link</MenuItem>
+                </Menu>
+                <ActionButton onClick={() => setQrOpen(true)}>
                   <QRCodeIcon width={15} height={15} color="#121927" />
                   Review QR
                   <ActionSubtext>Shot link</ActionSubtext>
@@ -2343,23 +2567,31 @@ const BusinessProfile = () => {
                     </Box>
                   ) : (activeTab === 'products' ? products : services).length > 0 ? (
                     (activeTab === 'products' ? products : services).slice(0, 2).map((item) => (
-                      <ProductCard key={item.id}>
-                        <ProductImage 
-                          src={item.image} 
-                          alt={item.title}
-                          onError={(e) => {
-                            e.target.style.backgroundColor = '#f3f4f6';
-                            e.target.style.display = 'flex';
-                            e.target.style.alignItems = 'center';
-                            e.target.style.justifyContent = 'center';
-                            e.target.innerHTML = '<span style="color: #9ca3af; font-size: 12px;">No Image</span>';
-                          }}
-                        />
-                        <ProductContent>
-                          <ProductTitle>{item.title}</ProductTitle>
-                          <ProductPrice>{item.price}</ProductPrice>
-                        </ProductContent>
-                      </ProductCard>
+                      activeTab === 'services' ? (
+                        <ProductCard key={item.id}>
+                          <ProductContent>
+                            <ProductTitle>{item.title}</ProductTitle>
+                          </ProductContent>
+                        </ProductCard>
+                      ) : (
+                        <ProductCard key={item.id}>
+                          <ProductImage 
+                            src={item.image} 
+                            alt={item.title}
+                            onError={(e) => {
+                              e.target.style.backgroundColor = '#f3f4f6';
+                              e.target.style.display = 'flex';
+                              e.target.style.alignItems = 'center';
+                              e.target.style.justifyContent = 'center';
+                              e.target.innerHTML = '<span style=\"color: #9ca3af; font-size: 12px;\">No Image</span>';
+                            }}
+                          />
+                          <ProductContent>
+                            <ProductTitle>{item.title}</ProductTitle>
+                            <ProductPrice>{item.price}</ProductPrice>
+                          </ProductContent>
+                        </ProductCard>
+                      )
                     ))
                   ) : (
                     <Box sx={{ 
@@ -2426,27 +2658,7 @@ const BusinessProfile = () => {
                   </MetricCard>
                 ))}
               </MetricsGrid>
-              {showPerformanceDetails && (
-                <Box sx={{ mt: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                  <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#121927', mb: 1 }}>Additional Insights</Typography>
-                  {performanceData ? (
-                    <>
-                      <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Total impressions: {formatNumber(performanceData.localViews)}</Typography>
-                      <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Customer actions: {formatNumber(performanceData.callClicks + performanceData.directionRequests + performanceData.websiteClicks)}</Typography>
-                      <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>• Data source: Google Business Profile Performance API</Typography>
-                    </>
-                  ) : (
-                    <>
-                      <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Peak viewing hours: 2-4 PM and 7-9 PM</Typography>
-                      <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Most popular search terms: "business hours", "location", "services"</Typography>
-                      <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>• Top traffic sources: Google Search (65%), Direct (25%), Social Media (10%)</Typography>
-                    </>
-                  )}
-                </Box>
-              )}
-              <ViewDetailsButton onClick={handleViewPerformanceDetails}>
-                {showPerformanceDetails ? 'Hide Details' : 'View Details'}
-              </ViewDetailsButton>
+              {/* Additional Insights removed as requested */}
             </PerformanceCard>
 
             <PerformanceCard>
@@ -2519,19 +2731,7 @@ const BusinessProfile = () => {
                   </Box>
                 )}
               </FeedSection>
-              {showFeedDetails && (
-                <Box sx={{ mt: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                  <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#121927', mb: 1 }}>Live Feed Analytics</Typography>
-                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Live notifications: {notifications.length}</Typography>
-                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• Recent reviews: {notifications.filter(n => n.type === 'NEW_REVIEW').length}</Typography>
-                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• New photos: {notifications.filter(n => n.type === 'NEW_CUSTOMER_MEDIA').length}</Typography>
-                  <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>• New posts: {notifications.filter(n => n.type === 'NEW_LOCAL_POST').length}</Typography>
-                  <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>• Notification polling: {notificationLoading ? 'Connecting...' : 'Active'}</Typography>
-                </Box>
-              )}
-              <ViewDetailsButton onClick={handleViewFeedDetails}>
-                {showFeedDetails ? 'Hide Details' : 'View Details'}
-              </ViewDetailsButton>
+              {/* Live Feed Analytics removed as requested */}
             </PerformanceCard>
           </PerformanceGrid>
 
@@ -2560,6 +2760,7 @@ const BusinessProfile = () => {
                 <ReviewsStatValue>{reviewsData?.totalReviewCount || reviews.length || 0}</ReviewsStatValue>
                 <ReviewsStatLabel>Total Reviews</ReviewsStatLabel>
               </ReviewsStat>
+              <StatsDivider />
               <ReviewsStat>
                 <ReviewsStatValue>{reviews.filter(review => {
                   const reviewDate = new Date(review.createTime);
@@ -2569,6 +2770,7 @@ const BusinessProfile = () => {
                 }).length}</ReviewsStatValue>
                 <ReviewsStatLabel>Reviews In Last 7 Days</ReviewsStatLabel>
               </ReviewsStat>
+              <StatsDivider />
               <ReviewsStat>
                 <ReviewsStatValue>{reviews.filter(review => {
                   const reviewDate = new Date(review.createTime);
@@ -2755,23 +2957,31 @@ const BusinessProfile = () => {
           
           <ModalProductsGrid>
             {(activeTab === 'products' ? products : services).map((item) => (
-              <ProductCard key={item.id}>
-                <ProductImage 
-                  src={item.image} 
-                  alt={item.title}
-                  onError={(e) => {
-                    e.target.style.backgroundColor = '#f3f4f6';
-                    e.target.style.display = 'flex';
-                    e.target.style.alignItems = 'center';
-                    e.target.style.justifyContent = 'center';
-                    e.target.innerHTML = '<span style="color: #9ca3af; font-size: 12px;">No Image</span>';
-                  }}
-                />
-                <ProductContent>
-                  <ProductTitle>{item.title}</ProductTitle>
-                  <ProductPrice>{item.price}</ProductPrice>
-                </ProductContent>
-              </ProductCard>
+              activeTab === 'services' ? (
+                <ProductCard key={item.id}>
+                  <ProductContent>
+                    <ProductTitle>{item.title}</ProductTitle>
+                  </ProductContent>
+                </ProductCard>
+              ) : (
+                <ProductCard key={item.id}>
+                  <ProductImage 
+                    src={item.image} 
+                    alt={item.title}
+                    onError={(e) => {
+                      e.target.style.backgroundColor = '#f3f4f6';
+                      e.target.style.display = 'flex';
+                      e.target.style.alignItems = 'center';
+                      e.target.style.justifyContent = 'center';
+                      e.target.innerHTML = '<span style=\"color: #9ca3af; font-size: 12px;\">No Image</span>';
+                    }}
+                  />
+                  <ProductContent>
+                    <ProductTitle>{item.title}</ProductTitle>
+                    <ProductPrice>{item.price}</ProductPrice>
+                  </ProductContent>
+                </ProductCard>
+              )
             ))}
           </ModalProductsGrid>
         </ModalContent>

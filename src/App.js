@@ -38,8 +38,7 @@ import { AppProvider } from './contexts/AppContext';
 import 'leaflet/dist/leaflet.css';
 import HeatmapPage from './components/Heatmap/HeatmapPage';
 import Holidays from './components/edms/Holidays';
-
-
+import YourData from './components/YourData/YourData.jsx';
 
 
 
@@ -102,6 +101,7 @@ function App() {
         <Route path="/heatmap-results" element={<HeatmapResultsPage />} />
         <Route path="/holidays" element={<Holidays />} />
         <Route path="/src/heatmap/heatmap-pages" element={<HeatmapPage/>}/>
+        <Route path="/your-data" element={<YourData />} />
         <Route path="/reviews-management" element={
           <DashboardLayout>
             <ReviewsManagement />

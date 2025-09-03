@@ -44,6 +44,23 @@ export const clearSession = () => {
   sessionStorage.removeItem('access_token');
 };
 
+// Determine if the session's token is expired based on expires_at (unix seconds or ISO)
+export function isTokenExpired(session, skewSeconds = 60) {
+  if (!session) return false;
+  const expiresAt = session.expires_at || session.expiresAt;
+  if (!expiresAt) return false;
+  let expiryEpoch;
+  if (typeof expiresAt === 'number') {
+    expiryEpoch = expiresAt;
+  } else {
+    const parsed = Date.parse(expiresAt);
+    if (Number.isNaN(parsed)) return false;
+    expiryEpoch = Math.floor(parsed / 1000);
+  }
+  const now = Math.floor(Date.now() / 1000);
+  return now >= (expiryEpoch - skewSeconds);
+}
+
 // Auto token extraction with multiple fallbacks
 export function getAutoToken() {
     const session = getSession();
