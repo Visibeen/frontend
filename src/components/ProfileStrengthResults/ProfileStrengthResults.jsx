@@ -8,6 +8,7 @@ import GMBService from '../../services/GMBService';
 import CompetitorDiscoveryService from '../../services/CompetitorDiscoveryService';
 import VelocityService from '../../services/VelocityService';
 import GMBFeedService from '../../services/GMBFeedService';
+import PhoneValidationService from '../../services/PhoneValidationService';
 import EditIcon from '@mui/icons-material/Edit';
 
 const MainContent = styled(Box)(({ theme }) => ({
@@ -707,9 +708,43 @@ const ProfileStrengthResults = () => {
       updateProgress('Checking contact information...', 45, ['Address Analysis']);
       await new Promise(resolve => setTimeout(resolve, 400));
 
-      // 4) Phone number
-      const hasPhone = !!(targetLocation?.phoneNumbers?.primaryPhone || targetLocation?.phoneNumbers?.additionalPhones?.length);
-      phonePts = hasPhone ? 18 : 0;
+      // 4) Phone number with uniqueness check
+      const primaryPhone = targetLocation?.phoneNumbers?.primaryPhone || 
+                          targetLocation?.nationalPhoneNumber || 
+                          targetLocation?.internationalPhoneNumber ||
+                          business?.phoneNumber ||
+                          business?.phone;
+      
+      let phoneScoreResult = { score: 0, analysis: { hasPhone: false } };
+      
+      if (primaryPhone) {
+        try {
+          // Get current business place ID for exclusion
+          const currentPlaceId = targetLocation?.metadata?.placeId || 
+                               targetLocation?.placeId || 
+                               business?.placeId || 
+                               business?.place_id ||
+                               state?.locationData?.placeId ||
+                               state?.selectedLocation?.placeId;
+          
+          phoneScoreResult = await PhoneValidationService.calculatePhoneScore(primaryPhone, currentPlaceId);
+          console.log('[ProfileStrength] Phone validation result:', phoneScoreResult);
+        } catch (error) {
+          console.warn('[ProfileStrength] Phone validation failed, using fallback scoring:', error);
+          // Fallback to simple phone presence check
+          phoneScoreResult = { 
+            score: 18, 
+            analysis: { 
+              hasPhone: true, 
+              isUnique: true, 
+              reason: 'Phone validation unavailable, assuming unique',
+              error: error.message 
+            } 
+          };
+        }
+      }
+      
+      phonePts = phoneScoreResult.score;
       score += phonePts;
       updateProgress('Analyzing business description...', 55, ['Contact Information']);
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -1895,7 +1930,14 @@ const ProfileStrengthResults = () => {
           { factor: 'Verification', details: { verified: isVerified }, points: verPts },
           { factor: 'Business name contains city', details: { hasCity }, points: namePts },
           { factor: 'Address', details: { hasAddress, hasCity, hasKeyword, addr: displayAddress }, points: addrPts },
-          { factor: 'Phone number', details: { hasPhone }, points: phonePts },
+          { factor: 'Phone number', details: { 
+            hasPhone: phoneScoreResult.analysis.hasPhone,
+            isUnique: phoneScoreResult.analysis.isUnique,
+            linkedBusinesses: phoneScoreResult.analysis.linkedBusinesses,
+            reason: phoneScoreResult.analysis.reason,
+            phoneNumber: primaryPhone,
+            otherBusinessNames: phoneScoreResult.analysis.otherBusinessNames
+          }, points: phonePts },
           { factor: 'Description length', details: { descLength }, points: descPts },
           { factor: 'Website link', details: { hasWebsite }, points: websitePts },
           { factor: 'Timings (hours)', details: { hasHours }, points: hoursPts },
