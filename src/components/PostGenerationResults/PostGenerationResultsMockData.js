@@ -60,7 +60,6 @@ export const mockRootProps = {
     { platform: 'facebook', label: 'Facebook' },
     { platform: 'whatsapp', label: 'Whats app' },
     { platform: 'instagram', label: 'Instagram' },
-    { platform: 'google_profile', label: 'Google Profile (coming soon)' },
     { platform: 'copy_link', label: 'Copy link' }
   ]
 };

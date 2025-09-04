@@ -65,7 +65,40 @@ const PostGenerationResults = ({ templatePreviews, generatedPost, sharingOptions
 
   const handleDownload = () => {
     console.log('Downloading generated post...');
-    // Implement download logic here
+    
+    // Get the post preview element
+    const postElement = document.querySelector('.post-preview-container');
+    
+    if (!postElement) {
+      console.error('Post preview element not found');
+      return;
+    }
+    
+    // Use html2canvas to capture the post as an image
+    import('html2canvas').then(html2canvas => {
+      // Set background color to white for better image quality
+      const options = {
+        backgroundColor: '#ffffff',
+        scale: 2, // Higher scale for better quality
+        useCORS: true, // Enable CORS for images
+        logging: false,
+        removeContainer: false
+      };
+      
+      html2canvas.default(postElement, options).then(canvas => {
+        // Create a download link
+        const link = document.createElement('a');
+        link.download = `visibeen-post-${new Date().getTime()}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0); // Use maximum quality
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }).catch(err => {
+        console.error('Error generating canvas:', err);
+      });
+    }).catch(err => {
+      console.error('Error loading html2canvas:', err);
+    });
   };
 
   const handleShare = () => {
