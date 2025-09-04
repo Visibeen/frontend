@@ -5,8 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import GoogleButton from './GoogleButton';
 import FormDivider from './FormDivider';
 import LoginForm from './LoginForm';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { GoogleAuthProvider } from 'firebase/auth';
 import { auth, provider } from '../../firebase';
+import { signInWithGoogleOnce } from '../../utils/googlePopupAuth';
 import { setSession } from '../../utils/authUtils';
 import api from '../../services/api';
 import tokenManager from '../../auth/TokenManager';
@@ -81,7 +82,12 @@ const RightPanel = () => {
         include_granted_scopes: 'true' 
       });
 
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithGoogleOnce(auth, provider, (p) => {
+        p.setCustomParameters({
+          prompt: 'consent',
+          include_granted_scopes: 'true'
+        });
+      });
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const googleAccessToken = credential?.accessToken || '';
 

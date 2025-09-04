@@ -1,25 +1,25 @@
 import React from 'react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper, 
-  Button, 
-  Typography, 
-  Stack 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Button,
+  Typography,
+  Stack,
+  Box,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import StatusBadge from './StatusBadge';
 
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   borderRadius: '12px',
   border: '0.6px solid #F6F0F0',
   boxShadow: 'none',
-  overflow: 'hidden'
+  overflow: 'hidden',
 }));
 
 const StyledTableHead = styled(TableHead)(({ theme }) => ({
@@ -31,20 +31,20 @@ const StyledTableHead = styled(TableHead)(({ theme }) => ({
     fontSize: '14px',
     fontWeight: 500,
     padding: '16px 24px',
-    border: 'none'
-  }
+    border: 'none',
+  },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   '&:not(:last-child)': {
-    borderBottom: '0.6px solid #F6F0F0'
+    borderBottom: '0.6px solid #F6F0F0',
   },
   '& .MuiTableCell-body': {
     fontFamily: 'Inter, sans-serif',
     fontSize: '14px',
     padding: '20px 24px',
-    border: 'none'
-  }
+    border: 'none',
+  },
 }));
 
 const BusinessName = styled(Typography)(({ theme }) => ({
@@ -52,21 +52,21 @@ const BusinessName = styled(Typography)(({ theme }) => ({
   fontSize: '14px',
   fontWeight: 500,
   color: '#30302E',
-  marginBottom: '4px'
+  marginBottom: '4px',
 }));
 
 const BusinessAddress = styled(Typography)(({ theme }) => ({
   fontFamily: 'Inter, sans-serif',
   fontSize: '12px',
   fontWeight: 400,
-  color: '#30302E'
+  color: '#30302E',
 }));
 
 const OptimizationScore = styled(Typography)(({ theme }) => ({
   fontFamily: 'Inter, sans-serif',
   fontSize: '14px',
   fontWeight: 500,
-  color: '#30302E'
+  color: '#30302E',
 }));
 
 const ViewProfileButton = styled(Button)(({ theme }) => ({
@@ -79,20 +79,8 @@ const ViewProfileButton = styled(Button)(({ theme }) => ({
   minWidth: 'auto',
   '&:hover': {
     backgroundColor: 'transparent',
-    textDecoration: 'underline'
-  }
-}));
-
-const CheckNowLink = styled(Typography)(({ theme }) => ({
-  fontFamily: 'Inter, sans-serif',
-  fontSize: '14px',
-  fontWeight: 500,
-  color: '#0B91D6',
-  textDecoration: 'underline',
-  cursor: 'pointer',
-  '&:hover': {
-    opacity: 0.8
-  }
+    textDecoration: 'underline',
+  },
 }));
 
 const CheckNowButton = styled(Button)(({ theme }) => ({
@@ -102,38 +90,59 @@ const CheckNowButton = styled(Button)(({ theme }) => ({
   textTransform: 'none',
   padding: '6px 2px',
   width: '100px',
-height: '30px',
+  height: '30px',
   borderRadius: '6px',
   color: '#ffffff',
   backgroundColor: '#0B91D6',
   '&:hover': {
-    backgroundColor: '#0a7db7'
-  }
+    backgroundColor: '#0a7db7',
+  },
 }));
 
+const StatusBadge = styled(Box)(({ status }) => ({
+  display: 'inline-block',
+  padding: '4px 12px',
+  borderRadius: '20px',
+  fontSize: '12px',
+  fontWeight: 500,
+  textTransform: 'capitalize',
+  backgroundColor:
+    status === 'verified'
+      ? '#E6F4EA'
+      : status === 'pending_verification'
+      ? '#FFF4E5'
+      : status === 'suspended'
+      ? '#FDECEA'
+      : status === 'unverified'
+      ? '#FBE9E9'
+      : '#F0F0F0',
+  color:
+    status === 'verified'
+      ? '#1E4620'
+      : status === 'pending_verification'
+      ? '#8A6D3B'
+      : status === 'suspended'
+      ? '#A94442'
+      : status === 'unverified'
+      ? '#D32F2F'
+      : '#444',
+}));
 const BusinessTable = ({ businesses = [] }) => {
   const navigate = useNavigate();
-
   const handleViewProfile = (business) => {
-    // Use the actual business/location ID from the business data
     const locationId = business.locationId || business.id || '112694470912208112675';
     navigate(`/business-profile?id=${locationId}`);
   };
-
   const handleCheckNow = (business) => {
-    // Navigate to profile strength analysis page with businesses and selection
     navigate('/profile-strength-analysis', { state: { businesses, selected: business } });
   };
-
   const getOptimizationDisplay = (business) => {
-    // Always show the Check Now button regardless of status
     return (
       <CheckNowButton onClick={() => handleCheckNow(business)}>
         Check Now
       </CheckNowButton>
     );
   };
-
   return (
     <StyledTableContainer component={Paper}>
       <Table>
@@ -162,12 +171,10 @@ const BusinessTable = ({ businesses = [] }) => {
                 {(() => {
                   const vs = (business.verificationState || business.verification_status || '').toUpperCase();
                   let derived = business.status;
-                  // Consider boolean flags and nested hints
-                  const boolVerified = (
+                  const boolVerified =
                     business.verified === true ||
                     business?.locationState?.isVerified === true ||
-                    business?.metadata?.verified === true
-                  );
+                    business?.metadata?.verified === true;
                   if (!derived) {
                     if (boolVerified || vs === 'VERIFIED') derived = 'verified';
                     else if (
@@ -175,16 +182,16 @@ const BusinessTable = ({ businesses = [] }) => {
                       vs === 'PENDING' ||
                       vs === 'VERIFICATION_PENDING' ||
                       vs === 'NEEDS_VERIFICATION'
-                    ) derived = 'pending_verification';
+                    )
+                      derived = 'pending_verification';
                     else if (vs === 'SUSPENDED') derived = 'suspended';
                     else if (vs) derived = 'unverified';
                   }
-                  return <StatusBadge status={(derived || (boolVerified ? 'verified' : 'unverified'))} />;
+                  const finalStatus = derived || (boolVerified ? 'verified' : 'unverified');
+                  return <StatusBadge status={finalStatus}>{finalStatus}</StatusBadge>;
                 })()}
               </TableCell>
-              <TableCell>
-                {getOptimizationDisplay(business)}
-              </TableCell>
+              <TableCell>{getOptimizationDisplay(business)}</TableCell>
               <TableCell>
                 <ViewProfileButton onClick={() => handleViewProfile(business)}>
                   View Profile

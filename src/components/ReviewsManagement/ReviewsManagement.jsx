@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Stack, Button, Checkbox, TextField } from '@mui/material';
+import { Box, Typography, Stack, Button, Checkbox, TextField, Dialog, DialogTitle, DialogContent, DialogActions, FormControl, InputLabel, Select, MenuItem, Chip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import ReviewCard from './ReviewCard';
@@ -187,6 +187,15 @@ const ReviewsManagement = () => {
   const [reviews, setReviews] = useState([]);
   const [page, setPage] = useState(0);
   const pageSize = 5;
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkReply, setBulkReply] = useState('');
+  const [bulkSending, setBulkSending] = useState(false);
+
+  // New state for AI reply dialog
+  const [aiReplyOpen, setAiReplyOpen] = useState(false);
+  const [selectedTime, setSelectedTime] = useState('Immediately');
+  const [selectedRatings, setSelectedRatings] = useState(['5', '4', '3']);
+  const [aiReplySending, setAiReplySending] = useState(false);
 
   // Fetch real reviews using selected account/location from Reputation page (stored in localStorage)
   useEffect(() => {
@@ -340,7 +349,35 @@ const ReviewsManagement = () => {
   };
 
   const handleAIReply = () => {
-    navigate('/set-auto-reply');
+    setAiReplyOpen(true);
+  };
+
+  const handleMultipleReplyClick = () => {
+    if (!selectedReviews || selectedReviews.length === 0) {
+      alert('Please select at least one review to reply to.');
+      return;
+    }
+    setBulkReply('');
+    setBulkOpen(true);
+  };
+
+  const handleBulkSend = async () => {
+    if (!bulkReply.trim()) {
+      alert('Please enter a reply message.');
+      return;
+    }
+    try {
+      setBulkSending(true);
+      // TODO: Integrate API to post replies per selected review ID
+      console.log('Bulk replying to reviews:', selectedReviews, 'with message:', bulkReply);
+      // Simulate success
+      setBulkOpen(false);
+      setBulkReply('');
+      setSelectedReviews([]);
+      setSelectAll(false);
+    } finally {
+      setBulkSending(false);
+    }
   };
 
   const handleFilterClose = () => {
@@ -361,6 +398,36 @@ const ReviewsManagement = () => {
   const handleSortApply = (newSort) => {
     setSortBy(newSort);
     handleSortClose();
+  };
+
+  const handleAiReplySave = async () => {
+    try {
+      setAiReplySending(true);
+      // TODO: Implement AI reply logic here
+      console.log('AI Reply settings:', {
+        selectedTime,
+        selectedRatings,
+        source: 'Google' // Default to Google
+      });
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setAiReplyOpen(false);
+      // Show success message or handle response
+    } catch (error) {
+      console.error('Error setting AI reply:', error);
+    } finally {
+      setAiReplySending(false);
+    }
+  };
+
+  const handleRatingToggle = (rating) => {
+    setSelectedRatings(prev => 
+      prev.includes(rating) 
+        ? prev.filter(r => r !== rating)
+        : [...prev, rating]
+    );
   };
 
   return (
@@ -403,9 +470,9 @@ const ReviewsManagement = () => {
               <AIIcon width={14} height={13} className="ai-icon" />
               Reply with AI
             </AIButton>
-            <ActionButton>
+            <ActionButton onClick={handleMultipleReplyClick} disabled={selectedReviews.length === 0}>
               <MultipleReplyIcon width={14} height={12} color="#a0a0aa" />
-              Multiple Reply
+              Multiple Reply {selectedReviews.length > 0 ? `(${selectedReviews.length})` : ''}
             </ActionButton>
           </Stack>
           <Stack direction="row" gap="18px">
@@ -429,6 +496,7 @@ const ReviewsManagement = () => {
               review={review}
               selected={selectedReviews.includes(review.id)}
               onSelect={(checked) => handleReviewSelect(review.id, checked)}
+              onAIReply={() => setAiReplyOpen(true)}
             />
           ))}
         </Stack>
@@ -469,6 +537,136 @@ const ReviewsManagement = () => {
         sortBy={sortBy}
         onApply={handleSortApply}
       />
+
+      <Dialog open={bulkOpen} onClose={() => setBulkOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Reply to {selectedReviews.length} selected {selectedReviews.length === 1 ? 'review' : 'reviews'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            multiline
+            minRows={4}
+            fullWidth
+            placeholder="Type your reply..."
+            value={bulkReply}
+            onChange={(e) => setBulkReply(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkOpen(false)} disabled={bulkSending}>Cancel</Button>
+          <Button variant="contained" onClick={handleBulkSend} disabled={bulkSending} sx={{ backgroundColor: '#0b91d6' }}>
+            {bulkSending ? 'Sending...' : 'Send'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={aiReplyOpen} onClose={() => setAiReplyOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ 
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '20px',
+          fontWeight: 600,
+          color: '#0B91D6',
+          borderBottom: '1px solid #e5e7eb',
+          pb: 2
+        }}>
+          Reply with AI
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Stack spacing={3}>
+            {/* Trigger Time Selection */}
+            <FormControl fullWidth>
+              <InputLabel sx={{ fontFamily: 'Inter, sans-serif' }}>Trigger Time</InputLabel>
+              <Select
+                value={selectedTime}
+                onChange={(e) => setSelectedTime(e.target.value)}
+                label="Trigger Time"
+                sx={{ fontFamily: 'Inter, sans-serif' }}
+              >
+                <MenuItem value="Immediately">Immediately</MenuItem>
+                <MenuItem value="After 1 hour">After 1 hour</MenuItem>
+                <MenuItem value="After 4 hours">After 4 hours</MenuItem>
+                <MenuItem value="After 24 hours">After 24 hours</MenuItem>
+                <MenuItem value="Custom">Custom</MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* Rating Selection */}
+            <Box>
+              <Typography variant="body2" sx={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 500,
+                mb: 2,
+                color: '#374151'
+              }}>
+                Select Ratings to Reply To
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
+                {['5', '4', '3', '2', '1'].map((rating) => (
+                  <Chip
+                    key={rating}
+                    label={`${rating} Star${rating !== '1' ? 's' : ''}`}
+                    onClick={() => handleRatingToggle(rating)}
+                    color={selectedRatings.includes(rating) ? 'primary' : 'default'}
+                    variant={selectedRatings.includes(rating) ? 'filled' : 'outlined'}
+                    sx={{
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: selectedRatings.includes(rating) 
+                          ? 'rgba(11, 145, 214, 0.8)' 
+                          : 'rgba(11, 145, 214, 0.1)'
+                      }
+                    }}
+                  />
+                ))}
+              </Stack>
+            </Box>
+
+            {/* Info Text */}
+            <Box sx={{ 
+              backgroundColor: '#f3f4f6', 
+              p: 2, 
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb'
+            }}>
+              <Typography variant="body2" sx={{ 
+                fontFamily: 'Inter, sans-serif',
+                color: '#6b7280',
+                fontSize: '13px',
+                lineHeight: '18px'
+              }}>
+                <strong>Note:</strong> AI will automatically generate appropriate replies based on the review content and rating. 
+                Replies will be sent to Google reviews only. No manual reply text or keywords needed.
+              </Typography>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button 
+            onClick={() => setAiReplyOpen(false)}
+            sx={{ 
+              fontFamily: 'Inter, sans-serif',
+              textTransform: 'none',
+              color: '#6b7280'
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleAiReplySave}
+            variant="contained"
+            disabled={aiReplySending || selectedRatings.length === 0}
+            sx={{ 
+              fontFamily: 'Inter, sans-serif',
+              textTransform: 'none',
+              backgroundColor: '#0B91D6',
+              '&:hover': { backgroundColor: '#0980c2' },
+              '&:disabled': { backgroundColor: '#d1d5db' }
+            }}
+          >
+            {aiReplySending ? 'Setting...' : 'Set AI Reply'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </ContentContainer>
   );
 };

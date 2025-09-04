@@ -108,6 +108,8 @@ const DashboardSidebar = () => {
           <WebsiteIcon className="nav-icon" width={16} height={16} color="currentColor" />
           <NavText className="nav-text">Free Website</NavText>
         </NavItem>
+
+        {/* Removed 'Your Data' from sidebar as requested */}
       </NavSection>
       <SectionDivider />
       <NavSection>

@@ -196,7 +196,7 @@ const SendButton = styled(Box)(({ theme }) => ({
   cursor: 'pointer'
 }));
 
-const ReviewCard = ({ review, selected, onSelect }) => {
+const ReviewCard = ({ review, selected, onSelect, onAIReply }) => {
   const navigate = useNavigate();
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
@@ -213,7 +213,11 @@ const ReviewCard = ({ review, selected, onSelect }) => {
   };
 
   const handleAIReply = () => {
-    navigate('/set-auto-reply');
+    if (onAIReply) {
+      onAIReply();
+    } else {
+      navigate('/set-auto-reply');
+    }
   };
 
   return (

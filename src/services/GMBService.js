@@ -123,7 +123,7 @@ class GMBService {
   }
 
   /**
-   * Get media (photos) for a specific location
+   * Get media (photos and videos) for a specific location
    * Uses GMB v4 media endpoint.
    * @param {string} accessToken - Google OAuth access token
    * @param {string} accountId - Account ID string (e.g., '12345')
@@ -151,6 +151,89 @@ class GMBService {
       return Array.isArray(data.mediaItems) ? data.mediaItems : [];
     } catch (error) {
       console.error('Error fetching media:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload video to a specific location
+   * Uses GMB v4 media endpoint.
+   * @param {string} accessToken - Google OAuth access token
+   * @param {string} accountId - Account ID string (e.g., '12345')
+   * @param {string} locationId - Location ID string (e.g., '67890')
+   * @param {File} videoFile - Video file to upload
+   * @returns {Promise<Object>} Upload result
+   */
+  async uploadVideo(accessToken, accountId, locationId, videoFile) {
+    try {
+      if (!accountId || !locationId) {
+        throw new Error('Invalid accountId or locationId');
+      }
+
+      if (!videoFile) {
+        throw new Error('Video file is required');
+      }
+
+      // Validate file type
+      const allowedTypes = ['video/mp4', 'video/mov', 'video/avi'];
+      if (!allowedTypes.includes(videoFile.type)) {
+        throw new Error('Invalid video format. Only MP4, MOV, and AVI files are supported.');
+      }
+
+      // Validate file size (100MB limit)
+      const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+      if (videoFile.size > maxSize) {
+        throw new Error('Video file size must be less than 100MB');
+      }
+
+      // Create FormData for multipart upload
+      const formData = new FormData();
+      formData.append('media', videoFile);
+
+      // First, create the media item metadata
+      const mediaMetadata = {
+        mediaFormat: 'VIDEO',
+        category: 'PROFILE',
+        description: videoFile.name || 'Business video'
+      };
+
+      const response = await this._googleFetch(
+        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(mediaMetadata)
+        },
+        accessToken
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to create video media item');
+      }
+
+      const mediaItem = await response.json();
+      
+      // Now upload the actual video file
+      const uploadResponse = await this._googleFetch(
+        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media/${mediaItem.name}/mediaFiles`,
+        {
+          method: 'POST',
+          body: formData
+        },
+        accessToken
+      );
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error?.message || 'Failed to upload video file');
+      }
+
+      return mediaItem;
+    } catch (error) {
+      console.error('Error uploading video:', error);
       throw error;
     }
   }
@@ -570,16 +653,17 @@ class GMBService {
       const accumulateFromTimeSeries = (metricKey, timeSeries) => {
         let totalValue = 0;
         let previousValue = 0;
+        let totalAll = 0;
+        let daysCount = 0;
 
         const dated = timeSeries?.datedValues || [];
-        // Sum, treating missing values as 0; values may be strings
         const toNum = (v) => {
           const n = parseInt(v, 10);
           return Number.isNaN(n) ? 0 : n;
         };
-        const totalAll = dated.reduce((sum, item) => sum + toNum(item.value), 0);
+        totalAll = dated.reduce((sum, item) => sum + toNum(item.value), 0);
+        daysCount = dated.length;
 
-        // Change: compare second half vs first half when we have a decent window
         if (dated.length > 15) {
           const mid = Math.floor(dated.length / 2);
           const firstHalf = dated.slice(0, mid).reduce((s, it) => s + toNum(it.value), 0);
@@ -600,18 +684,18 @@ class GMBService {
         processedMetrics[metricKey] = {
           value: totalValue,
           change: changePercent,
-          changeText: `${changePercent >= 0 ? '+' : ''}${changePercent}% vs last period`
+          changeText: `${changePercent >= 0 ? '+' : ''}${changePercent}% vs last period`,
+          totalAll,
+          daysCount
         };
       };
 
       if (Array.isArray(rawData?.multiDailyMetricTimeSeries)) {
         rawData.multiDailyMetricTimeSeries.forEach((entry) => {
-          // Shape A: entry has dailyMetric + dailyMetricTimeSeries.timeSeries
           if (entry?.dailyMetric && entry?.dailyMetricTimeSeries?.timeSeries) {
             accumulateFromTimeSeries(entry.dailyMetric, entry.dailyMetricTimeSeries.timeSeries);
             return;
           }
-          // Shape B: entry has dailyMetricTimeSeries as an array of { dailyMetric, timeSeries }
           if (Array.isArray(entry?.dailyMetricTimeSeries)) {
             entry.dailyMetricTimeSeries.forEach((s) => {
               if (s?.dailyMetric && s?.timeSeries) {
@@ -622,8 +706,25 @@ class GMBService {
         });
       }
 
+      const desktopImpr = processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.totalAll || 0;
+      const mobileImpr = processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.totalAll || 0;
+      const desktopDays = processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.daysCount || 0;
+      const mobileDays = processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.daysCount || 0;
+      const totalImpressionsAll = desktopImpr + mobileImpr;
+      const daysForAvg = Math.max(desktopDays, mobileDays, 1);
+      const avgDailyImpressions = totalImpressionsAll / daysForAvg;
+      const estimatedMonthlySearchVolume = Math.round(avgDailyImpressions * 30);
+
+      const websiteClicksVal = processedMetrics.WEBSITE_CLICKS?.value || 0;
+      const websiteClicksChange = processedMetrics.WEBSITE_CLICKS?.change || 0;
+
+      const searchVolumeChange = this.calculateAverageChange([
+        processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.change || 0,
+        processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.change || 0
+      ]);
+
       return {
-        localViews: processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.value + processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.value || 0,
+        localViews: (processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.value || 0) + (processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.value || 0),
         localViewsChange: this.calculateAverageChange([
           processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.change || 0,
           processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.change || 0
@@ -632,8 +733,12 @@ class GMBService {
         callClicksChange: processedMetrics.CALL_CLICKS?.change || 0,
         directionRequests: processedMetrics.BUSINESS_DIRECTION_REQUESTS?.value || 0,
         directionRequestsChange: processedMetrics.BUSINESS_DIRECTION_REQUESTS?.change || 0,
-        websiteClicks: processedMetrics.WEBSITE_CLICKS?.value || 0,
-        websiteClicksChange: processedMetrics.WEBSITE_CLICKS?.change || 0,
+        websiteClicks: websiteClicksVal,
+        websiteClicksChange: websiteClicksChange,
+        organicClicks: websiteClicksVal,
+        organicClicksChange: websiteClicksChange,
+        avgSearchVolume: estimatedMonthlySearchVolume,
+        avgSearchVolumeChange: searchVolumeChange,
         rawData: processedMetrics
       };
     } catch (error) {
@@ -647,16 +752,15 @@ class GMBService {
         directionRequestsChange: 0,
         websiteClicks: 0,
         websiteClicksChange: 0,
+        organicClicks: 0,
+        organicClicksChange: 0,
+        avgSearchVolume: 0,
+        avgSearchVolumeChange: 0,
         rawData: {}
       };
     }
   }
 
-  /**
-   * Calculate average change from multiple metrics
-   * @param {Array} changes - Array of change percentages
-   * @returns {number} Average change percentage
-   */
   calculateAverageChange(changes) {
     const validChanges = changes.filter(change => !isNaN(change) && change !== null);
     if (validChanges.length === 0) return 0;
@@ -1102,6 +1206,120 @@ class GMBService {
     } catch (error) {
       console.error('Error fetching VoiceOfMerchantState:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get response rate metrics for a specific location over the last 90 days
+   * @param {string} accessToken - optional Google OAuth access token
+   * @param {string} locationId - Location ID (numeric part only)
+   * @param {Object} dateRange - Date range object with startDate and endDate
+   * @returns {Promise<Object>} Response rate metrics data
+   */
+  async getResponseRateMetrics(accessToken, locationId, dateRange = null) {
+    try {
+      if (!locationId) {
+        throw new Error('Location ID is required');
+      }
+
+      // Ensure we have a valid access token
+      const token = await this._getAccessToken(accessToken);
+      if (!token) {
+        throw new Error('No valid access token available. Please re-authenticate with Google My Business.');
+      }
+
+      // Default to last 90 days if no date range provided
+      const now = new Date();
+      const start = new Date(now);
+      start.setDate(now.getDate() - 90);
+      const defaultDateRange = dateRange || {
+        startDate: {
+          year: start.getFullYear(),
+          month: start.getMonth() + 1,
+          day: start.getDate()
+        },
+        endDate: {
+          year: now.getFullYear(),
+          month: now.getMonth() + 1,
+          day: now.getDate()
+        }
+      };
+
+      // Response rate related metrics
+      const metrics = [
+        'BUSINESS_CONVERSATIONS',
+        'BUSINESS_DIRECTION_REQUESTS',
+        'CALL_CLICKS'
+      ];
+
+      const params = new URLSearchParams();
+      metrics.forEach(metric => params.append('dailyMetrics', metric));
+      params.append('dailyRange.startDate.year', defaultDateRange.startDate.year);
+      params.append('dailyRange.startDate.month', defaultDateRange.startDate.month);
+      params.append('dailyRange.startDate.day', defaultDateRange.startDate.day);
+      params.append('dailyRange.endDate.year', defaultDateRange.endDate.year);
+      params.append('dailyRange.endDate.month', defaultDateRange.endDate.month);
+      params.append('dailyRange.endDate.day', defaultDateRange.endDate.day);
+
+      const url = `https://businessprofileperformance.googleapis.com/v1/locations/${locationId}:fetchMultiDailyMetricsTimeSeries?${params.toString()}`;
+
+      console.log(`[GMB Service] Fetching response rate metrics from: ${url}`);
+
+      const response = await this._googleFetch(
+        url,
+        { method: 'GET' },
+        token
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('[GMB Service] Response rate metrics fetch failed:', {
+          status: response.status,
+          error: errorData
+        });
+        return { responseRate: 0 };
+      }
+
+      const data = await response.json();
+      console.log('[GMB Service] Response rate metrics response:', data);
+
+      // Calculate response rate from the metrics
+      // This is a simplified calculation - you may need to adjust based on actual API response structure
+      let totalConversations = 0;
+      let totalResponses = 0;
+
+      if (data.multiDailyMetricTimeSeries) {
+        data.multiDailyMetricTimeSeries.forEach(series => {
+          if (series.dailyMetricTimeSeries) {
+            series.dailyMetricTimeSeries.forEach(dailySeries => {
+              if (dailySeries.dailyMetrics) {
+                dailySeries.dailyMetrics.forEach(metric => {
+                  if (metric.metric === 'BUSINESS_CONVERSATIONS') {
+                    totalConversations += parseInt(metric.value || 0);
+                  }
+                  // Add other response-related metrics as needed
+                });
+              }
+            });
+          }
+        });
+      }
+
+      // Calculate response rate percentage
+      const responseRate = totalConversations > 0 ? Math.min(100, (totalResponses / totalConversations) * 100) : 0;
+
+      return {
+        responseRate: responseRate,
+        totalConversations: totalConversations,
+        totalResponses: totalResponses,
+        dateRange: defaultDateRange,
+        raw: data
+      };
+
+    } catch (error) {
+      console.error('Error fetching response rate metrics:', error);
+      // Return default values instead of throwing to prevent breaking the scoring
+      return { responseRate: 0 };
     }
   }
 }

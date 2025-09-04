@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { getSession, getAutoToken } from '../../utils/authUtils';
 import GMBWebsiteService from '../../services/GMBWebsiteService';
 import GMBService from '../../services/GMBService';
+import api from '../../services/api';
 import {
   Box,
   Stack,
@@ -166,7 +166,6 @@ const SubmitButton = styled(Button)(({ theme }) => ({
 const ContactUs = () => {
   const [formData, setFormData] = useState({
     name: '',
-    business_category: '',
     business_name: '',
     complaint_type: '',
     email: '',
@@ -174,8 +173,6 @@ const ContactUs = () => {
     date_and_time: '',
     message: '',
   });
-
-  // Local UI state for ticket types
   const [ticketTypes] = useState(['Service', 'Billing', 'Technical', 'Other']);
   const [complaint_type, setTicketType] = useState('');
   const [accounts, setAccounts] = useState([]);
@@ -189,32 +186,24 @@ const ContactUs = () => {
       [name]: value
     }));
   };
-
-  // Removed handleSwitchAccount; selection now auto-applies on change
-
-  // Autofill from session on mount (async IIFE with mounted guard)
   React.useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-  const session = getSession() || {};
-          const autoToken = getAutoToken();
-
-        // Support multiple session shapes for GMB data
+        const session = getSession() || {};
+        const autoToken = getAutoToken();
         const gmbAccounts = session?.gmbAccounts || session?.gmbData?.accounts || [];
         const gmbPrimaryAccountName = session?.gmbPrimaryAccountName || (gmbAccounts[0] && gmbAccounts[0].accountName) || '';
         const gmbPrimaryLocation = session?.gmbPrimaryLocation || (session?.gmbData && session.gmbData.locations && session.gmbData.locations[0]) || null;
 
         if (!mounted) return;
         setAccounts(gmbAccounts || []);
-        // Populate locations dropdown from session or by fetching via GMB API for the primary account
         try {
           const primaryAccount = gmbAccounts && gmbAccounts.length ? gmbAccounts[0] : null;
-            if (primaryAccount && autoToken && primaryAccount.name) {
-              const locs = await GMBService.getLocations(autoToken, primaryAccount.name);
+          if (primaryAccount && autoToken && primaryAccount.name) {
+            const locs = await GMBService.getLocations(autoToken, primaryAccount.name);
             if (mounted) setLocations(Array.isArray(locs) ? locs : []);
           } else {
-            // try session-stored primary location
             const sessPrimary = session?.gmbPrimaryLocation;
             if (sessPrimary) {
               if (mounted) setLocations([sessPrimary]);
@@ -231,7 +220,6 @@ const ContactUs = () => {
           email: prev.email || session?.user?.email || session?.email || ''
         }));
 
-        // If still missing, fetch primary location via GMB API using token
         const currentSession = getSession() || {};
         const needsBusiness = !currentSession?.business_name && !currentSession?.gmbPrimaryLocationTitle;
         const needsPhone = !currentSession?.phone && !currentSession?.user?.phone;
@@ -261,25 +249,30 @@ const ContactUs = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const session = getSession();
+    const authToken = getAutoToken();
+    if (!session || !authToken) {
+      alert('Authentication required. Please log in again.');
+      return;
+    }
+    const payload = {
+      user_id: session?.id || session?.user?.id,
+      name: formData.name,
+      business_name: formData.business_name,
+      complaint_type: complaint_type, 
+      email: formData.email,
+      phone_number: formData.phone_number,
+      date_and_time: formData.date_and_time,
+      message: formData.message,
+    };
     try {
-      const token = JSON.parse(localStorage.getItem('userData'));
-      const response = await axios.post(
-        'http://52.44.140.230:8089/api/v1/customer/contact-us/create-contact',
-        formData,
-        {
-          headers: {
-            Authorization: `${token?.token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      alert('Updated')
+      const response = await api.post('/customer/contact-us/create-contact', payload);
+      alert('Message sent successfully!');
       console.log('Form submitted successfully:', response.data);
     } catch (error) {
-      console.error('Submission error:', error.response?.data || error.message);
+      alert('Failed to send message. Please try again.');
     }
   };
-
   return (
     <DashboardLayout>
       <PageHeader
@@ -290,7 +283,6 @@ const ContactUs = () => {
         <FormContainer>
           <form onSubmit={handleSubmit}>
             <FormStack>
-              {/* Account selector + switch button */}
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 <FormControl sx={{ flex: 1 }}>
                   <StyledSelect
@@ -298,7 +290,6 @@ const ContactUs = () => {
                     onChange={(e) => {
                       const value = e.target.value;
                       setSelectedLocation(value);
-                      // Auto-apply selected profile without clicking the button
                       if (value !== '') {
                         const index = Number(value);
                         const locObj = locations[index];
@@ -323,9 +314,7 @@ const ContactUs = () => {
                     ))}
                   </StyledSelect>
                 </FormControl>
-                {/* Switch Profile button removed; selection auto-applies */}
               </Box>
-              {/* Name Field */}
               <Box>
                 <RequiredLabel>Name*</RequiredLabel>
                 <StyledTextField
@@ -339,7 +328,6 @@ const ContactUs = () => {
                 />
               </Box>
 
-              {/* Business Name Field */}
               <Box>
                 <RequiredLabel>Business Name*</RequiredLabel>
                 <StyledTextField
@@ -370,7 +358,6 @@ const ContactUs = () => {
                 </FormControl>
               </Box>
 
-              {/* Email Field */}
               <Box>
                 <OptionalLabel>Email Id*</OptionalLabel>
                 <StyledTextField
@@ -385,7 +372,6 @@ const ContactUs = () => {
                 />
               </Box>
 
-              {/* Contact Number Field */}
               <Box>
                 <OptionalLabel>Contact Number*</OptionalLabel>
                 <StyledTextField
@@ -399,7 +385,6 @@ const ContactUs = () => {
                 />
               </Box>
 
-              {/* Preferred Date & Time */}
               <Box>
                 <OptionalLabel>Preferred Time*</OptionalLabel>
                 <TimePickerContainer>
@@ -414,7 +399,6 @@ const ContactUs = () => {
                 </TimePickerContainer>
               </Box>
 
-              {/* Message Field */}
               <Box>
                 <OptionalLabel>Message*</OptionalLabel>
                 <MessageField
@@ -430,7 +414,6 @@ const ContactUs = () => {
                 />
               </Box>
 
-              {/* Submit Button */}
               <SubmitButton type="submit" fullWidth variant="contained">
                 Send Message
               </SubmitButton>
@@ -441,4 +424,4 @@ const ContactUs = () => {
     </DashboardLayout>
   );
 }
-export default ContactUs;
+  export default ContactUs

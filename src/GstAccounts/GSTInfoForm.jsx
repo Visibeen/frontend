@@ -156,6 +156,51 @@ const GSTInfoForm = () => {
     setSelectedInvoice(null);
   };
 
+  const buildPaymentLink = (invoice) => {
+    if (invoice?.paymentLink) return invoice.paymentLink;
+    const explicit = process.env.REACT_APP_RAZORPAY_PAYMENT_LINK;
+    if (explicit) {
+      try {
+        const u = new URL(explicit, window.location.origin);
+        if (invoice?.id) u.searchParams.set('invoiceId', invoice.id);
+        if (invoice?.amount) u.searchParams.set('amount', String(invoice.amount));
+        return u.toString();
+      } catch (_) {
+        const safe = explicit.startsWith('http') ? explicit : `https://${explicit}`;
+        return safe;
+      }
+    }
+
+    const shortFromEnv = process.env.REACT_APP_RAZORPAY_SHORT_LINK;
+    if (shortFromEnv) {
+      try {
+        const u = new URL(shortFromEnv);
+        if (invoice?.id) u.searchParams.set('invoiceId', invoice.id);
+        if (invoice?.amount) u.searchParams.set('amount', String(invoice.amount));
+        return u.toString();
+      } catch (_) {
+        const safe = shortFromEnv.startsWith('http') ? shortFromEnv : `https://${shortFromEnv}`;
+        return safe;
+      }
+    }
+
+    const base = (process.env.REACT_APP_API_BASE_URL || '').replace(/\/$/, '');
+    if (base) {
+      return `${base}/payments/razorpay?invoiceId=${encodeURIComponent(invoice?.id || '')}&amount=${encodeURIComponent(String(invoice?.amount || ''))}`;
+    }
+
+    const fallbackShortLink = process.env.REACT_APP_RAZORPAY_FALLBACK || 'https://rzp.io/l/visibeen-pay';
+    try {
+      const u2 = new URL(fallbackShortLink);
+      if (invoice?.id) u2.searchParams.set('invoiceId', invoice.id);
+      if (invoice?.amount) u2.searchParams.set('amount', String(invoice.amount));
+      return u2.toString();
+    } catch (_) {
+      const safe = fallbackShortLink.startsWith('http') ? fallbackShortLink : `https://${fallbackShortLink}`;
+      return safe;
+    }
+  };
+
   return (
     <div className="gst-page-container">
       {/* GST Information Section */}
@@ -234,17 +279,24 @@ const GSTInfoForm = () => {
         </td>
         <td>
           <div className="action-buttons">
-            <button className="action-btn view-btn" onClick={() => viewInvoice(invoice)} title="View Invoice">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 4.5C7.5 4.5 3.73 7.61 2.73 12C3.73 16.39 7.5 19.5 12 19.5S20.27 16.39 21.27 12C20.27 7.61 16.5 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12S9.24 7 12 7S17 9.24 17 12S14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12S10.34 15 12 15S15 13.66 15 12S13.66 9 12 9Z" fill="currentColor" />
-              </svg>
-            </button>
-            {/* Download button intentionally removed for now */}
-            {/* {invoice.status === 'Pending' && invoice.paymentLink && (
-              <button className="action-btn paynow-btn" onClick={() => window.open(invoice.paymentLink, '_blank')} title="Pay Now">
+            {invoice.status === 'Pending' ? (
+              <button 
+                className="action-btn paynow-btn" 
+                onClick={() => {
+                  const link = buildPaymentLink(invoice);
+                  if (link) window.open(link, '_blank', 'noopener,noreferrer');
+                }}
+                title="Pay Now"
+              >
                 Pay Now
               </button>
-            )} */}
+            ) : (
+              <button className="action-btn view-btn" onClick={() => viewInvoice(invoice)} title="View Invoice">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 4.5C7.5 4.5 3.73 7.61 2.73 12C3.73 16.39 7.5 19.5 12 19.5S20.27 16.39 21.27 12C20.27 7.61 16.5 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12S9.24 7 12 7S17 9.24 17 12S14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12S10.34 15 12 15S15 13.66 15 12S13.66 9 12 9Z" fill="currentColor" />
+                </svg>
+              </button>
+            )}
           </div>
         </td>
       </tr>

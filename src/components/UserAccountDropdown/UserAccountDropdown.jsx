@@ -2,8 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Box, Typography, Avatar, Menu, MenuItem, Divider, IconButton } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import { AccountCircle, Logout, Person, Settings } from '@mui/icons-material';
+import { AccountCircle, Logout, Person } from '@mui/icons-material';
 import { getSession, clearSession } from '../../utils/authUtils';
+import tokenManager from '../../auth/TokenManager';
+import AutoTokenManager from '../../utils/autoTokenUtils';
 
 const DropdownContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
@@ -29,9 +31,12 @@ const UserButton = styled(IconButton)(({ theme }) => ({
 const UserAvatar = styled(Avatar)(({ theme }) => ({
   width: '28px',
   height: '28px',
-  backgroundColor: '#0B91D6',
-  fontSize: '14px',
-  fontWeight: 600
+  background: 'linear-gradient(135deg, #0B91D6 0%, #2563EB 100%)',
+  boxShadow: '0 2px 8px rgba(11, 145, 214, 0.3)',
+  color: '#ffffff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
 }));
 
 const StyledMenu = styled(Menu)(({ theme }) => ({
@@ -111,13 +116,39 @@ const UserAccountDropdown = () => {
     // Get user session info
     const session = getSession();
     if (session) {
+      // Get account name from GMB data or fallback to user name
+      const accountName = session.gmbPrimaryAccountName ||
+        session.gmbAccounts?.[0]?.accountName ||
+        session.user?.accountName ||
+        session.accountName ||
+        session.user?.name ||
+        session.user?.displayName ||
+        'User';
       setUserInfo({
         name: session.user?.name || session.user?.displayName || 'User',
+        accountName: accountName,
         email: session.user?.email || 'user@example.com',
-        initials: getInitials(session.user?.name || session.user?.displayName || 'User')
+        initials: getInitials(accountName)
       });
     }
   }, []);
+
+  const getDisplayNameFromSession = (session) => {
+    // Prefer account/business level names over generic user name
+    const candidates = [
+      session.accountName,
+      session.businessName,
+      session.account?.name,
+      session.business?.name,
+      session.organization?.name,
+      session.companyName,
+      session.user?.accountName,
+      session.user?.businessName,
+      session.user?.name,
+      session.user?.displayName,
+    ].filter(Boolean);
+    return (candidates[0] || 'Account');
+  };
 
   const getInitials = (name) => {
     return name
@@ -126,6 +157,23 @@ const UserAccountDropdown = () => {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const getLogoFromSession = (session) => {
+    const candidates = [
+      session.logoUrl,
+      session.logo,
+      session.photoURL,
+      session.profileImage,
+      session.imageUrl,
+      session.business?.logoUrl,
+      session.account?.logoUrl,
+      session.organization?.logoUrl,
+      session.user?.photoURL,
+      session.user?.avatar,
+      session.user?.imageUrl
+    ].filter(Boolean);
+    return candidates[0] || null;
   };
 
   const handleClick = (event) => {
@@ -143,17 +191,20 @@ const UserAccountDropdown = () => {
 
   const handleSettings = () => {
     handleClose();
-    navigate('/my-account/account-information');
+    navigate('/');
   };
-
+  
   const handleLogout = async () => {
     handleClose();
-    
+
     try {
+      // Stop auto token management first
+      AutoTokenManager.stopAutoRefresh();
+      
       // Get the auth token for the API call
       const session = getSession();
       const token = session?.token || session?.access_token;
-      
+
       // Call the logout API
       const response = await fetch('http://52.44.140.230:8089/api/v1/customer/auth/logout', {
         method: 'POST',
@@ -162,7 +213,7 @@ const UserAccountDropdown = () => {
           ...(token && { 'Authorization': `${token}` })
         }
       });
-      
+
       if (response.ok) {
         console.log('Successfully logged out from server');
       } else {
@@ -172,9 +223,19 @@ const UserAccountDropdown = () => {
       console.error('Error calling logout API:', error);
       // Continue with local logout even if API fails
     }
-    
-    // Always clear local session and redirect
+
+    // Clear Google tokens from TokenManager (not handled by clearSession)
+    try {
+      tokenManager.remove('google');
+      console.log('Google tokens cleared from TokenManager');
+    } catch (clearError) {
+      console.error('Error clearing Google tokens:', clearError);
+    }
+
+    // Clear all other tokens and session data (handled by enhanced clearSession)
     clearSession();
+    
+    // Redirect to login
     navigate('/login');
   };
 
@@ -191,9 +252,13 @@ const UserAccountDropdown = () => {
         aria-haspopup="true"
         aria-expanded={open ? 'true' : undefined}
       >
-        <UserAvatar>
-          {userInfo.initials}
-        </UserAvatar>
+        {userInfo.logoUrl ? (
+          <UserAvatar src={userInfo.logoUrl} alt={userInfo.name} />
+        ) : (
+          <UserAvatar>
+            <AccountCircle sx={{ color: '#ffffff' }} />
+          </UserAvatar>
+        )}
       </UserButton>
 
       <StyledMenu
@@ -214,19 +279,16 @@ const UserAccountDropdown = () => {
         }}
       >
         <MenuHeader>
-          <UserName>{userInfo.name}</UserName>
+          <UserName>{userInfo.accountName}</UserName>
           <UserEmail>{userInfo.email}</UserEmail>
         </MenuHeader>
 
-        <StyledMenuItem onClick={handleMyAccount}>
+        {/* <StyledMenuItem onClick={handleMyAccount}>
           <Person />
           My Account
-        </StyledMenuItem>
+        </StyledMenuItem> */}
 
-        <StyledMenuItem onClick={handleSettings}>
-          <Settings />
-          Settings
-        </StyledMenuItem>
+        {/* Settings menu item removed */}
 
         <Divider sx={{ margin: '8px 0' }} />
 

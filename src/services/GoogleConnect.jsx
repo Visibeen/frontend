@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, provider, signInWithPopup } from '../firebase';
+import { auth, provider } from '../firebase';
 import { GoogleAuthProvider } from 'firebase/auth';
+import { signInWithGoogleOnce } from '../utils/googlePopupAuth';
 import { getSession, setSession } from '../utils/authUtils';
 import GMBWebsiteService from './GMBWebsiteService';
 import tokenManager from '../auth/TokenManager';
@@ -31,7 +32,12 @@ function GoogleConnect() {
                 'prompt': 'consent'
             });
 
-            const result = await signInWithPopup(auth, provider);
+            const result = await signInWithGoogleOnce(auth, provider, (p) => {
+                p.setCustomParameters({
+                    prompt: 'consent',
+                    include_granted_scopes: 'true'
+                });
+            });
             
             // Get the OAuth access token (not Firebase ID token)
             const credential = GoogleAuthProvider.credentialFromResult(result);

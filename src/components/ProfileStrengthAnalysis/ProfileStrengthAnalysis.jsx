@@ -1,12 +1,13 @@
-import React, { useRef, useState } from 'react';
-import { Box, Stack, Typography, Button, TextField, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { getYourData } from '../../utils/yourDataStore';
+import { Box, Stack, Typography, Button, TextField, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress, CircularProgress } from '@mui/material';
+import { styled, keyframes } from '@mui/material/styles';
 import { useLocation, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import DropdownArrowIcon from '../icons/DropdownArrowIcon';
-import EditIcon from '../icons/EditIcon';
+import CompetitorDiscoveryService from '../../services/CompetitorDiscoveryService';
+import ReviewsScoring from '../Performance/components/ReviewsScoring';
 import AnalysisLoadingPopup from '../ProfileStrengthResults/components/AnalysisLoadingPopup';
-import EnhancedScorePopup from '../ProfileStrengthResults/components/EnhancedScorePopup';
 
 const MainContent = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -192,8 +193,7 @@ const ProfileStrengthAnalysis = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [newKeyword, setNewKeyword] = useState('');
   const [showAnalysisPopup, setShowAnalysisPopup] = useState(false);
-  const [showScorePopup, setShowScorePopup] = useState(false);
-  const [profileScore, setProfileScore] = useState(0);
+  const [competitorScoreData, setCompetitorScoreData] = useState(null);
 
   const accountSelectRef = useRef(null);
   const keywordsSelectRef = useRef(null);
@@ -226,298 +226,10 @@ const ProfileStrengthAnalysis = () => {
     setNewKeyword('');
   };
 
-  const handleContinue = () => {
-    // Show analysis popup instead of navigating immediately
+  const handleContinue = async () => {
+    // Show analysis popup
     setShowAnalysisPopup(true);
-  };
 
-  const handleAnalysisComplete = () => {
-    // Calculate real profile strength score using the same logic as ProfileStrengthResults
-    const calculateProfileScore = () => {
-      const selectedBiz = accounts.find(a => a.name === selectedAccount) || null;
-      const raw = selectedBiz?.raw || location.state?.selected || null;
-      
-      console.log('[ProfileStrengthAnalysis] Starting score calculation...');
-      console.log('[ProfileStrengthAnalysis] Selected business:', selectedBiz);
-      console.log('[ProfileStrengthAnalysis] Raw data:', raw);
-      
-      let score = 0;
-      
-      // 1) Verification status
-      const verificationState = String(raw?.verificationState || '').toUpperCase();
-      const isVerified = verificationState === 'VERIFIED' || raw?.verified === true;
-      const isSoftSuspended = String(raw?.metadata?.placeSuspensionReason || '').toUpperCase().includes('SOFT');
-      const isUnverified = !isVerified && !isSoftSuspended;
-      
-      let verPts = 0;
-      if (isVerified) verPts = 0;
-      else if (isSoftSuspended) verPts = -60;
-      else if (isUnverified) verPts = -100;
-      score += verPts;
-      console.log('[Score] Verification:', { verificationState, isVerified, isSoftSuspended, isUnverified, points: verPts, totalScore: score });
-      
-      // 2) Business name contains city
-      const businessTitle = raw?.title || raw?.name || raw?.businessName || selectedBiz?.name || '';
-      const city = raw?.storefrontAddress?.locality || '';
-      let namePts = 0;
-      if (businessTitle && city && businessTitle.toLowerCase().includes(city.toLowerCase())) {
-        namePts = 20;
-      } else if (businessTitle) {
-        namePts = 10;
-      }
-      score += namePts;
-      console.log('[Score] Business Name:', { businessTitle, city, hasCity: businessTitle && city && businessTitle.toLowerCase().includes(city.toLowerCase()), points: namePts, totalScore: score });
-      
-      // 3) Address scoring
-      let address = selectedBiz?.address || raw?.address || raw?.formattedAddress || '';
-      if (raw?.storefrontAddress) {
-        const sa = raw.storefrontAddress;
-        const parts = [];
-        if (Array.isArray(sa.addressLines) && sa.addressLines.length) parts.push(sa.addressLines.join(', '));
-        if (sa.locality) parts.push(sa.locality);
-        const tail = [sa.administrativeArea, sa.postalCode].filter(Boolean).join(' ');
-        if (tail) parts.push(tail);
-        const full = parts.join(', ').trim();
-        if (full) address = full;
-      }
-      
-      const hasCity = !!city && address.toLowerCase().includes(city.toLowerCase());
-      const keywords = [...selectedKeywords, ...manualKeywords.split(',').map(k => k.trim()).filter(Boolean)]
-        .slice(0, 3)
-        .map(k => k.toLowerCase());
-      const hasKeyword = keywords.some(k => address.toLowerCase().includes(k));
-      const hasAnyAddressFields = !!(raw?.storefrontAddress?.locality || raw?.storefrontAddress?.administrativeArea || raw?.storefrontAddress?.postalCode);
-      
-      let addrPts = 0;
-      if (hasCity && hasKeyword) {
-        addrPts = 20;
-      } else if (address) {
-        addrPts = 12;
-      } else if (!hasAnyAddressFields) {
-        addrPts = 2;
-      }
-      score += addrPts;
-      console.log('[Score] Address:', { address, city, keywords, hasCity, hasKeyword, hasAnyAddressFields, points: addrPts, totalScore: score });
-      
-      // 4) Phone number
-      const hasPhone = !!(raw?.phoneNumbers?.primaryPhone || raw?.phoneNumbers?.additionalPhones?.length);
-      const phonePts = hasPhone ? 100 : 0;
-      score += phonePts;
-      console.log('[Score] Phone:', { hasPhone, points: phonePts, totalScore: score });
-      
-      // 5) Description length
-      const description = raw?.profile?.description || '';
-      const wordCount = description ? (description.trim().split(/\s+/).filter(Boolean).length) : 0;
-      let descPts = 0;
-      if (wordCount > 0 && wordCount <= 400) {
-        descPts = 5;
-      } else if (wordCount >= 700) {
-        descPts = 10;
-      }
-      score += descPts;
-      console.log('[Score] Description:', { description: description.substring(0, 100) + '...', wordCount, points: descPts, totalScore: score });
-      
-      // 6) Website link presence
-      const hasWebsite = !!raw?.websiteUri;
-      const websitePts = hasWebsite ? 5 : 0;
-      score += websitePts;
-      console.log('[Score] Website:', { hasWebsite, websiteUri: raw?.websiteUri, points: websitePts, totalScore: score });
-      
-      // 7) Business hours
-      const hasHours = !!(raw?.regularHours?.periods?.length || raw?.moreHours?.length);
-      const hoursPts = hasHours ? 5 : 0;
-      score += hoursPts;
-      console.log('[Score] Hours:', { hasHours, points: hoursPts, totalScore: score });
-      
-      // 8) Labels
-      const hasLabels = Array.isArray(raw?.labels) && raw.labels.length > 0;
-      const labelPts = hasLabels ? 10 : 0;
-      score += labelPts;
-      console.log('[Score] Labels:', { hasLabels, labels: raw?.labels, points: labelPts, totalScore: score });
-      
-      // 9) Categories scoring
-      const catInfo = raw?.categories || {};
-      const primaryCategory = catInfo?.primaryCategory || catInfo?.primary || null;
-      const additionalCats = Array.isArray(catInfo?.additionalCategories) ? catInfo.additionalCategories : [];
-      
-      let catBasePts = 0;
-      let catExtraPts = 0;
-      if (primaryCategory) catBasePts = 25;
-      const extraCount = Math.max(0, Math.min(additionalCats.length, 2));
-      catExtraPts = extraCount * 5;
-      score += (catBasePts + catExtraPts);
-      console.log('[Score] Categories:', { primaryCategory, additionalCats, catBasePts, catExtraPts, totalCatPts: catBasePts + catExtraPts, totalScore: score });
-      
-      // 10) City mentioned in category name
-      const cityLc = city.toLowerCase();
-      const extractCatNames = () => {
-        const names = [];
-        if (primaryCategory) {
-          names.push(primaryCategory.displayName || primaryCategory.name || primaryCategory);
-        }
-        additionalCats.forEach((c) => {
-          names.push(c?.displayName || c?.name || c);
-        });
-        return names.filter(Boolean);
-      };
-      const catNames = extractCatNames();
-      const hasCityInCategory = !!(cityLc && catNames.some(n => String(n).toLowerCase().includes(cityLc)));
-      const cityCatPts = hasCityInCategory ? 10 : 0;
-      score += cityCatPts;
-      console.log('[Score] City in Category:', { city, categoryNames: catNames, hasCityInCategory, points: cityCatPts, totalScore: score });
-
-      // 11) Social media attached (+5 if present)
-      let socialPts = 0;
-      const socialDomains = ['facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'linkedin.com', 'youtube.com', 't.me', 'telegram.me', 'pinterest.', 'tiktok.com'];
-      const looksSocialUrl = (u) => {
-        if (!u || typeof u !== 'string') return false;
-        const s = u.toLowerCase();
-        return socialDomains.some(d => s.includes(d));
-      };
-      const collectLinks = () => {
-        const out = [];
-        const tl = raw || {};
-        const candidates = [];
-        if (Array.isArray(tl.socialLinks)) candidates.push(...tl.socialLinks);
-        if (Array.isArray(tl?.profile?.socialLinks)) candidates.push(...tl.profile.socialLinks);
-        if (Array.isArray(tl.links)) candidates.push(...tl.links);
-        if (Array.isArray(tl.profiles)) candidates.push(...tl.profiles);
-        if (Array.isArray(tl.additionalUrls)) candidates.push(...tl.additionalUrls);
-        if (Array.isArray(tl?.profile?.urls)) candidates.push(...tl.profile.urls);
-        if (tl.websiteUri) candidates.push(tl.websiteUri);
-        candidates.forEach((v) => {
-          if (!v) return;
-          if (typeof v === 'string') out.push(v);
-          else if (v?.url) out.push(v.url);
-          else if (v?.link) out.push(v.link);
-        });
-        return out.filter(Boolean);
-      };
-      const allLinks = collectLinks();
-      const hasSocial = allLinks.some(looksSocialUrl);
-      socialPts = hasSocial ? 5 : 0;
-      score += socialPts;
-      console.log('[Score] Social Media:', { hasSocial, allLinks, points: socialPts, totalScore: score });
-
-      // 12) Appointments link (+5 if present)
-      let appointmentsPts = 0;
-      const hasApptDirect = !!(
-        raw?.appointmentLinks ||
-        raw?.appointmentLink ||
-        raw?.appointmentsLink ||
-        raw?.profile?.appointmentLink ||
-        raw?.profile?.appointmentUrl ||
-        raw?.metadata?.appointmentLink
-      );
-      const attrs = raw?.attributes || {};
-      const attrKeys = Object.keys(attrs).map(k => k.toLowerCase());
-      const hasApptAttr = attrKeys.some(k => k.includes('appointment') || k.includes('booking'));
-      const hasApptUrlInAttrs = Object.values(attrs).some(v => {
-        if (typeof v === 'string') return /http(s)?:\/\//i.test(v) && (v.toLowerCase().includes('book') || v.toLowerCase().includes('appoint'));
-        if (Array.isArray(v)) return v.some(x => typeof x === 'string' && /http(s)?:\/\//i.test(x) && (x.toLowerCase().includes('book') || x.toLowerCase().includes('appoint')));
-        return false;
-      });
-      const hasAppt = !!(hasApptDirect || hasApptAttr || hasApptUrlInAttrs);
-      appointmentsPts = hasAppt ? 5 : 0;
-      score += appointmentsPts;
-      console.log('[Score] Appointments:', { hasAppt, points: appointmentsPts, totalScore: score });
-
-      // 13) Service area (+5 if present)
-      let serviceAreaPts = 0;
-      const sa = raw?.serviceArea || null;
-      const hasServiceArea = !!(
-        sa && (
-          (Array.isArray(sa?.places) && sa.places.length > 0) ||
-          sa?.placeId || sa?.radius || sa?.businessArea || sa?.regionCode ||
-          Object.keys(sa || {}).length > 0
-        )
-      );
-      serviceAreaPts = hasServiceArea ? 5 : 0;
-      score += serviceAreaPts;
-      console.log('[Score] Service Area:', { hasServiceArea, points: serviceAreaPts, totalScore: score });
-
-      // 14) Book Appointment explicit (+5 if present)
-      let bookApptPts = 0;
-      const linkLooksBook = (u) => typeof u === 'string' && /http(s)?:\/\//i.test(u) && /(book|reserve|booking)/i.test(u);
-      const hasBookByLinks = Array.isArray(allLinks) && allLinks.some(linkLooksBook);
-      const hasBookByFields = !!(
-        raw?.appointmentLinks ||
-        raw?.appointmentLink ||
-        raw?.appointmentsLink ||
-        raw?.profile?.appointmentLink ||
-        raw?.profile?.appointmentUrl ||
-        raw?.metadata?.appointmentLink
-      );
-      const hasBookAppointment = !!(hasBookByLinks || hasBookByFields);
-      bookApptPts = hasBookAppointment ? 5 : 0;
-      score += bookApptPts;
-      console.log('[Score] Book Appointment:', { hasBookAppointment, points: bookApptPts, totalScore: score });
-
-      // 15) Q&A section present (+5 if present)
-      let qaPts = 0;
-      const qnaCandidates = [
-        raw?.qna,
-        raw?.qa,
-        raw?.questions,
-        raw?.questionsAndAnswers,
-        raw?.communityQuestions
-      ];
-      const hasQAByStructure = qnaCandidates.some(v => Array.isArray(v) ? v.length > 0 : (v && typeof v === 'object' && Object.keys(v).length > 0));
-      const hasQASection = !!hasQAByStructure;
-      qaPts = hasQASection ? 5 : 0;
-      score += qaPts;
-      console.log('[Score] Q&A Section:', { hasQASection, points: qaPts, totalScore: score });
-
-      // 16) Reviews vs competitors (simplified - just check if reviews exist)
-      let reviewsPts = 0;
-      const hasReviews = !!(raw?.reviews || raw?.reviewCount || raw?.rating);
-      reviewsPts = hasReviews ? 5 : 0;
-      score += reviewsPts;
-      console.log('[Score] Reviews:', { hasReviews, points: reviewsPts, totalScore: score });
-      
-      // Ensure score is within reasonable bounds (0-300)
-      const baseScore = 150; // Add base score to ensure reasonable range
-      const finalScore = Math.max(0, Math.min(300, score + baseScore));
-      
-      console.log('[Score] FINAL CALCULATION:', {
-        rawScore: score,
-        baseScore: baseScore,
-        finalScore: finalScore,
-        breakdown: {
-          verification: verPts,
-          businessName: namePts,
-          address: addrPts,
-          phone: phonePts,
-          description: descPts,
-          website: websitePts,
-          hours: hoursPts,
-          labels: labelPts,
-          categories: catBasePts + catExtraPts,
-          cityInCategory: cityCatPts,
-          socialMedia: socialPts,
-          appointments: appointmentsPts,
-          serviceArea: serviceAreaPts,
-          bookAppointment: bookApptPts,
-          qaSection: qaPts,
-          reviews: reviewsPts
-        }
-      });
-      
-      return finalScore;
-    };
-    
-    const calculatedScore = calculateProfileScore();
-    setProfileScore(calculatedScore);
-    
-    // Hide analysis popup and show score popup
-    setShowAnalysisPopup(false);
-    setShowScorePopup(true);
-  };
-
-  const handleScorePopupClose = () => {
-    setShowScorePopup(false);
-    
-    // Now navigate to results page with all the data
     // Merge predefined selected + manual keywords (manual split by comma)
     const manualParts = manualKeywords
       .split(',')
@@ -525,122 +237,129 @@ const ProfileStrengthAnalysis = () => {
       .filter(Boolean);
     const keywords = [...selectedKeywords, ...manualParts].slice(0, 3);
 
+    // Run competitor discovery in the background
+    try {
+      const selectedBiz = accounts.find(a => a.name === selectedAccount) || {};
+      const raw = selectedBiz?.raw || location.state?.selected || {};
+      
+      console.log('[Competitor Discovery] Debug - selectedAccount:', selectedAccount);
+      console.log('[Competitor Discovery] Debug - selectedBiz:', selectedBiz);
+      console.log('[Competitor Discovery] Debug - raw data:', raw);
+      console.log('[Competitor Discovery] Debug - location.state:', location.state);
+      
+      let latitude = raw?.latlng?.latitude;
+      let longitude = raw?.latlng?.longitude;
+      const placeId = raw?.id || raw?.place_id;
+      
+      console.log('[Competitor Discovery] Debug - initial latitude:', latitude);
+      console.log('[Competitor Discovery] Debug - initial longitude:', longitude);
+      console.log('[Competitor Discovery] Debug - placeId:', placeId);
+      
+      // If we don't have coordinates, try different approaches
+      if (!latitude || !longitude) {
+        // Try to fetch from place ID first
+        if (placeId) {
+          console.log('[Competitor Discovery] Fetching coordinates from place ID:', placeId);
+          try {
+            const placeDetails = await CompetitorDiscoveryService.getPlaceDetails(placeId);
+            
+            if (placeDetails?.geometry?.location) {
+              latitude = placeDetails.geometry.location.lat;
+              longitude = placeDetails.geometry.location.lng;
+              console.log('[Competitor Discovery] Fetched coordinates - lat:', latitude, 'lng:', longitude);
+            }
+          } catch (placeError) {
+            console.warn('[Competitor Discovery] Failed to fetch place details from place ID:', placeError);
+          }
+        }
+        
+        // If still no coordinates, try geocoding the address
+        if ((!latitude || !longitude) && raw?.address) {
+          console.log('[Competitor Discovery] Attempting to geocode address:', raw.address);
+          try {
+            const geocodeResult = await CompetitorDiscoveryService.geocodeAddress(raw.address);
+            if (geocodeResult?.lat && geocodeResult?.lng) {
+              latitude = geocodeResult.lat;
+              longitude = geocodeResult.lng;
+              console.log('[Competitor Discovery] Geocoded coordinates - lat:', latitude, 'lng:', longitude);
+            }
+          } catch (geocodeError) {
+            console.warn('[Competitor Discovery] Failed to geocode address:', geocodeError);
+          }
+        }
+        
+        // Final fallback: use a default location (Delhi, India as example)
+        if (!latitude || !longitude) {
+          console.warn('[Competitor Discovery] Using default location (Delhi, India) as fallback');
+          latitude = 28.6139;
+          longitude = 77.2090;
+        }
+      }
+      
+      const allKeywords = [...selectedKeywords, ...manualKeywords.split(',').map(k => k.trim()).filter(Boolean)].slice(0, 3);
+      const primaryKeyword = allKeywords[0];
+      
+      console.log('[Competitor Discovery] Debug - selectedKeywords:', selectedKeywords);
+      console.log('[Competitor Discovery] Debug - manualKeywords:', manualKeywords);
+      console.log('[Competitor Discovery] Debug - allKeywords:', allKeywords);
+      console.log('[Competitor Discovery] Debug - primaryKeyword:', primaryKeyword);
+
+      if (latitude && longitude && primaryKeyword) {
+        console.log('[Competitor Discovery] Starting analysis for keyword:', primaryKeyword);
+        
+        const competitors = await CompetitorDiscoveryService.findCompetitors({
+          latitude,
+          longitude,
+          keyword: primaryKeyword,
+          excludePlaceId: placeId
+        });
+
+        // Just pass the competitor data to ProfileStrengthResults for velocity calculation there
+        console.log('[Competitor Discovery] Found competitors:', competitors.length);
+        
+        // Navigate to results with raw competitor data (velocity calculation will happen in ProfileStrengthResults)
+        navigate('/profile-strength-results', {
+          state: {
+            business: selectedBiz,
+            keywords,
+            address,
+            competitors: competitors, // Pass raw competitor data
+            selected: raw
+          }
+        });
+        return; // Exit early since we've navigated
+      } else {
+        console.warn('[Competitor Discovery] Missing location or keyword. Skipping analysis.');
+        console.warn('[Competitor Discovery] Missing data - latitude:', latitude, 'longitude:', longitude, 'primaryKeyword:', primaryKeyword);
+      }
+    } catch (error) {
+      console.error('Failed to run competitor discovery:', error);
+    }
+
     // Resolve selected business for address and id
     const selectedBiz = accounts.find(a => a.name === selectedAccount) || null;
-    // If we have the raw GMB location, format like BusinessProfile.jsx
     const raw = selectedBiz?.raw || location.state?.selected || null;
     let address = selectedBiz?.address || raw?.address || raw?.formattedAddress || '';
-    // Always prefer storefrontAddress when available to build a complete address
+    
     if (raw?.storefrontAddress) {
       const sa = raw.storefrontAddress;
       const parts = [];
       if (Array.isArray(sa.addressLines) && sa.addressLines.length) parts.push(sa.addressLines.join(', '));
       if (sa.locality) parts.push(sa.locality);
-      const tail = [sa.administrativeArea, sa.postalCode].filter(Boolean).join(' ');
-      if (tail) parts.push(tail);
-      const full = parts.join(', ').trim();
-      if (full) address = full;
+      if (sa.administrativeArea) parts.push(sa.administrativeArea);
+      if (sa.postalCode) parts.push(sa.postalCode);
+      if (sa.regionCode) parts.push(sa.regionCode);
+      address = parts.join(', ');
     }
 
-    // Build a robust account object: ensure id is always an Account ID (not a Location ID)
-    const parseAccountIdFromName = (name) => {
-      if (typeof name !== 'string') return undefined;
-      // Expected shapes: "accounts/<accId>/locations/<locId>" or just "accounts/<accId>"
-      const parts = name.split('/');
-      const idx = parts.indexOf('accounts');
-      if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
-      return undefined;
-    };
-
-    const selectedRawName = raw?.name || location.state?.selected?.name;
-    const derivedAccId = selectedBiz?.accountId 
-      || parseAccountIdFromName(selectedRawName)
-      || parseAccountIdFromName(location.state?.selected?.name);
-
-    const account = selectedBiz
-      ? {
-          id: derivedAccId, // strictly an Account ID
-          name: selectedBiz.name,
-          locationId: selectedBiz.locationId,
-          verificationState: raw?.verificationState || raw?.verification_status,
-          accountName: derivedAccId ? `accounts/${derivedAccId}` : undefined
-        }
-      : {
-          id: (location.state?.selected?.accountId) || parseAccountIdFromName(location.state?.selected?.name),
-          name: selectedAccount,
-          locationId: location.state?.selected?.locationId || location.state?.selected?.id,
-          verificationState: location.state?.selected?.verificationState || location.state?.selected?.verification_status,
-          accountName: ((location.state?.selected?.accountId) || parseAccountIdFromName(location.state?.selected?.name))
-            ? `accounts/${(location.state?.selected?.accountId) || parseAccountIdFromName(location.state?.selected?.name)}`
-            : undefined
-        };
-
-    // Ensure business object has all required fields for scoring
-    const businessPayload = {
-      ...raw,
-      title: raw?.title || raw?.name || raw?.businessName || selectedBiz?.name,
-      businessName: raw?.businessName || raw?.name || raw?.title || selectedBiz?.name,
-      address: address,
-      formattedAddress: address,
-      locationId: selectedBiz?.locationId || raw?.locationId || raw?.id,
-      accountId: selectedBiz?.accountId || raw?.accountId,
-      accountName: selectedBiz?.accountId || raw?.accountName,
-      name: raw?.name || (raw?.id ? `locations/${raw.id}` : (selectedBiz?.locationId ? `locations/${selectedBiz.locationId}` : undefined)),
-      id: raw?.id || selectedBiz?.locationId,
-      // Ensure storefrontAddress is properly structured for city extraction
-      storefrontAddress: raw?.storefrontAddress || {
-        addressLines: address ? [address.split(',')[0]] : [],
-        locality: raw?.storefrontAddress?.locality || extractCityFromAddress(address),
-        administrativeArea: raw?.storefrontAddress?.administrativeArea || extractStateFromAddress(address),
-        postalCode: raw?.storefrontAddress?.postalCode || extractPostalCodeFromAddress(address)
-      }
-    };
-
-    // Helper functions to extract address components
-    function extractCityFromAddress(addr) {
-      if (!addr) return '';
-      const parts = addr.split(',').map(p => p.trim());
-      // For "SCO 7 Hermitage Centralis, VIP Road, Zirakpur, Punjab 140603"
-      // Find the part that comes before the state/postal code part
-      for (let i = parts.length - 1; i >= 0; i--) {
-        const part = parts[i];
-        // If this part contains digits (postal code), skip it
-        if (/\d/.test(part)) continue;
-        // If this part looks like a state (contains common state names), skip it
-        if (/punjab|haryana|delhi|maharashtra|gujarat|rajasthan|karnataka|tamil nadu|kerala|andhra pradesh|telangana|west bengal|bihar|uttar pradesh|madhya pradesh|odisha|jharkhand|chhattisgarh|uttarakhand|himachal pradesh|jammu|kashmir|goa|manipur|meghalaya|tripura|arunachal pradesh|mizoram|nagaland|sikkim/i.test(part)) continue;
-        // This should be the city
-        return part;
-      }
-      // Fallback: if we have at least 3 parts, take the third-to-last
-      return parts.length >= 3 ? parts[parts.length - 3] : (parts.length >= 2 ? parts[parts.length - 2] : '');
-    }
-
-    function extractStateFromAddress(addr) {
-      if (!addr) return '';
-      const parts = addr.split(',').map(p => p.trim());
-      const lastPart = parts[parts.length - 1] || '';
-      // Extract state from "State PostalCode" format
-      const stateMatch = lastPart.match(/^([A-Za-z\s]+)\s+\d+/);
-      return stateMatch ? stateMatch[1].trim() : '';
-    }
-
-    function extractPostalCodeFromAddress(addr) {
-      if (!addr) return '';
-      const postalMatch = addr.match(/\b\d{6}\b/); // 6-digit postal code
-      return postalMatch ? postalMatch[0] : '';
-    }
-
-    // Navigate to profile strength results page with state
+    // Navigate to results without competitor data (fallback case)
     navigate('/profile-strength-results', {
       state: {
-        account,
+        business: selectedBiz,
         keywords,
         address,
-        business: businessPayload,
-        businesses: passedBusinesses,
-        locationData: raw,
-        selectedLocation: raw,
-        preCalculatedScore: profileScore // Pass the calculated score to skip re-calculation
+        competitors: [], // No competitors found
+        selected: raw
       }
     });
   };
@@ -683,21 +402,17 @@ const ProfileStrengthAnalysis = () => {
                           overflowY: 'auto'
                         }}
                       >
-                        {(accounts.length ? accounts : [{ id: 'acc-1', name: 'Account 1' }, { id: 'acc-2', name: 'Account 2' }]).map((acc) => (
+                        {accounts.map((acc) => (
                           <Box
-                            key={acc.id}
+                            key={acc.name}
+                            sx={{
+                              padding: '12px 16px',
+                              cursor: 'pointer',
+                              '&:hover': { backgroundColor: '#F9FAFB' }
+                            }}
                             onClick={() => {
                               setSelectedAccount(acc.name);
                               setAccountMenuOpen(false);
-                              // Scroll to and focus keywords selector
-                              if (keywordsSelectRef.current) {
-                                keywordsSelectRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              }
-                            }}
-                            sx={{
-                              padding: '10px 14px',
-                              cursor: 'pointer',
-                              '&:hover': { backgroundColor: '#F9FAFB' }
                             }}
                           >
                             {acc.name}
@@ -766,23 +481,13 @@ const ProfileStrengthAnalysis = () => {
             </ContinueButton>
           
           </FormSection>
-
-              
         </ContentSection>
       </MainContent>
-      
+
       {/* Analysis Loading Popup */}
-      <AnalysisLoadingPopup
+      <AnalysisLoadingPopup 
         open={showAnalysisPopup}
-        onComplete={handleAnalysisComplete}
-      />
-      
-      {/* Enhanced Score Popup */}
-      <EnhancedScorePopup
-        open={showScorePopup}
-        onClose={handleScorePopupClose}
-        score={profileScore}
-        maxScore={300}
+        onClose={() => setShowAnalysisPopup(false)}
       />
     </DashboardLayout>
   );

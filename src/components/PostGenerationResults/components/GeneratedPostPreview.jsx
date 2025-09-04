@@ -2,7 +2,9 @@ import React from 'react';
 import { Box, Stack, Typography, Avatar, Rating, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
-const PreviewContainer = styled(Box)(({ theme, templateStyle }) => ({
+const PreviewContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'templateStyle'
+})(({ theme, templateStyle }) => ({
   width: '716px',
   height: '500px',
   background: templateStyle?.background || 'linear-gradient(135deg, #1B5E20 0%, #4CAF50 100%)',
@@ -36,7 +38,9 @@ const TitleSection = styled(Stack)(({ theme }) => ({
   gap: '8px'
 }));
 
-const MainTitle = styled(Typography)(({ theme, templateStyle }) => ({
+const MainTitle = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'templateStyle'
+})(({ theme, templateStyle }) => ({
   fontFamily: 'Inter, sans-serif',
   fontSize: '24px',
   fontWeight: 300,
@@ -44,7 +48,9 @@ const MainTitle = styled(Typography)(({ theme, templateStyle }) => ({
   fontStyle: 'italic'
 }));
 
-const SubTitle = styled(Typography)(({ theme, templateStyle }) => ({
+const SubTitle = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'templateStyle'
+})(({ theme, templateStyle }) => ({
   fontFamily: 'Inter, sans-serif',
   fontSize: '32px',
   fontWeight: 700,
@@ -57,13 +63,17 @@ const ProfileSection = styled(Stack)(({ theme }) => ({
   gap: '12px'
 }));
 
-const ProfileAvatar = styled(Avatar)(({ theme, templateStyle }) => ({
+const ProfileAvatar = styled(Avatar, {
+  shouldForwardProp: (prop) => prop !== 'templateStyle'
+})(({ theme, templateStyle }) => ({
   width: '80px',
   height: '80px',
   border: `3px solid ${templateStyle?.primaryColor || '#4CAF50'}`
 }));
 
-const ProfileName = styled(Typography)(({ theme, templateStyle }) => ({
+const ProfileName = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'templateStyle'
+})(({ theme, templateStyle }) => ({
   fontFamily: 'Inter, sans-serif',
   fontSize: '20px',
   fontWeight: 600,
@@ -87,14 +97,18 @@ const TestimonialText = styled(Typography)(({ theme }) => ({
   fontStyle: 'italic'
 }));
 
-const StyledRating = styled(Rating)(({ theme, templateStyle }) => ({
+const StyledRating = styled(Rating, {
+  shouldForwardProp: (prop) => prop !== 'templateStyle'
+})(({ theme, templateStyle }) => ({
   marginBottom: '20px',
   '& .MuiRating-iconFilled': {
     color: templateStyle?.primaryColor || '#4CAF50'
   }
 }));
 
-const CTAButton = styled(Button)(({ theme, templateStyle }) => ({
+const CTAButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'templateStyle'
+})(({ theme, templateStyle }) => ({
   backgroundColor: templateStyle?.secondaryColor || '#1B5E20',
   color: '#ffffff',
   fontFamily: 'Inter, sans-serif',
@@ -116,7 +130,7 @@ const GeneratedPostPreview = ({ generatedPost, selectedTemplate }) => {
   const templateStyle = selectedTemplate?.style;
   
   return (
-    <PreviewContainer templateStyle={templateStyle}>
+    <PreviewContainer templateStyle={templateStyle} className="post-preview-container">
       <WatermarkText>Image Not Included</WatermarkText>
       
       <ContentCard>

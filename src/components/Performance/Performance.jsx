@@ -6,6 +6,7 @@ import GMBService from '../../services/GMBService';
 import { useAppContext } from '../../contexts/AppContext';
 import tokenManager from '../../auth/TokenManager';
 import PerformanceDashboard from './PerformanceDashboard';
+import { savePerformanceSnapshot, getYourData } from '../../utils/yourDataStore';
 
 const PageContainer = styled(Box)(({ theme }) => ({
   maxWidth: '1200px',
@@ -311,6 +312,114 @@ const Performance = () => {
     fetchPerformanceData();
   }, [currentProfile?.locationId]); // Only depend on locationId to avoid unnecessary re-fetches
 
+  // Save a snapshot of key business fields from the selected profile (locationData)
+  useEffect(() => {
+    try {
+      const loc = currentProfile?.locationData;
+      if (!loc) return;
+
+      const name = currentProfile?.name || loc?.title || '';
+      const address = currentProfile?.address || '';
+      const number = loc?.phoneNumbers?.primaryPhone || '';
+      const primaryCategory = loc?.categories?.primaryCategory;
+      const additionalCategories = Array.isArray(loc?.categories?.additionalCategories) ? loc.categories.additionalCategories : [];
+      const categoryNames = [
+        primaryCategory?.displayName || primaryCategory?.name,
+        ...additionalCategories.map(c => c?.displayName || c?.name)
+      ].filter(Boolean).join(' | ');
+      const serviceArea = loc?.serviceArea?.places || loc?.serviceArea?.region || loc?.serviceArea?.placeInfos || undefined;
+      // Strict: use only structured locality
+      const city = loc?.storefrontAddress?.locality || '';
+      // Redefined: true when primary category exists AND city (from address) or service area is present
+      const hasPrimaryCategory = !!(primaryCategory?.displayName || primaryCategory?.name);
+      const hasServiceArea = !!(
+        loc?.serviceArea && (
+          (Array.isArray(loc?.serviceArea?.places) && loc.serviceArea.places.length > 0) ||
+          loc?.serviceArea?.region ||
+          loc?.serviceArea?.placeInfos
+        )
+      );
+      // Strict rule: only locality presence determines the flag
+      const computedHasCityInCategory = !!city;
+      // Prefer value stored by Business Profile snapshot if available
+      const storedCityInCategory = (() => {
+        try { return getYourData()?.businessProfile?.cityInCategory; } catch { return undefined; }
+      })();
+      const hasCityInCategory = (typeof storedCityInCategory === 'boolean') ? storedCityInCategory : computedHasCityInCategory;
+      console.log('[Performance] CityInCategory check:', {
+        cityValue: city,
+        hasLocality: !!city,
+        hasCityInCategory,
+        source: (typeof storedCityInCategory === 'boolean') ? 'businessProfileSnapshot' : 'computed',
+        storedCityInCategory,
+        computedHasCityInCategory
+      });
+      const description = loc?.profile?.description || '';
+      const websiteLink = loc?.websiteUri || '';
+      const hasHours = !!(loc?.regularHours?.periods?.length || loc?.moreHours?.length);
+      const timings = hasHours ? 'Available' : '';
+      const labels = Array.isArray(loc?.labels) ? loc.labels.join(' | ') : '';
+      const pinToMapLocation = (loc?.latlng?.latitude && loc?.latlng?.longitude)
+        ? `${loc.latlng.latitude}, ${loc.latlng.longitude}`
+        : '';
+
+      // Social links collection (best effort from location data)
+      const collectLinks = () => {
+        const out = [];
+        const candidates = [];
+        if (Array.isArray(loc?.socialLinks)) candidates.push(...loc.socialLinks);
+        if (Array.isArray(loc?.profile?.socialLinks)) candidates.push(...loc.profile.socialLinks);
+        if (Array.isArray(loc?.links)) candidates.push(...loc.links);
+        if (Array.isArray(loc?.profiles)) candidates.push(...loc.profiles);
+        if (Array.isArray(loc?.additionalUrls)) candidates.push(...loc.additionalUrls);
+        if (Array.isArray(loc?.profile?.urls)) candidates.push(...loc.profile.urls);
+        if (loc?.websiteUri) candidates.push(loc.websiteUri);
+        candidates.forEach(v => {
+          if (!v) return;
+          if (typeof v === 'string') out.push(v);
+          else if (v?.url) out.push(v.url);
+          else if (v?.link) out.push(v.link);
+        });
+        return Array.from(new Set(out));
+      };
+      const socialMedia = collectLinks().join(' | ');
+
+      // Derive Profile Status: prefer dashboard's Business Profile verification flag
+      const bpVerified = (() => {
+        try {
+          const bp = getYourData()?.businessProfile || {};
+          return bp?.verified === true || String(bp?.status || '').toLowerCase() === 'verified';
+        } catch { return false; }
+      })();
+      const perfProfileStatus = currentProfile?.verificationState || '';
+      const derivedProfileStatus = bpVerified ? 'Verified' : (perfProfileStatus || '');
+
+      // Persist
+      savePerformanceSnapshot({
+        profileStatus: derivedProfileStatus,
+        name,
+        address,
+        number,
+        category: categoryNames,
+        products: undefined, // not available here
+        services: undefined, // to be provided from Business Profile page if available
+        serviceArea,
+        cityInCategory: hasCityInCategory,
+        description,
+        socialMedia,
+        websiteLink,
+        bookAppointment: undefined,
+        timings,
+        photos: undefined,
+        attributes: undefined,
+        labels,
+        pinToMapLocation,
+      });
+    } catch (_) {
+      // non-blocking
+    }
+  }, [currentProfile]);
+
   // Transform real performance data to match the new UI component structure
   const transformedPerformanceData = useMemo(() => {
     if (!performanceData) return null;
@@ -582,6 +691,7 @@ const Performance = () => {
           onExportToPDF={handleExportToPDF}
           onTimeRangeChange={handleTimeRangeChange}
           selectedTimeRange="6 Month"
+          currentProfile={currentProfile}
         />
       ) : (
         !loading && currentProfile && (

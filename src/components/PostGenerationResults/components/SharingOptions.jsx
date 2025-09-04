@@ -5,7 +5,7 @@ import EmailIcon from '../icons/EmailIcon';
 import FacebookIcon from '../icons/FacebookIcon';
 import WhatsAppIcon from '../icons/WhatsAppIcon';
 import InstagramIcon from '../icons/InstagramIcon';
-import GoogleIcon from '../icons/GoogleIcon';
+
 import CopyLinkIcon from '../icons/CopyLinkIcon';
 
 const SharingContainer = styled(Stack)(({ theme }) => ({
@@ -36,20 +36,13 @@ const OptionText = styled(Typography)(({ theme }) => ({
   textAlign: 'left'
 }));
 
-const ComingSoonText = styled(Typography)(({ theme }) => ({
-  fontFamily: 'Inter, sans-serif',
-  fontSize: '16px',
-  fontWeight: 400,
-  color: '#121927',
-  textAlign: 'left'
-}));
+
 
 const iconComponents = {
   email: EmailIcon,
   facebook: FacebookIcon,
   whatsapp: WhatsAppIcon,
   instagram: InstagramIcon,
-  google_profile: GoogleIcon,
   copy_link: CopyLinkIcon
 };
 
@@ -60,10 +53,13 @@ const SharingOptions = ({ sharingOptions, onSocialShare }) => {
   const handleOptionClick = async (platform, label) => {
     console.log(`Sharing via ${platform}`);
     
+    const postUrl = window.location.href;
+    const postTitle = 'Check out my Visibeen post!';
+    const postDescription = 'I created this post with Visibeen. Take a look!';
+    
     if (platform === 'copy_link') {
       try {
-        const currentUrl = window.location.href;
-        await navigator.clipboard.writeText(currentUrl);
+        await navigator.clipboard.writeText(postUrl);
         setSnackbarMessage('Link copied to clipboard!');
         setSnackbarOpen(true);
       } catch (err) {
@@ -71,8 +67,27 @@ const SharingOptions = ({ sharingOptions, onSocialShare }) => {
         setSnackbarMessage('Failed to copy link');
         setSnackbarOpen(true);
       }
-    } else if (platform === 'google_profile') {
-      setSnackbarMessage('Google Profile sharing coming soon!');
+    } else if (platform === 'email') {
+      // Email sharing
+      const mailtoLink = `mailto:?subject=${encodeURIComponent(postTitle)}&body=${encodeURIComponent(postDescription + '\n\n' + postUrl)}`;
+      window.open(mailtoLink, '_blank');
+      setSnackbarMessage(`Email client opened!`);
+      setSnackbarOpen(true);
+    } else if (platform === 'facebook') {
+      // Facebook sharing
+      const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
+      window.open(facebookUrl, '_blank', 'width=600,height=400');
+      setSnackbarMessage(`Shared via Facebook!`);
+      setSnackbarOpen(true);
+    } else if (platform === 'whatsapp') {
+      // WhatsApp sharing
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(postTitle + '\n\n' + postUrl)}`;
+      window.open(whatsappUrl, '_blank');
+      setSnackbarMessage(`Shared via WhatsApp!`);
+      setSnackbarOpen(true);
+    } else if (platform === 'instagram') {
+      // Instagram doesn't have a direct sharing API, so we'll show a message
+      setSnackbarMessage(`To share on Instagram, please download the image first and upload it to your Instagram account.`);
       setSnackbarOpen(true);
     } else {
       // Handle other social sharing platforms
@@ -93,8 +108,6 @@ const SharingOptions = ({ sharingOptions, onSocialShare }) => {
       <SharingContainer>
         {sharingOptions.map((option) => {
           const IconComponent = iconComponents[option.platform];
-          const isComingSoon = option.platform === 'google_profile';
-          
           return (
             <SharingOption
               key={option.platform}
@@ -103,11 +116,7 @@ const SharingOptions = ({ sharingOptions, onSocialShare }) => {
               {IconComponent && (
                 <IconComponent width={20} height={20} color="currentColor" />
               )}
-              {isComingSoon ? (
-                <ComingSoonText>{option.label}</ComingSoonText>
-              ) : (
-                <OptionText>{option.label}</OptionText>
-              )}
+              <OptionText>{option.label}</OptionText>
             </SharingOption>
           );
         })}
