@@ -3,6 +3,8 @@
  * Finds competitors by location/keyword and fetches reviews data for scoring
  */
 
+import VelocityService from './VelocityService.js';
+
 class CompetitorDiscoveryService {
   constructor() {
     this.apiKey = process.env.REACT_APP_GOOGLE_PLACES_API_KEY || process.env.REACT_APP_GOOGLE_API_KEY;
@@ -276,6 +278,104 @@ class CompetitorDiscoveryService {
   }
 
   /**
+   * Calculate velocity score for user business
+   * @param {Object} userBusiness - User business data
+   * @param {Object} options - Options for velocity calculation
+   * @returns {Object} Velocity score analysis
+   */
+  calculateVelocityScore(userBusiness, options = {}) {
+    try {
+      console.log('[CompetitorDiscovery] Calculating velocity score for:', userBusiness.name);
+      
+      // Use provided 30-day review count directly
+      let velocityAnalysis = null;
+      
+      if (options.reviewsLast30Days !== undefined) {
+        // Use provided 30-day review count
+        velocityAnalysis = VelocityService.calculateVelocityScore(
+          options.reviewsLast30Days, 
+          options.benchmarkReviewCount
+        );
+      }
+      
+      if (!velocityAnalysis) {
+        // Fallback: estimate based on total reviews and business age
+        const totalReviews = userBusiness.reviewsCount || userBusiness.userRatingCount || 0;
+        const estimatedMonthlyReviews = Math.max(1, Math.floor(totalReviews / 12)); // Assume 1 year average
+        const estimatedLast30Days = Math.floor(estimatedMonthlyReviews);
+        
+        console.log('[CompetitorDiscovery] Using estimated velocity:', {
+          totalReviews,
+          estimatedLast30Days
+        });
+        
+        velocityAnalysis = VelocityService.calculateVelocityScore(estimatedLast30Days);
+      }
+      
+      return {
+        velocityScore: velocityAnalysis.velocityScore,
+        analysis: velocityAnalysis
+      };
+      
+    } catch (error) {
+      console.error('[CompetitorDiscovery] Error calculating velocity score:', error);
+      return {
+        velocityScore: 0,
+        analysis: {
+          error: 'Failed to calculate velocity score',
+          newReviewsLast30Days: 0,
+          benchmarkReviewCount: 5,
+          recommendations: ['Unable to calculate velocity score. Please check review data availability.']
+        }
+      };
+    }
+  }
+
+  /**
+   * Calculate comprehensive scoring including reviews and velocity
+   */
+  calculateComprehensiveScore(userBusiness, competitors, options = {}) {
+    try {
+      // Calculate existing reviews score
+      const reviewsScoring = this.calculateReviewsScore(competitors, userBusiness);
+      
+      // Calculate velocity score
+      const velocityScoring = this.calculateVelocityScore(userBusiness, options);
+      
+      // Combine scores (you can adjust weights as needed)
+      const reviewsWeight = 0.7; // 70% weight for reviews score
+      const velocityWeight = 0.3; // 30% weight for velocity score
+      
+      const combinedScore = Math.round(
+        (reviewsScoring.score * reviewsWeight) + 
+        (velocityScoring.velocityScore * velocityWeight * (100/12)) // Scale velocity to 100 point scale
+      );
+      
+      console.log('[CompetitorDiscovery] Comprehensive scoring calculated:', {
+        reviewsScore: reviewsScoring.score,
+        velocityScore: velocityScoring.velocityScore,
+        combinedScore
+      });
+      
+      return {
+        score: combinedScore,
+        reviewsAnalysis: reviewsScoring.analysis,
+        velocityAnalysis: velocityScoring,
+        breakdown: {
+          reviewsScore: reviewsScoring.score,
+          velocityScore: velocityScoring.velocityScore,
+          weights: { reviews: reviewsWeight, velocity: velocityWeight }
+        }
+      };
+      
+    } catch (error) {
+      console.error('[CompetitorDiscovery] Error calculating comprehensive score:', error);
+      // Fallback to reviews-only scoring
+      return this.calculateReviewsScore(competitors, userBusiness);
+    }
+  }
+
+  /**
    * Calculate scoring based on reviews count and rating
    */
   calculateReviewsScore(competitors, userBusiness = null) {
@@ -475,33 +575,6 @@ class CompetitorDiscoveryService {
     }
 
     console.groupEnd();
-  }
-
-  /**
-   * Log Velocity (reviews growth) calculation in a consistent format
-   * @param {Object} params
-   * @param {number} params.newReviews30 - New reviews count in last 30 days for the business
-   * @param {number} params.avgCompetitorReviews - Average competitor total reviews (baseline)
-   * @param {number} params.rawPoints - Raw (newReviews30/avgCompetitorReviews)*12 before capping
-   * @param {number} params.finalPoints - Final points after MIN(..., 12)
-   */
-  logVelocityCalculation({ newReviews30, avgCompetitorReviews, rawPoints, finalPoints }) {
-    try {
-      console.group('[Velocity] Calculation');
-      console.log('Inputs:', {
-        newReviewsLast30Days: newReviews30,
-        avgCompetitorReviews,
-        formula: 'MIN((newReviews30 / avgCompetitorReviews) * 12, 12)',
-        maxPoints: 12
-      });
-      console.log('Computation:', {
-        rawPoints: Number.isFinite(rawPoints) ? Number(rawPoints.toFixed?.(3) ?? rawPoints) : rawPoints,
-        finalPoints
-      });
-      console.groupEnd();
-    } catch (_) {
-      // noop
-    }
   }
 }
 

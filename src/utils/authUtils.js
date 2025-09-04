@@ -35,13 +35,51 @@ export const getSession = () => {
 };
 
 export const clearSession = () => {
+  // Clear user session data
   localStorage.removeItem('user');
   sessionStorage.removeItem('user');
-  // Clear token storage as well
+  localStorage.removeItem('userData');
+  sessionStorage.removeItem('userData');
+  
+  // Clear backend/database tokens
   localStorage.removeItem('authToken');
   sessionStorage.removeItem('authToken');
   localStorage.removeItem('access_token');
   sessionStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  sessionStorage.removeItem('refresh_token');
+  localStorage.removeItem('token');
+  sessionStorage.removeItem('token');
+  
+  // Clear Google tokens
+  localStorage.removeItem('googleAccessToken');
+  sessionStorage.removeItem('googleAccessToken');
+  localStorage.removeItem('google_token');
+  sessionStorage.removeItem('google_token');
+  localStorage.removeItem('googleRefreshToken');
+  sessionStorage.removeItem('googleRefreshToken');
+  
+  // Clear any other potential token storage
+  localStorage.removeItem('bearer_token');
+  sessionStorage.removeItem('bearer_token');
+  localStorage.removeItem('id_token');
+  sessionStorage.removeItem('id_token');
+  
+  // Clear URL parameters if possible
+  if (typeof window !== 'undefined') {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('access_token');
+      url.searchParams.delete('google_token');
+      url.searchParams.delete('token');
+      url.searchParams.delete('id_token');
+      window.history.replaceState({}, document.title, url.pathname);
+    } catch (e) {
+      console.warn('Could not clear URL parameters:', e);
+    }
+  }
+  
+  console.log('Session and all tokens cleared successfully');
 };
 
 // Determine if the session's token is expired based on expires_at (unix seconds or ISO)
