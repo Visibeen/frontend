@@ -116,13 +116,19 @@ const UserAccountDropdown = () => {
     // Get user session info
     const session = getSession();
     if (session) {
-      const displayName = getDisplayNameFromSession(session);
-      const logoUrl = getLogoFromSession(session);
+      // Get account name from GMB data or fallback to user name
+      const accountName = session.gmbPrimaryAccountName ||
+        session.gmbAccounts?.[0]?.accountName ||
+        session.user?.accountName ||
+        session.accountName ||
+        session.user?.name ||
+        session.user?.displayName ||
+        'User';
       setUserInfo({
-        name: displayName,
-        email: session.user?.email || session.email || 'user@example.com',
-        initials: getInitials(displayName),
-        logoUrl
+        name: session.user?.name || session.user?.displayName || 'User',
+        accountName: accountName,
+        email: session.user?.email || 'user@example.com',
+        initials: getInitials(accountName)
       });
     }
   }, []);
@@ -183,8 +189,11 @@ const UserAccountDropdown = () => {
     navigate('/my-account');
   };
 
-  // Settings removed from logout/menu section per request
-
+  const handleSettings = () => {
+    handleClose();
+    navigate('/');
+  };
+  
   const handleLogout = async () => {
     handleClose();
 

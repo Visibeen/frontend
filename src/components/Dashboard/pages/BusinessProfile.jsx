@@ -1547,7 +1547,7 @@ const BusinessProfile = () => {
         const servicesData = await GMBService.getServices(locationId, accessToken);
         console.log('[BusinessProfile] Services fetched:', servicesData);
         
-        // Transform API data to match our component structure (services: name only)
+        // Transform API data to match our component structure
         const transformedServices = servicesData.map((service, index) => ({
           id: service.name?.split('/').pop() || index + 1,
           title: (service.serviceId || service.name || `Service ${index + 1}`).replace(/_/g, ' ')
@@ -3157,31 +3157,23 @@ const BusinessProfile = () => {
                     </Box>
                   ) : (activeTab === 'products' ? products : services).length > 0 ? (
                     (activeTab === 'products' ? products : services).slice(0, 2).map((item) => (
-                      activeTab === 'services' ? (
-                        <ProductCard key={item.id}>
-                          <ProductContent>
-                            <ProductTitle>{item.title}</ProductTitle>
-                          </ProductContent>
-                        </ProductCard>
-                      ) : (
-                        <ProductCard key={item.id}>
-                          <ProductImage 
-                            src={item.image} 
-                            alt={item.title}
-                            onError={(e) => {
-                              e.target.style.backgroundColor = '#f3f4f6';
-                              e.target.style.display = 'flex';
-                              e.target.style.alignItems = 'center';
-                              e.target.style.justifyContent = 'center';
-                              e.target.innerHTML = '<span style=\"color: #9ca3af; font-size: 12px;\">No Image</span>';
-                            }}
-                          />
-                          <ProductContent>
-                            <ProductTitle>{item.title}</ProductTitle>
-                            <ProductPrice>{item.price}</ProductPrice>
-                          </ProductContent>
-                        </ProductCard>
-                      )
+                      <ProductCard key={item.id}>
+                        <ProductImage 
+                          src={item.image} 
+                          alt={item.title}
+                          onError={(e) => {
+                            e.target.style.backgroundColor = '#f3f4f6';
+                            e.target.style.display = 'flex';
+                            e.target.style.alignItems = 'center';
+                            e.target.style.justifyContent = 'center';
+                            e.target.innerHTML = '<span style="color: #9ca3af; font-size: 12px;">No Image</span>';
+                          }}
+                        />
+                        <ProductContent>
+                          <ProductTitle>{item.title}</ProductTitle>
+                          <ProductPrice>{item.price}</ProductPrice>
+                        </ProductContent>
+                      </ProductCard>
                     ))
                   ) : (
                     <Box sx={{
@@ -3547,31 +3539,23 @@ const BusinessProfile = () => {
 
           <ModalProductsGrid>
             {(activeTab === 'products' ? products : services).map((item) => (
-              activeTab === 'services' ? (
-                <ProductCard key={item.id}>
-                  <ProductContent>
-                    <ProductTitle>{item.title}</ProductTitle>
-                  </ProductContent>
-                </ProductCard>
-              ) : (
-                <ProductCard key={item.id}>
-                  <ProductImage 
-                    src={item.image} 
-                    alt={item.title}
-                    onError={(e) => {
-                      e.target.style.backgroundColor = '#f3f4f6';
-                      e.target.style.display = 'flex';
-                      e.target.style.alignItems = 'center';
-                      e.target.style.justifyContent = 'center';
-                      e.target.innerHTML = '<span style=\"color: #9ca3af; font-size: 12px;\">No Image</span>';
-                    }}
-                  />
-                  <ProductContent>
-                    <ProductTitle>{item.title}</ProductTitle>
-                    <ProductPrice>{item.price}</ProductPrice>
-                  </ProductContent>
-                </ProductCard>
-              )
+              <ProductCard key={item.id}>
+                <ProductImage 
+                  src={item.image} 
+                  alt={item.title}
+                  onError={(e) => {
+                    e.target.style.backgroundColor = '#f3f4f6';
+                    e.target.style.display = 'flex';
+                    e.target.style.alignItems = 'center';
+                    e.target.style.justifyContent = 'center';
+                    e.target.innerHTML = '<span style="color: #9ca3af; font-size: 12px;">No Image</span>';
+                  }}
+                />
+                <ProductContent>
+                  <ProductTitle>{item.title}</ProductTitle>
+                  <ProductPrice>{item.price}</ProductPrice>
+                </ProductContent>
+              </ProductCard>
             ))}
           </ModalProductsGrid>
         </ModalContent>
