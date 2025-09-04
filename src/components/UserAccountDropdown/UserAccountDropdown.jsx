@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Box, Typography, Avatar, Menu, MenuItem, Divider, IconButton } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import { AccountCircle, Logout, Person, Settings } from '@mui/icons-material';
+import { AccountCircle, Logout, Person } from '@mui/icons-material';
 import { getSession, clearSession } from '../../utils/authUtils';
 import tokenManager from '../../auth/TokenManager';
 import AutoTokenManager from '../../utils/autoTokenUtils';
@@ -31,9 +31,12 @@ const UserButton = styled(IconButton)(({ theme }) => ({
 const UserAvatar = styled(Avatar)(({ theme }) => ({
   width: '28px',
   height: '28px',
-  backgroundColor: '#0B91D6',
-  fontSize: '14px',
-  fontWeight: 600
+  background: 'linear-gradient(135deg, #0B91D6 0%, #2563EB 100%)',
+  boxShadow: '0 2px 8px rgba(11, 145, 214, 0.3)',
+  color: '#ffffff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
 }));
 
 const StyledMenu = styled(Menu)(({ theme }) => ({
@@ -113,22 +116,33 @@ const UserAccountDropdown = () => {
     // Get user session info
     const session = getSession();
     if (session) {
-      // Get account name from GMB data or fallback to user name
-      const accountName = session.gmbPrimaryAccountName ||
-        session.gmbAccounts?.[0]?.accountName ||
-        session.user?.accountName ||
-        session.accountName ||
-        session.user?.name ||
-        session.user?.displayName ||
-        'User';
+      const displayName = getDisplayNameFromSession(session);
+      const logoUrl = getLogoFromSession(session);
       setUserInfo({
-        name: session.user?.name || session.user?.displayName || 'User',
-        accountName: accountName,
-        email: session.user?.email || 'user@example.com',
-        initials: getInitials(accountName)
+        name: displayName,
+        email: session.user?.email || session.email || 'user@example.com',
+        initials: getInitials(displayName),
+        logoUrl
       });
     }
   }, []);
+
+  const getDisplayNameFromSession = (session) => {
+    // Prefer account/business level names over generic user name
+    const candidates = [
+      session.accountName,
+      session.businessName,
+      session.account?.name,
+      session.business?.name,
+      session.organization?.name,
+      session.companyName,
+      session.user?.accountName,
+      session.user?.businessName,
+      session.user?.name,
+      session.user?.displayName,
+    ].filter(Boolean);
+    return (candidates[0] || 'Account');
+  };
 
   const getInitials = (name) => {
     return name
@@ -137,6 +151,23 @@ const UserAccountDropdown = () => {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const getLogoFromSession = (session) => {
+    const candidates = [
+      session.logoUrl,
+      session.logo,
+      session.photoURL,
+      session.profileImage,
+      session.imageUrl,
+      session.business?.logoUrl,
+      session.account?.logoUrl,
+      session.organization?.logoUrl,
+      session.user?.photoURL,
+      session.user?.avatar,
+      session.user?.imageUrl
+    ].filter(Boolean);
+    return candidates[0] || null;
   };
 
   const handleClick = (event) => {
@@ -152,11 +183,8 @@ const UserAccountDropdown = () => {
     navigate('/my-account');
   };
 
-  const handleSettings = () => {
-    handleClose();
-    navigate('/');
-  };
-  
+  // Settings removed from logout/menu section per request
+
   const handleLogout = async () => {
     handleClose();
 
@@ -215,9 +243,13 @@ const UserAccountDropdown = () => {
         aria-haspopup="true"
         aria-expanded={open ? 'true' : undefined}
       >
-        <UserAvatar>
-          {userInfo.initials}
-        </UserAvatar>
+        {userInfo.logoUrl ? (
+          <UserAvatar src={userInfo.logoUrl} alt={userInfo.name} />
+        ) : (
+          <UserAvatar>
+            <AccountCircle sx={{ color: '#ffffff' }} />
+          </UserAvatar>
+        )}
       </UserButton>
 
       <StyledMenu
@@ -247,10 +279,7 @@ const UserAccountDropdown = () => {
           My Account
         </StyledMenuItem> */}
 
-        <StyledMenuItem onClick={handleSettings}>
-          <Settings />
-          Settings
-        </StyledMenuItem>
+        {/* Settings menu item removed */}
 
         <Divider sx={{ margin: '8px 0' }} />
 

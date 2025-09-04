@@ -5,9 +5,8 @@ import { useLocation } from 'react-router-dom';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import EditIcon from '../icons/EditIcon';
 import GMBService from '../../services/GMBService';
-import EnhancedScorePopup from './components/EnhancedScorePopup';
-import AnalysisLoadingPopup from './components/AnalysisLoadingPopup';
- 
+import CompetitorDiscoveryService from '../../services/CompetitorDiscoveryService';
+import { getYourData } from '../../utils/yourDataStore';
 
 const MainContent = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -384,9 +383,6 @@ const ProfileStrengthResults = () => {
   const [completedSteps, setCompletedSteps] = useState([]);
   const [stepProgress, setStepProgress] = useState(0);
   
-  // Enhanced popup state
-  const [showScorePopup, setShowScorePopup] = useState(false);
-  
 
   // Ensure target location is always set with available data
   useEffect(() => {
@@ -623,16 +619,8 @@ const ProfileStrengthResults = () => {
     console.debug('[Results] Address source used:', chosen, 'value:', displayAddress);
   }, [freshAddress, resolvedAddress, fallbackBusinessesAddress, displayAddress]);
 
-  // Compute profile strength score out of 500 based on provided rules
+  // Compute profile strength score out of 300 based on provided rules
   useEffect(() => {
-    // Skip auto-calculation if we're coming from ProfileStrengthAnalysis with a pre-calculated score
-    const hasPreCalculatedScore = location.state?.preCalculatedScore;
-    if (hasPreCalculatedScore) {
-      setProfileScore(hasPreCalculatedScore);
-      setIsCalculating(false);
-      return;
-    }
-
     let isMounted = true;
     const computeScore = async () => {
       if (!isMounted) return;
@@ -709,7 +697,7 @@ const ProfileStrengthResults = () => {
 
       // 4) Phone number
       const hasPhone = !!(targetLocation?.phoneNumbers?.primaryPhone || targetLocation?.phoneNumbers?.additionalPhones?.length);
-      phonePts = hasPhone ? 100 : 0;
+      phonePts = hasPhone ? 18 : 0;
       score += phonePts;
       updateProgress('Analyzing business description...', 55, ['Contact Information']);
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -968,8 +956,265 @@ const ProfileStrengthResults = () => {
       score += qaPts;
       console.log('[Score] Q&A check:', { hasQASection, awarded: qaPts });
 
-      // 9) Reviews vs competitors (Places Nearby)
+      // 9) Review Rating scoring
+      let reviewRatingPts = 0;
+      updateProgress('Fetching business rating...', 88, ['Categories & Services']);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      // Check multiple sources for business rating
+      const ratingCandidates = {
+        targetLocationRating: targetLocation?.rating,
+        targetLocationAverageRating: targetLocation?.averageRating,
+        targetLocationGoogleRating: targetLocation?.googleRating,
+        businessRating: business?.rating,
+        businessAverageRating: business?.averageRating,
+        businessGoogleRating: business?.googleRating,
+        reviewsDataRating: reviewsData?.averageRating,
+        stateLocationRating: state?.locationData?.rating || state?.selectedLocation?.rating,
+        stateLocationAverageRating: state?.locationData?.averageRating || state?.selectedLocation?.averageRating
+      };
+      
+      let myRating = (
+        targetLocation?.rating ||
+        targetLocation?.averageRating ||
+        targetLocation?.googleRating ||
+        business?.rating ||
+        business?.averageRating ||
+        business?.googleRating ||
+        reviewsData?.averageRating ||
+        state?.locationData?.rating ||
+        state?.selectedLocation?.rating ||
+        state?.locationData?.averageRating ||
+        state?.selectedLocation?.averageRating ||
+        0
+      );
+      
+      // If no rating found in existing data, fetch from Places API
+      if (!myRating || myRating === 0) {
+        try {
+          const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || process.env.REACT_APP_GMB_API_KEY;
+          const base = process.env.NODE_ENV === 'development' ? '/places' : 'https://maps.googleapis.com';
+          
+          // Get place_id from various sources
+          let placeId = (
+            targetLocation?.metadata?.placeId ||
+            targetLocation?.placeId ||
+            business?.placeId ||
+            business?.place_id ||
+            state?.locationData?.placeId ||
+            state?.selectedLocation?.placeId ||
+            null
+          );
+          
+          // If no place_id, try to find it using business name and address
+          if (!placeId && apiKey) {
+            const businessTitle = targetLocation?.title || business?.title || business?.businessName || '';
+            const displayAddress = (freshAddress || resolvedAddress || fallbackBusinessesAddress || '').trim();
+            const queryParts = [businessTitle, displayAddress].filter(Boolean).join(' ').trim();
+            
+            if (queryParts) {
+              console.log('[Review Rating] Finding place_id for rating lookup:', queryParts);
+              const params = new URLSearchParams({
+                input: queryParts,
+                inputtype: 'textquery',
+                fields: 'place_id,name,rating,user_ratings_total',
+                key: apiKey
+              });
+              const findUrl = `${base}/maps/api/place/findplacefromtext/json?${params.toString()}`;
+              const findResponse = await fetch(findUrl);
+              
+              if (findResponse.ok) {
+                const findData = await findResponse.json();
+                const candidate = Array.isArray(findData?.candidates) ? findData.candidates[0] : null;
+                if (candidate?.place_id) {
+                  placeId = candidate.place_id;
+                  if (candidate.rating) {
+                    myRating = candidate.rating;
+                    console.log('[Review Rating] Found rating from Find Place API:', { placeId, rating: myRating });
+                  }
+                }
+              }
+            }
+          }
+          
+          // If we have place_id but still no rating, get details
+          if (placeId && (!myRating || myRating === 0) && apiKey) {
+            console.log('[Review Rating] Fetching rating from Place Details API:', placeId);
+            const params = new URLSearchParams({
+              place_id: placeId,
+              fields: 'place_id,name,rating,user_ratings_total',
+              key: apiKey
+            });
+            const detailsUrl = `${base}/maps/api/place/details/json?${params.toString()}`;
+            const detailsResponse = await fetch(detailsUrl);
+            
+            if (detailsResponse.ok) {
+              const detailsData = await detailsResponse.json();
+              if (detailsData?.result?.rating) {
+                myRating = detailsData.result.rating;
+                console.log('[Review Rating] Found rating from Place Details API:', { 
+                  placeId, 
+                  rating: myRating,
+                  totalReviews: detailsData.result.user_ratings_total 
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('[Review Rating] Failed to fetch rating from Places API:', error);
+        }
+      }
+      
+      console.log('[Review Rating] Starting calculation:', { 
+        myRating,
+        ratingCandidates,
+        fetchedFromAPI: myRating > 0 && !Object.values(ratingCandidates).some(r => r > 0),
+        formula: 'MIN((rating - 1) * 2.5, 20)',
+        maxPoints: 20 
+      });
+      
+      if (myRating > 1) {
+        const rawCalculation = (myRating - 1) * 2.5;
+        reviewRatingPts = Math.min(20, rawCalculation);
+        score += reviewRatingPts;
+        console.log('[Review Rating] Calculation complete:', { 
+          myRating,
+          rawCalculation: rawCalculation.toFixed(2),
+          finalPoints: reviewRatingPts,
+          capped: reviewRatingPts === 20,
+          formula: `(${myRating} - 1) * 2.5 = ${rawCalculation.toFixed(2)} → ${reviewRatingPts} points`
+        });
+      } else {
+        console.log('[Review Rating] No points awarded - rating must be > 1.0');
+      }
+
+      // 10) Response Rate scoring
+      let responseRatePts = 0;
+      updateProgress('Fetching response rate data...', 90, ['Review Rating']);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      // Check for response rate in existing data first (including Your Data store that backs CSV export)
+      const responseRateCandidates = {
+        performanceDataResponseRate: performanceData?.responseRate,
+        performanceDataAvgResponseRate: performanceData?.averageResponseRate,
+        performanceDataMessagingResponseRate: performanceData?.messagingResponseRate,
+        targetLocationResponseRate: targetLocation?.responseRate,
+        businessResponseRate: business?.responseRate
+      };
+
+      // Prefer stored values from Your Data (same as CSV export source)
+      let responseRateFromStore90d;
+      let responseRateFromStore30d;
+      try {
+        const yd = getYourData ? getYourData() : null;
+        const psSnap = yd?.profileStrength || {};
+        const bpSnap = yd?.businessProfile || {};
+        const toNum = (v) => {
+          if (typeof v === 'number') return v;
+          const n = parseFloat(v);
+          return Number.isFinite(n) ? n : undefined;
+        };
+        responseRateFromStore90d = toNum(psSnap.responseRate90d) ?? toNum(bpSnap.responseRate90d);
+        responseRateFromStore30d = toNum(psSnap.responseRate30d) ?? toNum(bpSnap.responseRate30d);
+      } catch (_) {}
+
+      let responseRate = (
+        (responseRateFromStore90d && responseRateFromStore90d > 0 ? responseRateFromStore90d : undefined) ??
+        (responseRateFromStore30d && responseRateFromStore30d > 0 ? responseRateFromStore30d : undefined) ??
+        (performanceData?.responseRate ?? performanceData?.averageResponseRate ?? performanceData?.messagingResponseRate) ??
+        targetLocation?.responseRate ??
+        business?.responseRate ??
+        0
+      );
+
+      if (responseRateFromStore90d || responseRateFromStore30d) {
+        console.log('[Response Rate] Using value from Your Data store', {
+          responseRateFromStore90d,
+          responseRateFromStore30d,
+          chosen: responseRate
+        });
+      }
+      
+      // If no response rate found in existing data, fetch from GMB API for last 90 days
+      if (!responseRate || responseRate === 0) {
+        try {
+          // Get account info from available data sources
+          let accId = account?.id;
+          if (!accId) accId = business?.accountId || business?.accountName;
+          if (!accId && typeof business?.name === 'string' && business.name.includes('accounts/')) {
+            const parts = String(business.name).split('/');
+            const idx = parts.indexOf('accounts');
+            if (idx !== -1 && parts[idx + 1]) accId = parts[idx + 1];
+          }
+          
+          const accountName = accId ? (String(accId).includes('accounts/') ? String(accId) : `accounts/${accId}`) : undefined;
+          const accountId = (accountName && accountName.includes('accounts/')) ? accountName.split('/')[1] : undefined;
+          const locationName = targetLocation?.name || '';
+          const locationIdFromName = locationName ? String(locationName).split('/').pop() : undefined;
+          
+          if (accountId && locationIdFromName) {
+            console.log('[Response Rate] Fetching response rate from GMB API for last 90 days');
+            
+            // Calculate date range for last 90 days
+            const now = new Date();
+            const start = new Date(now);
+            start.setDate(now.getDate() - 90);
+            
+            const dateRange = {
+              startDate: {
+                year: start.getFullYear(),
+                month: start.getMonth() + 1,
+                day: start.getDate()
+              },
+              endDate: {
+                year: now.getFullYear(),
+                month: now.getMonth() + 1,
+                day: now.getDate()
+              }
+            };
+            
+            // Fetch response rate metrics from GMB API
+            const responseMetrics = await GMBService.getResponseRateMetrics(undefined, locationIdFromName, dateRange);
+            
+            if (responseMetrics?.responseRate) {
+              responseRate = responseMetrics.responseRate;
+              console.log('[Response Rate] Found response rate from GMB API:', {
+                responseRate: `${responseRate}%`,
+                dateRange: '90 days',
+                source: 'GMB API'
+              });
+            }
+          }
+        } catch (error) {
+          console.warn('[Response Rate] Failed to fetch response rate from GMB API:', error);
+        }
+      }
+      
+      console.log('[Response Rate] Starting calculation:', {
+        responseRate,
+        responseRateCandidates,
+        formula: '(Response Rate) × (8 / 100)',
+        maxPoints: 8
+      });
+      
+      if (responseRate > 0) {
+        // Formula: (Response Rate) × (8 / 100)
+        // Response rate is typically a percentage (0-100), so we use it directly
+        responseRatePts = (responseRate / 100) * 8;
+        score += responseRatePts;
+        console.log('[Response Rate] Calculation complete:', {
+          responseRate: `${responseRate}%`,
+          calculation: `(${responseRate} / 100) × 8 = ${responseRatePts.toFixed(2)}`,
+          finalPoints: responseRatePts,
+          formula: `${responseRate}% response rate → ${responseRatePts.toFixed(2)} points`
+        });
+      } else {
+        console.log('[Response Rate] No points awarded - no response rate data found');
+      }
+
+      // 11) Reviews vs competitors (Places Nearby)
       let reviewsPts = 0;
+      let velocityPts = 0; // New: Velocity score (max 12)
       try {
         const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || process.env.REACT_APP_GMB_API_KEY;
         // Prefer explicit lat/lng passed from BusinessProfile; then fall back to GMB latlng shapes
@@ -1345,9 +1590,93 @@ const ProfileStrengthResults = () => {
           }
 
           if (compAvg > 0 && myTotal >= 0) {
-            reviewsPts = Math.round((myTotal / compAvg) * 30);
+            reviewsPts = Math.min(30, Math.round((myTotal / compAvg) * 30));
             score += reviewsPts;
-            console.log('Review-based points computed:', { myTotal, compAvg, reviewsPts });
+            console.log('Review-based points computed:', { myTotal, compAvg, reviewsPts, capped: reviewsPts === 30 });
+          }
+          
+          // 11.b) Velocity scoring (new reviews in last 30d vs competitor avg total reviews)
+          try {
+            // Get account info from available data sources - try multiple fallbacks
+            let accId = account?.id;
+            if (!accId) accId = business?.accountId || business?.accountName;
+            if (!accId && typeof business?.name === 'string' && business.name.includes('accounts/')) {
+              const parts = String(business.name).split('/');
+              const idx = parts.indexOf('accounts');
+              if (idx !== -1 && parts[idx + 1]) accId = parts[idx + 1];
+            }
+            
+            // Try state sources
+            if (!accId && state?.account?.id) accId = state.account.id;
+            if (!accId && state?.selectedAccount?.id) accId = state.selectedAccount.id;
+            if (!accId && state?.business?.accountId) accId = state.business.accountId;
+            if (!accId && state?.locationData?.accountId) accId = state.locationData.accountId;
+            if (!accId && state?.selectedLocation?.accountId) accId = state.selectedLocation.accountId;
+            
+            // Try extracting from location name pattern: accounts/{accountId}/locations/{locationId}
+            if (!accId && targetLocation?.name) {
+              const fullLocationName = String(targetLocation.name);
+              if (fullLocationName.includes('accounts/') && fullLocationName.includes('/locations/')) {
+                const match = fullLocationName.match(/accounts\/([^\/]+)\/locations/);
+                if (match && match[1]) accId = match[1];
+              }
+            }
+            
+            const accountName = accId ? (String(accId).includes('accounts/') ? String(accId) : `accounts/${accId}`) : undefined;
+            const accountId = (accountName && accountName.includes('accounts/')) ? accountName.split('/')[1] : undefined;
+            const locationName = targetLocation?.name || '';
+            const locationIdFromName = locationName ? String(locationName).split('/').pop() : undefined;
+
+            // Debug logging for Velocity prerequisites
+            console.log('[Velocity] Debug prerequisites:', {
+              accountId,
+              locationIdFromName,
+              compAvg,
+              accId,
+              accountName,
+              account: account ? { id: account.id, name: account.name } : null,
+              business: business ? { 
+                accountId: business.accountId, 
+                accountName: business.accountName, 
+                name: business.name 
+              } : null,
+              targetLocation: targetLocation ? { name: targetLocation.name } : null,
+              state: state ? {
+                selectedAccount: state.selectedAccount,
+                account: JSON.stringify(state.account),
+                locationData: JSON.stringify(state.locationData),
+                selectedLocation: JSON.stringify(state.selectedLocation),
+                business: JSON.stringify(state.business)
+              } : null
+            });
+
+            if (accountId && locationIdFromName && compAvg > 0) {
+              updateProgress('Calculating review velocity...', 97, ['Competitor Analysis']);
+              // Fetch count of reviews in last 30 days
+              const newReviews30 = await GMBService.getNewReviewsCountLast30Days(undefined, accountId, locationIdFromName);
+              const rawVelocity = (newReviews30 / compAvg) * 12;
+              velocityPts = Math.min(12, Number.isFinite(rawVelocity) ? rawVelocity : 0);
+              score += velocityPts;
+              console.log('[Velocity] Computation:', {
+                newReviews30,
+                compAvg,
+                rawVelocity: Number.isFinite(rawVelocity) ? rawVelocity.toFixed(3) : rawVelocity,
+                finalPoints: velocityPts,
+                formula: 'MIN((New_Reviews_30d / AvgCompetitorReviews) * 12, 12)',
+                maxPoints: 12
+              });
+              // Structured velocity log via service helper
+              CompetitorDiscoveryService.logVelocityCalculation({
+                newReviews30,
+                avgCompetitorReviews: compAvg,
+                rawPoints: rawVelocity,
+                finalPoints: velocityPts
+              });
+            } else {
+              console.log('[Velocity] Skipped: missing account/location or compAvg <= 0', { accountId, locationIdFromName, compAvg });
+            }
+          } catch (ve) {
+            console.warn('[Velocity] Failed to compute velocity score:', ve);
           }
           console.groupEnd();
         }
@@ -1381,7 +1710,10 @@ const ProfileStrengthResults = () => {
           { factor: 'Service area', details: { hasServiceArea }, points: serviceAreaPts },
           { factor: 'Book appointment (explicit)', details: { hasBookAppointment }, points: bookApptPts },
           { factor: 'Q&A section present', details: { hasQASection }, points: qaPts },
+          { factor: 'Review Rating', details: { myRating, capped: reviewRatingPts === 20 }, points: reviewRatingPts },
+          { factor: 'Response Rate', details: { responseRate: `${responseRate}%` }, points: responseRatePts },
           { factor: 'Reviews vs competitors', details: {}, points: reviewsPts },
+          { factor: 'Velocity (30d)', details: { formula: 'min((new30/compAvg)*12,12)' }, points: velocityPts },
           { factor: 'TOTAL (raw)', details: {}, points: score }
         ]);
         console.groupEnd();
@@ -1391,15 +1723,11 @@ const ProfileStrengthResults = () => {
       await new Promise(resolve => setTimeout(resolve, 800));
       
       if (isMounted) {
-        setProfileScore(score);
+        // Round to nearest integer before saving
+        setProfileScore(Math.round(score));
         updateProgress('Analysis complete!', 100, ['Final Score Calculation']);
         await new Promise(resolve => setTimeout(resolve, 1000));
         setIsCalculating(false);
-        
-        // Show the enhanced popup after calculation is complete
-        setTimeout(() => {
-          setShowScorePopup(true);
-        }, 500);
       }
     };
 
@@ -1577,14 +1905,6 @@ const ProfileStrengthResults = () => {
           <Button variant="contained" onClick={handleSaveKeywords}>Save</Button>
         </DialogActions>
       </Dialog>
-      
-      {/* Enhanced Score Popup */}
-      <EnhancedScorePopup
-        open={showScorePopup}
-        onClose={() => setShowScorePopup(false)}
-        score={profileScore}
-        maxScore={300}
-      />
     </DashboardLayout>
   );
 };
