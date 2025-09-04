@@ -134,7 +134,7 @@ class GMBService {
   }
 
   /**
-   * Get media (photos) for a specific location
+   * Get media (photos and videos) for a specific location
    * Uses GMB v4 media endpoint.
    * @param {string} accessToken - Google OAuth access token
    * @param {string} accountId - Account ID string (e.g., '12345')
@@ -162,6 +162,89 @@ class GMBService {
       return Array.isArray(data.mediaItems) ? data.mediaItems : [];
     } catch (error) {
       console.error('Error fetching media:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload video to a specific location
+   * Uses GMB v4 media endpoint.
+   * @param {string} accessToken - Google OAuth access token
+   * @param {string} accountId - Account ID string (e.g., '12345')
+   * @param {string} locationId - Location ID string (e.g., '67890')
+   * @param {File} videoFile - Video file to upload
+   * @returns {Promise<Object>} Upload result
+   */
+  async uploadVideo(accessToken, accountId, locationId, videoFile) {
+    try {
+      if (!accountId || !locationId) {
+        throw new Error('Invalid accountId or locationId');
+      }
+
+      if (!videoFile) {
+        throw new Error('Video file is required');
+      }
+
+      // Validate file type
+      const allowedTypes = ['video/mp4', 'video/mov', 'video/avi'];
+      if (!allowedTypes.includes(videoFile.type)) {
+        throw new Error('Invalid video format. Only MP4, MOV, and AVI files are supported.');
+      }
+
+      // Validate file size (100MB limit)
+      const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+      if (videoFile.size > maxSize) {
+        throw new Error('Video file size must be less than 100MB');
+      }
+
+      // Create FormData for multipart upload
+      const formData = new FormData();
+      formData.append('media', videoFile);
+
+      // First, create the media item metadata
+      const mediaMetadata = {
+        mediaFormat: 'VIDEO',
+        category: 'PROFILE',
+        description: videoFile.name || 'Business video'
+      };
+
+      const response = await this._googleFetch(
+        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(mediaMetadata)
+        },
+        accessToken
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to create video media item');
+      }
+
+      const mediaItem = await response.json();
+      
+      // Now upload the actual video file
+      const uploadResponse = await this._googleFetch(
+        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media/${mediaItem.name}/mediaFiles`,
+        {
+          method: 'POST',
+          body: formData
+        },
+        accessToken
+      );
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error?.message || 'Failed to upload video file');
+      }
+
+      return mediaItem;
+    } catch (error) {
+      console.error('Error uploading video:', error);
       throw error;
     }
   }

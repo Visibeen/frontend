@@ -1,15 +1,24 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './AccountInfoForm.css';
 import { getSession, getAutoToken, clearSession } from '../utils/authUtils';
 import api from '../services/api';
+
+// Helper to format YYYY-MM-DD
+const formatDate = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const initialFormState = {
   business_name: '',
-  industry_type: '',
   start_date: '',
   end_date: '',
   cro_employee_name: '',
   seo_employee_name: '',
-  password: '',
   contact_person: '',
   contact_number: '',
   email: '',
@@ -23,8 +32,37 @@ const AccountInfoForm = () => {
   const [logoPreview, setLogoPreview] = useState(null);
   const fileInputRef = useRef(null);
 
+  // Compute defaults for dates
+  useEffect(() => {
+    const today = new Date();
+    const nextYear = new Date(today);
+    nextYear.setFullYear(today.getFullYear() + 1);
+
+    setForm((prev) => ({
+      ...prev,
+      start_date: prev.start_date || formatDate(today),
+      end_date: prev.end_date || formatDate(nextYear),
+    }));
+  }, []);
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    // If start_date changes, ensure end_date >= start_date, default to +1 year if needed
+    if (name === 'start_date') {
+      const start = new Date(value);
+      const currentEnd = form.end_date ? new Date(form.end_date) : null;
+      let newEnd = form.end_date;
+      if (!currentEnd || currentEnd < start) {
+        const plusYear = new Date(start);
+        plusYear.setFullYear(start.getFullYear() + 1);
+        newEnd = formatDate(plusYear);
+      }
+      setForm({ ...form, start_date: value, end_date: newEnd });
+      return;
+    }
+
+    setForm({ ...form, [name]: value });
   };
 
   const handleLogoChange = (e) => {
@@ -76,12 +114,10 @@ const AccountInfoForm = () => {
     const payload = {
       user_id: session?.id || session?.user?.id,
       business_name: form.business_name,
-      industry_type: form.industry_type,
       start_date: form.start_date,
       end_date: form.end_date,
       cro_employee_name: form.cro_employee_name,
       seo_employee_name: form.seo_employee_name,
-      password: form.password,
       contact_person: form.contact_person,
       contact_number: form.contact_number,
       email: form.email,
@@ -147,30 +183,25 @@ const AccountInfoForm = () => {
         </label>
       </div>
       <form className="account-info-form" onSubmit={handleSubmit}>
-        <label>Business Name*<input name="business_name" value={form.business_name} onChange={handleChange} /></label>
-        <label>Industry Type*<input name="industry_type" value={form.industry_type} onChange={handleChange} /></label>
+        <label>Name*<input name="contact_person" value={form.contact_person} onChange={handleChange} /></label>
         <div className="form-row">
           <label>Start Date*
             <input name="start_date" type="date" value={form.start_date} onChange={handleChange} />
           </label>
           <label>End Date*
-            <input name="end_date" type="date" value={form.end_date} onChange={handleChange} />
+            <input name="end_date" type="date" value={form.end_date} min={form.start_date || formatDate(new Date())} onChange={handleChange} />
           </label>
         </div>
         <div className="form-row">
-          <label>CRO Employee
+          <label>Relationship Manager Name
             <input name="cro_employee_name" value={form.cro_employee_name} onChange={handleChange} />
           </label>
-          <label>SEO Employee
-            <input name="seo_employee_name" value={form.seo_employee_name} onChange={handleChange} />
-          </label>
+          <label>Contact Number<input name="contact_number" value={form.contact_number} onChange={handleChange} /></label>
         </div>
         <label>Email ID*<input name="email" value={form.email} onChange={handleChange} /></label>
-        <label>Password*<input name="password" value={form.password} onChange={handleChange} autoComplete="current-password" minLength="8" /></label>
         <label>Address*<input name="address" value={form.address} onChange={handleChange} /></label>
         <label>Website*<input name="website" value={form.website} onChange={handleChange} /></label>
-        <label>Contact Person*<input name="contact_person" value={form.contact_person} onChange={handleChange} /></label>
-        <label>Contact Number<input name="contact_number" value={form.contact_number} onChange={handleChange} /></label>
+        <label>Business Name<input name="business_name" value={form.business_name} onChange={handleChange} /></label>
         <div className="form-actions">
           <button type="button" className="cancel-btn" onClick={handleCancel}>Cancel</button>
           <button type="submit" className="update-btn">Update</button>
