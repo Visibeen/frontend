@@ -22,7 +22,6 @@ import SwitchAccountIcon from '../../icons/SwitchAccountIcon';
 import ProfileGaugeIcon from '../../icons/ProfileGaugeIcon';
 import CloseIcon from '@mui/icons-material/Close';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import EditIcon from '@mui/icons-material/Edit';
 
 // Styled Components
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -1028,7 +1027,9 @@ const getMetricsData = (performanceData) => {
       { label: 'Local Views (Last 30 days)', value: '2,300', change: '+35% vs last month', color: '#34A853' },
       { label: 'Calls from GBP (Last 30 days)', value: '156', change: '+12% vs last month', color: '#34A853' },
       { label: 'Direction Requests (Last 30 days)', value: '89', change: '+8% vs last month', color: '#34A853' },
-      { label: 'Website Clicks (Last 30 days)', value: '234', change: '+18% vs last month', color: '#34A853' }
+      { label: 'Website Clicks (Last 30 days)', value: '234', change: '+18% vs last month', color: '#34A853' },
+      { label: 'Organic Clicks This Month', value: '234', change: '+18% vs last month', color: '#34A853' },
+      { label: 'Avg. Google Search Volume', value: '12,450', change: '+5% vs last month', color: '#34A853' }
     ];
   }
 
@@ -1055,6 +1056,18 @@ const getMetricsData = (performanceData) => {
       label: 'Website Clicks (Last 30 days)',
       value: formatNumber(performanceData.websiteClicks),
       change: `${performanceData.websiteClicksChange >= 0 ? '+' : ''}${performanceData.websiteClicksChange}% vs last period`,
+      color: '#34A853'
+    },
+    {
+      label: 'Organic Clicks This Month',
+      value: formatNumber(performanceData.organicClicks),
+      change: `${performanceData.organicClicksChange >= 0 ? '+' : ''}${performanceData.organicClicksChange}% vs last period`,
+      color: '#34A853'
+    },
+    {
+      label: 'Avg. Google Search Volume',
+      value: formatNumber(performanceData.avgSearchVolume),
+      change: `${performanceData.avgSearchVolumeChange >= 0 ? '+' : ''}${performanceData.avgSearchVolumeChange}% vs last period`,
       color: '#34A853'
     }
   ];
@@ -1256,6 +1269,10 @@ const BusinessProfile = () => {
   const [services, setServices] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [servicesLoading, setServicesLoading] = useState(false);
+  const [performanceModalOpen, setPerformanceModalOpen] = useState(false);
+  const [reviewsModalOpen, setReviewsModalOpen] = useState(false);
+  const [gmbFeedModalOpen, setGmbFeedModalOpen] = useState(false);
+  const [socialFeedModalOpen, setSocialFeedModalOpen] = useState(false);
 
   const open = Boolean(anchorEl);
 
@@ -1433,7 +1450,8 @@ const BusinessProfile = () => {
       const photos = Array.isArray(mediaItems) ? mediaItems.length : undefined;
       const attributes = Array.isArray(loc?.attributes) ? loc.attributes.map(a => a?.name || a?.displayName).filter(Boolean).join(' | ') : '';
       const labels = Array.isArray(loc?.labels) ? loc.labels.join(' | ') : '';
-      const pinToMapLocation = (loc?.latlng?.latitude && loc?.latlng?.longitude) ? `${loc.latlng.latitude}, ${loc.latlng.longitude}` : '';
+      const pinToMapLocation = (loc?.latlng?.latitude != null && loc?.latlng?.longitude != null)
+        ? `${loc.latlng.latitude}, ${loc.latlng.longitude}` : '';
       const gmbPosts = Array.isArray(localPosts) ? localPosts.length : undefined;
       // Derive verification status from location metadata
       const verified = (
@@ -2394,27 +2412,18 @@ const BusinessProfile = () => {
                   <ContactLabel>Primary Number:</ContactLabel>
                   <ContactValue>
                     {primaryPhone}
-                    <IconButton size="small" sx={{ ml: 1 }} onClick={() => setEditProfileOpen(true)} aria-label="Edit primary number">
-                      <EditIcon fontSize="small" />
-                    </IconButton>
                   </ContactValue>
                 </ContactItem>
                 <ContactItem>
                   <ContactLabel>Secondary Number:</ContactLabel>
                   <ContactValue>
                     {locationData?.secondaryPhone || 'Not available'}
-                    <IconButton size="small" sx={{ ml: 1 }} onClick={() => setEditProfileOpen(true)} aria-label="Edit secondary number">
-                      <EditIcon fontSize="small" />
-                    </IconButton>
                   </ContactValue>
                 </ContactItem>
                 <ContactItem>
                   <ContactLabel>Manager Number:</ContactLabel>
                   <ContactValue>
                     {locationData?.managerPhone || 'Not available'}
-                    <IconButton size="small" sx={{ ml: 1 }} onClick={() => setEditProfileOpen(true)} aria-label="Edit manager number">
-                      <EditIcon fontSize="small" />
-                    </IconButton>
                   </ContactValue>
                 </ContactItem>
               </ContactGrid>
@@ -2426,9 +2435,6 @@ const BusinessProfile = () => {
                 <PhotosTitle>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>Photos</span>
-                    <IconButton size="small" onClick={() => setPhotoUploadOpen(true)} aria-label="Add or edit photos">
-                      <EditIcon fontSize="small" />
-                    </IconButton>
                   </Box>
                 </PhotosTitle>
 
@@ -2565,7 +2571,7 @@ const BusinessProfile = () => {
               {/* Videos Section */}
               <VideosSection>
                 <VideosTitle>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between', width: '100%' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       Videos
                       {videos.length > 0 && (
@@ -2585,37 +2591,23 @@ const BusinessProfile = () => {
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <IconButton
-                        onClick={() => setVideoUploadOpen(true)}
+                        onClick={refreshVideos}
                         size="small"
+                        disabled={videosRefreshing}
                         sx={{ 
                           color: '#0B91D6',
                           '&:hover': { 
                             backgroundColor: 'rgba(11, 145, 214, 0.1)' 
                           }
                         }}
-                        title="Add or edit videos"
-                        aria-label="Add or edit videos"
+                        title="Refresh videos"
                       >
-                        <EditIcon />
+                        {videosRefreshing ? (
+                          <CircularProgress size={16} color="inherit" />
+                        ) : (
+                          <RefreshIcon />
+                        )}
                       </IconButton>
-                    <IconButton
-                      onClick={refreshVideos}
-                      size="small"
-                      disabled={videosRefreshing}
-                      sx={{ 
-                        color: '#0B91D6',
-                        '&:hover': { 
-                          backgroundColor: 'rgba(11, 145, 214, 0.1)' 
-                        }
-                      }}
-                      title="Refresh videos"
-                    >
-                      {videosRefreshing ? (
-                        <CircularProgress size={16} color="inherit" />
-                      ) : (
-                        <RefreshIcon />
-                      )}
-                    </IconButton>
                     </Box>
                   </Box>
                 </VideosTitle>
@@ -2885,21 +2877,22 @@ const BusinessProfile = () => {
                 </Box>
               </Modal>
 
-              {/* Edit Profile Dialog */}
-              <Dialog
-                open={editProfileOpen}
-                onClose={() => setEditProfileOpen(false)}
-                maxWidth="md"
-                fullWidth
-              >
-                <DialogTitle>Edit Business Profile</DialogTitle>
-                <DialogContent>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              {/* Edit Profile Modal (site design) */}
+              <ModalContainer open={editProfileOpen} onClose={() => setEditProfileOpen(false)}>
+                <ModalContent>
+                  <ModalHeader>
+                    <ModalTitle>Edit Business Profile</ModalTitle>
+                    <CloseButton onClick={() => setEditProfileOpen(false)} aria-label="Close">
+                      <CloseIcon />
+                    </CloseButton>
+                  </ModalHeader>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <TextField
                       label="Business Name"
                       defaultValue={locationData?.title || businessTitle}
                       fullWidth
                       variant="outlined"
+                      size="small"
                     />
                     <TextField
                       label="Business Description"
@@ -2908,43 +2901,48 @@ const BusinessProfile = () => {
                       multiline
                       rows={3}
                       variant="outlined"
+                      size="small"
                     />
                     <TextField
                       label="Primary Number"
                       defaultValue={locationData?.phoneNumbers.primaryPhone || 'Not available'}
                       fullWidth
                       variant="outlined"
+                      size="small"
                     />
                     <TextField
                       label="Secondary Number"
                       defaultValue={locationData?.phoneNumbers.SecondaryNumber || 'Not available'}
                       fullWidth
                       variant="outlined"
+                      size="small"
                     />
                     <TextField
                       label="Manager Number"
                       defaultValue={locationData?.phoneNumbers.SecondaryNumber || 'Not available'}
                       fullWidth
                       variant="outlined"
+                      size="small"
                     />
                     <TextField
                       label="Website"
                       defaultValue={locationData?.websiteUri || 'Not available'}
                       fullWidth
                       variant="outlined"
+                      size="small"
                     />
-                    <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                    <Typography variant="body2" color="textSecondary">
                       Note: Changes will be submitted to Google My Business for review and may take time to appear.
                     </Typography>
                   </Box>
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={() => setEditProfileOpen(false)}>Cancel</Button>
-                  <Button variant="contained" sx={{ backgroundColor: '#0B91D6' }}>
-                    Save Changes
-                  </Button>
-                </DialogActions>
-              </Dialog>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3 }}>
+                    <Button onClick={() => setEditProfileOpen(false)} sx={{ textTransform: 'capitalize' }}>Cancel</Button>
+                    <Button variant="contained" sx={{ backgroundColor: '#0B91D6', textTransform: 'capitalize' }}>
+                      Save Changes
+                    </Button>
+                  </Box>
+                </ModalContent>
+              </ModalContainer>
 
               {/* Photo Upload Dialog */}
               <Dialog
@@ -3229,7 +3227,7 @@ const BusinessProfile = () => {
               <SectionTitle>Performance</SectionTitle>
               <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1 }}>Last 30 days</Typography>
               <MetricsGrid>
-                {(showPerformanceDetails ? metricsData : metricsData.slice(0, 2)).map((metric, index) => (
+                {metricsData.slice(0, 2).map((metric, index) => (
                   <MetricCard key={index} sx={{ backgroundColor: metric.color }}>
                     <MetricLabel sx={{ color: '#ffffff' }}>{metric.label}</MetricLabel>
                     <MetricValue>{metric.value}</MetricValue>
@@ -3240,8 +3238,39 @@ const BusinessProfile = () => {
                   </MetricCard>
                 ))}
               </MetricsGrid>
+              <Box sx={{ textAlign: 'center', marginTop: '26px' }}>
+                <ViewAllButton onClick={() => setPerformanceModalOpen(true)}>
+                  View All
+                </ViewAllButton>
+              </Box>
               {/* Additional Insights removed as requested */}
             </PerformanceCard>
+
+            {/* Performance Metrics Modal */}
+            <ModalContainer open={performanceModalOpen} onClose={() => setPerformanceModalOpen(false)}>
+              <ModalContent>
+                <ModalHeader>
+                  <ModalTitle>Performance - Last 30 days</ModalTitle>
+                  <CloseButton onClick={() => setPerformanceModalOpen(false)} aria-label="Close">
+                    <CloseIcon />
+                  </CloseButton>
+                </ModalHeader>
+                <Box>
+                  <MetricsGrid>
+                    {metricsData.map((metric, index) => (
+                      <MetricCard key={`all-metric-${index}`} sx={{ backgroundColor: metric.color }}>
+                        <MetricLabel sx={{ color: '#ffffff' }}>{metric.label}</MetricLabel>
+                        <MetricValue>{metric.value}</MetricValue>
+                        <MetricChange>
+                          <span>{metric.change.startsWith('+') || metric.change.startsWith('-') ? (metric.change.startsWith('+') ? '↗' : '↘') : '→'}</span>
+                          {metric.change}
+                        </MetricChange>
+                      </MetricCard>
+                    ))}
+                  </MetricsGrid>
+                </Box>
+              </ModalContent>
+            </ModalContainer>
 
             <PerformanceCard>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -3363,31 +3392,8 @@ const BusinessProfile = () => {
                 <ReviewsStatLabel>Reviews In Last 30 Days</ReviewsStatLabel>
               </ReviewsStat>
             </ReviewsStatsGrid>
-            {showAllReviews && (
-              <Box sx={{ mt: 3, p: 2, backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#121927', mb: 2 }}>Recent Reviews</Typography>
-                {reviews.slice(0, 3).map((review, index) => (
-                  <Box key={index} sx={{ mb: 2, pb: 2, borderBottom: index < 2 ? '1px solid #e5e7eb' : 'none' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <Rating value={toNumericRating(review.starRating)} readOnly size="small" sx={{ color: '#F59E0B' }} />
-                      <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>
-                        {new Date(review.createTime).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                    <Typography sx={{ fontSize: '12px', color: '#121927', mb: 1 }}>
-                      {review.comment || 'No comment provided'}
-                    </Typography>
-                    <Typography sx={{ fontSize: '11px', color: '#0B91D6' }}>
-                      - {review.reviewer?.displayName || 'Anonymous'}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            )}
             <Box sx={{ textAlign: 'center', marginTop: '26px' }}>
-              <ViewAllButton onClick={handleViewAllReviews}>
-                {showAllReviews ? 'Show Less' : 'View All'}
-              </ViewAllButton>
+              <ViewAllButton onClick={() => setReviewsModalOpen(true)}>View All</ViewAllButton>
             </Box>
           </ReviewsCard>
 
@@ -3405,7 +3411,7 @@ const BusinessProfile = () => {
             ) : localPosts && localPosts.length > 0 ? (
               <>
                 <FeedGrid>
-                  {(showAllGMBFeed ? localPosts : localPosts.slice(0, 9)).map((post, index) => {
+                  {localPosts.slice(0, 6).map((post, index) => {
                     console.log('[BusinessProfile] Processing post:', post.name, 'media:', post.media);
 
                     // Extract post data - check multiple possible image sources
@@ -3489,9 +3495,7 @@ const BusinessProfile = () => {
                   })}
                 </FeedGrid>
                 <Box sx={{ textAlign: 'center' }}>
-                  <ViewAllButton onClick={handleViewAllGMBFeed}>
-                    {showAllGMBFeed ? 'Show Less' : 'View All'}
-                  </ViewAllButton>
+                  <ViewAllButton onClick={() => setGmbFeedModalOpen(true)}>View All</ViewAllButton>
                 </Box>
               </>
             ) : (
@@ -3503,7 +3507,7 @@ const BusinessProfile = () => {
           <FeedCard>
             <SectionTitle>Social Feed</SectionTitle>
             <FeedGrid>
-              {(showAllSocialFeed ? [...mockSocialFeed, ...mockSocialFeed, ...mockSocialFeed] : mockSocialFeed).map((item, index) => (
+              {mockSocialFeed.map((item, index) => (
                 <FeedCardItem key={index}>
                   <FeedImage src={item.image} alt={`Social Feed ${index + 1}`} />
                   <FeedContent>
@@ -3514,11 +3518,10 @@ const BusinessProfile = () => {
               ))}
             </FeedGrid>
             <Box sx={{ textAlign: 'center' }}>
-              <ViewAllButton onClick={handleViewAllSocialFeed}>
-                {showAllSocialFeed ? 'Show Less' : 'View All'}
-              </ViewAllButton>
+              <ViewAllButton onClick={() => setSocialFeedModalOpen(true)}>View All</ViewAllButton>
             </Box>
           </FeedCard>
+
         </ContentWrapper>
       </PageContainer>
 
@@ -3558,6 +3561,133 @@ const BusinessProfile = () => {
               </ProductCard>
             ))}
           </ModalProductsGrid>
+        </ModalContent>
+      </ModalContainer>
+
+      {/* Reviews Overview Modal */}
+      <ModalContainer open={reviewsModalOpen} onClose={() => setReviewsModalOpen(false)}>
+        <ModalContent>
+          <ModalHeader>
+            <ModalTitle>All Reviews</ModalTitle>
+            <CloseButton onClick={() => setReviewsModalOpen(false)}>
+              <CloseIcon />
+            </CloseButton>
+          </ModalHeader>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {(reviews && reviews.length > 0 ? reviews : []).map((review, index) => (
+              <Box key={`review-${index}`} sx={{ p: 2, border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#ffffff' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Rating value={toNumericRating(review.starRating)} readOnly size="small" sx={{ color: '#F59E0B' }} />
+                  <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>
+                    {review.createTime ? new Date(review.createTime).toLocaleDateString() : 'Unknown date'}
+                  </Typography>
+                </Box>
+                <Typography sx={{ fontSize: '13px', color: '#121927', mb: 1 }}>
+                  {review.comment || 'No comment provided'}
+                </Typography>
+                <Typography sx={{ fontSize: '12px', color: '#0B91D6' }}>
+                  - {review.reviewer?.displayName || 'Anonymous'}
+                </Typography>
+              </Box>
+            ))}
+            {(!reviews || reviews.length === 0) && (
+              <Typography sx={{ color: '#6b7280' }}>No reviews available.</Typography>
+            )}
+          </Box>
+        </ModalContent>
+      </ModalContainer>
+
+      {/* GMB Feed Modal */}
+      <ModalContainer open={gmbFeedModalOpen} onClose={() => setGmbFeedModalOpen(false)}>
+        <ModalContent>
+          <ModalHeader>
+            <ModalTitle>All GMB Posts</ModalTitle>
+            <CloseButton onClick={() => setGmbFeedModalOpen(false)}>
+              <CloseIcon />
+            </CloseButton>
+          </ModalHeader>
+          <FeedGrid>
+            {(localPosts && localPosts.length > 0 ? localPosts : []).map((post, index) => {
+              const postMedia = post.media?.[0];
+              let originalSrc = '';
+              if (postMedia) {
+                originalSrc = postMedia.sourceUrl || postMedia.googleUrl || postMedia.thumbnailUrl || postMedia.url || '';
+              } else if (post.photos && post.photos.length > 0) {
+                const photo = post.photos[0];
+                originalSrc = photo.sourceUrl || photo.googleUrl || photo.thumbnailUrl || photo.url || '';
+              }
+              const imgSrc = originalSrc;
+              const created = post.createTime ? new Date(post.createTime) : null;
+              const dateText = created
+                ? `Posted on - ${created.toLocaleString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}`
+                : 'Date not available';
+              const heading = post.summary || post.callToAction?.actionType || post.topicType || 'Local Post';
+              return (
+                <FeedCardItem key={post.name || `post-all-${index}`}>
+                  {imgSrc ? (
+                    <FeedImage
+                      src={buildProxyUrl(imgSrc) || imgSrc}
+                      alt={`Local Post ${index + 1}`}
+                      referrerPolicy="no-referrer"
+                      crossOrigin="anonymous"
+                      data-original={imgSrc}
+                      data-proxy={buildProxyUrl(imgSrc) || ''}
+                      data-retry="0"
+                      onError={(e) => {
+                        const imgEl = e.currentTarget;
+                        const retry = parseInt(imgEl.dataset.retry || '0', 10);
+                        const og = imgEl.dataset.original;
+                        const proxy = imgEl.dataset.proxy;
+                        if (retry === 0 && proxy && imgEl.src === proxy && og) {
+                          console.warn('Image failed via proxy (modal), retry original:', og);
+                          imgEl.dataset.retry = '1';
+                          imgEl.src = og;
+                        } else if (retry <= 1 && proxy && imgEl.src === og) {
+                          console.warn('Image failed via original (modal), fallback placeholder');
+                          imgEl.dataset.retry = '2';
+                          imgEl.src = placeholderLarge;
+                        } else {
+                          imgEl.src = placeholderLarge;
+                        }
+                      }}
+                    />
+                  ) : (
+                    <FeedImage src={placeholderLarge} alt="No image available" />
+                  )}
+                  <FeedContent>
+                    <FeedDate>{dateText}</FeedDate>
+                    <FeedText>{heading}</FeedText>
+                  </FeedContent>
+                </FeedCardItem>
+              );
+            })}
+            {(!localPosts || localPosts.length === 0) && (
+              <Typography sx={{ color: '#6b7280' }}>No local posts found.</Typography>
+            )}
+          </FeedGrid>
+        </ModalContent>
+      </ModalContainer>
+
+      {/* Social Feed Modal */}
+      <ModalContainer open={socialFeedModalOpen} onClose={() => setSocialFeedModalOpen(false)}>
+        <ModalContent>
+          <ModalHeader>
+            <ModalTitle>All Social Posts</ModalTitle>
+            <CloseButton onClick={() => setSocialFeedModalOpen(false)}>
+              <CloseIcon />
+            </CloseButton>
+          </ModalHeader>
+          <FeedGrid>
+            {[...mockSocialFeed, ...mockSocialFeed, ...mockSocialFeed].map((item, index) => (
+              <FeedCardItem key={`social-all-${index}`}>
+                <FeedImage src={item.image} alt={`Social Feed ${index + 1}`} />
+                <FeedContent>
+                  <FeedDate>{item.date}</FeedDate>
+                  <FeedText>{item.text}</FeedText>
+                </FeedContent>
+              </FeedCardItem>
+            ))}
+          </FeedGrid>
         </ModalContent>
       </ModalContainer>
     </DashboardLayout>
