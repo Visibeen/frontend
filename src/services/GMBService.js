@@ -653,16 +653,17 @@ class GMBService {
       const accumulateFromTimeSeries = (metricKey, timeSeries) => {
         let totalValue = 0;
         let previousValue = 0;
+        let totalAll = 0;
+        let daysCount = 0;
 
         const dated = timeSeries?.datedValues || [];
-        // Sum, treating missing values as 0; values may be strings
         const toNum = (v) => {
           const n = parseInt(v, 10);
           return Number.isNaN(n) ? 0 : n;
         };
-        const totalAll = dated.reduce((sum, item) => sum + toNum(item.value), 0);
+        totalAll = dated.reduce((sum, item) => sum + toNum(item.value), 0);
+        daysCount = dated.length;
 
-        // Change: compare second half vs first half when we have a decent window
         if (dated.length > 15) {
           const mid = Math.floor(dated.length / 2);
           const firstHalf = dated.slice(0, mid).reduce((s, it) => s + toNum(it.value), 0);
@@ -683,18 +684,18 @@ class GMBService {
         processedMetrics[metricKey] = {
           value: totalValue,
           change: changePercent,
-          changeText: `${changePercent >= 0 ? '+' : ''}${changePercent}% vs last period`
+          changeText: `${changePercent >= 0 ? '+' : ''}${changePercent}% vs last period`,
+          totalAll,
+          daysCount
         };
       };
 
       if (Array.isArray(rawData?.multiDailyMetricTimeSeries)) {
         rawData.multiDailyMetricTimeSeries.forEach((entry) => {
-          // Shape A: entry has dailyMetric + dailyMetricTimeSeries.timeSeries
           if (entry?.dailyMetric && entry?.dailyMetricTimeSeries?.timeSeries) {
             accumulateFromTimeSeries(entry.dailyMetric, entry.dailyMetricTimeSeries.timeSeries);
             return;
           }
-          // Shape B: entry has dailyMetricTimeSeries as an array of { dailyMetric, timeSeries }
           if (Array.isArray(entry?.dailyMetricTimeSeries)) {
             entry.dailyMetricTimeSeries.forEach((s) => {
               if (s?.dailyMetric && s?.timeSeries) {
@@ -705,8 +706,25 @@ class GMBService {
         });
       }
 
+      const desktopImpr = processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.totalAll || 0;
+      const mobileImpr = processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.totalAll || 0;
+      const desktopDays = processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.daysCount || 0;
+      const mobileDays = processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.daysCount || 0;
+      const totalImpressionsAll = desktopImpr + mobileImpr;
+      const daysForAvg = Math.max(desktopDays, mobileDays, 1);
+      const avgDailyImpressions = totalImpressionsAll / daysForAvg;
+      const estimatedMonthlySearchVolume = Math.round(avgDailyImpressions * 30);
+
+      const websiteClicksVal = processedMetrics.WEBSITE_CLICKS?.value || 0;
+      const websiteClicksChange = processedMetrics.WEBSITE_CLICKS?.change || 0;
+
+      const searchVolumeChange = this.calculateAverageChange([
+        processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.change || 0,
+        processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.change || 0
+      ]);
+
       return {
-        localViews: processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.value + processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.value || 0,
+        localViews: (processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.value || 0) + (processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.value || 0),
         localViewsChange: this.calculateAverageChange([
           processedMetrics.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH?.change || 0,
           processedMetrics.BUSINESS_IMPRESSIONS_MOBILE_SEARCH?.change || 0
@@ -715,8 +733,12 @@ class GMBService {
         callClicksChange: processedMetrics.CALL_CLICKS?.change || 0,
         directionRequests: processedMetrics.BUSINESS_DIRECTION_REQUESTS?.value || 0,
         directionRequestsChange: processedMetrics.BUSINESS_DIRECTION_REQUESTS?.change || 0,
-        websiteClicks: processedMetrics.WEBSITE_CLICKS?.value || 0,
-        websiteClicksChange: processedMetrics.WEBSITE_CLICKS?.change || 0,
+        websiteClicks: websiteClicksVal,
+        websiteClicksChange: websiteClicksChange,
+        organicClicks: websiteClicksVal,
+        organicClicksChange: websiteClicksChange,
+        avgSearchVolume: estimatedMonthlySearchVolume,
+        avgSearchVolumeChange: searchVolumeChange,
         rawData: processedMetrics
       };
     } catch (error) {
@@ -730,16 +752,15 @@ class GMBService {
         directionRequestsChange: 0,
         websiteClicks: 0,
         websiteClicksChange: 0,
+        organicClicks: 0,
+        organicClicksChange: 0,
+        avgSearchVolume: 0,
+        avgSearchVolumeChange: 0,
         rawData: {}
       };
     }
   }
 
-  /**
-   * Calculate average change from multiple metrics
-   * @param {Array} changes - Array of change percentages
-   * @returns {number} Average change percentage
-   */
   calculateAverageChange(changes) {
     const validChanges = changes.filter(change => !isNaN(change) && change !== null);
     if (validChanges.length === 0) return 0;

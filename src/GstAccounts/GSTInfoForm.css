@@ -418,6 +418,25 @@
   border-color: #bbb;
 }
 
+.paynow-btn {
+  background: #2196F3 !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 8px 16px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s !important;
+  white-space: nowrap !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.paynow-btn:hover {
+  background: #1976D2 !important;
+}
+
 @media (max-width: 768px) {
   .gst-page-container {
     padding: 20px 10px;
