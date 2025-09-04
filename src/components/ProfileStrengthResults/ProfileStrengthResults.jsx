@@ -3,10 +3,12 @@ import { Box, Stack, Typography, Button, TextField, Chip, IconButton, Dialog, Di
 import { styled, keyframes } from '@mui/material/styles';
 import { useLocation } from 'react-router-dom';
 import DashboardLayout from '../Layouts/DashboardLayout';
-import EditIcon from '../icons/EditIcon';
+import { getYourData } from '../../utils/yourDataStore';
 import GMBService from '../../services/GMBService';
 import CompetitorDiscoveryService from '../../services/CompetitorDiscoveryService';
-import { getYourData } from '../../utils/yourDataStore';
+import VelocityService from '../../services/VelocityService';
+import GMBFeedService from '../../services/GMBFeedService';
+import EditIcon from '@mui/icons-material/Edit';
 
 const MainContent = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -355,6 +357,15 @@ const ProfileStrengthResults = () => {
   const account = state.account || {};
   const business = state.business || {};
   const selectedKeywords = Array.isArray(state.keywords) ? state.keywords : [];
+  const competitors = state.competitors || [];
+  
+  // Log competitor data for debugging
+  console.log('[ProfileStrengthResults] Navigation state received:', {
+    hasCompetitors: !!state.competitors,
+    competitorsLength: competitors.length,
+    competitorsData: competitors.slice(0, 3), // Show first 3 competitors
+    fullState: Object.keys(state)
+  });
   let resolvedAddress = state.address || business.address || business.formattedAddress || '';
   if (!resolvedAddress && business?.storefrontAddress) {
     const sa = business.storefrontAddress;
@@ -382,6 +393,7 @@ const ProfileStrengthResults = () => {
   const [currentStep, setCurrentStep] = useState('');
   const [completedSteps, setCompletedSteps] = useState([]);
   const [stepProgress, setStepProgress] = useState(0);
+  const [scoreBreakdown, setScoreBreakdown] = useState([]);
   
 
   // Ensure target location is always set with available data
@@ -1214,7 +1226,22 @@ const ProfileStrengthResults = () => {
 
       // 11) Reviews vs competitors (Places Nearby)
       let reviewsPts = 0;
-      let velocityPts = 0; // New: Velocity score (max 12)
+      // Expose myTotal and compAvg to the whole computeScore closure for later use in breakdown
+      let myTotal = 0;
+      let compAvg = 0;
+      
+      // Declare velocity variables in proper scope
+      let velocityScore = 0;
+      let velocityLevel = 'N/A';
+      let reviewsLast30Days = 0;
+      let velocityRecommendations = [];
+
+      // Declare GMB Feed variables in proper scope (used later in breakdown)
+      let gmbFeedScore = 0;
+      let gmbFeedLevel = 'N/A';
+      let gmbFeedRecommendations = [];
+      let postsLast90Days = 0;
+      
       try {
         const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || process.env.REACT_APP_GMB_API_KEY;
         // Prefer explicit lat/lng passed from BusinessProfile; then fall back to GMB latlng shapes
@@ -1507,7 +1534,7 @@ const ProfileStrengthResults = () => {
             return 2 * R * Math.asin(Math.sqrt(s1 + s2));
           };
 
-          let myTotal = 0;
+          myTotal = 0;
           let myCandidate = null;
           let myMatchBy = myPlaceId ? 'place_id' : 'name+proximity';
           if (myPlaceId) {
@@ -1543,6 +1570,11 @@ const ProfileStrengthResults = () => {
           }
           if (myCandidate?.user_ratings_total != null) myTotal = myCandidate.user_ratings_total;
           console.log('My place match:', { found: !!myCandidate, myTotal, by: myMatchBy });
+          console.log('Debug - myCandidate data:', myCandidate);
+          console.log('Debug - targetLocation data:', targetLocation);
+          console.log('Debug - business data:', business);
+          console.log('Debug - myPlaceId:', myPlaceId);
+          console.log('Debug - myName:', myName);
 
           // If not found by exact match, try best proximity by name contains
           if (!myTotal && myName) {
@@ -1555,15 +1587,252 @@ const ProfileStrengthResults = () => {
               .sort((a, b) => a.dist - b.dist);
             if (prox[0]?.p?.user_ratings_total != null && prox[0].dist < 200) {
               myTotal = prox[0].p.user_ratings_total;
+              myCandidate = prox[0].p; // Update myCandidate to the found match
             }
             console.log('My place fuzzy/proximity check:', { candidate: prox[0]?.p?.name, dist: prox[0]?.dist, myTotal });
+          }
+          
+          // Final fallback: use any business with similar name if still no match
+          if (!myTotal && myName) {
+            const fallbackMatch = resultsAll.find(p => 
+              (p.name || '').toLowerCase().includes(myName.toLowerCase()) ||
+              myName.toLowerCase().includes((p.name || '').toLowerCase())
+            );
+            if (fallbackMatch?.user_ratings_total) {
+              myTotal = fallbackMatch.user_ratings_total;
+              myCandidate = fallbackMatch;
+              console.log('Using fallback business match:', { name: fallbackMatch.name, reviews: myTotal });
+            }
           }
 
           // Competitors average (exclude my candidate if matched)
           const competitors = resultsAll.filter((p) => p !== myCandidate && (p.user_ratings_total ?? 0) >= 0);
           const compTotals = competitors.map((p) => p.user_ratings_total || 0).filter((n) => typeof n === 'number');
-          const compAvg = compTotals.length ? (compTotals.reduce((s, n) => s + n, 0) / compTotals.length) : 0;
+          compAvg = compTotals.length ? (compTotals.reduce((s, n) => s + n, 0) / compTotals.length) : 0;
           console.log('Competitor stats:', { totalFetched: resultsAll.length, competitorCount: competitors.length, compAvg });
+
+          // Calculate velocity score using API data directly instead of competitor search
+          // Get actual business data from API calls (not competitor discovery)
+          const actualRating = business?.rating || account?.rating || targetLocation?.rating || 0;
+          const actualReviewsCount = business?.userRatingCount || business?.reviewsCount || account?.reviewsCount || 0;
+          
+          const userBusinessData = {
+            name: business?.name || business?.businessName || account?.name || resolvedAccountName,
+            rating: actualRating,
+            reviewsCount: actualReviewsCount
+          };
+          
+          console.log('[Velocity] Using API data directly:', {
+            businessData: business,
+            accountData: account,
+            extractedData: userBusinessData
+          });
+          
+          // LIVE Velocity fetch from Google My Business API (last 30 days reviews) — no CSV/localStorage fallback
+          try {
+            // Reuse robust ID extraction like GMB Feed block
+            const extractFromName = (nameStr) => {
+              if (typeof nameStr !== 'string') return { accountId: undefined, locationId: undefined };
+              const parts = nameStr.split('/');
+              const aIdx = parts.indexOf('accounts');
+              const lIdx = parts.indexOf('locations');
+              return {
+                accountId: aIdx !== -1 && parts[aIdx + 1] ? parts[aIdx + 1] : undefined,
+                locationId: lIdx !== -1 && parts[lIdx + 1] ? parts[lIdx + 1] : undefined,
+              };
+            };
+
+            const accountIdCandidatesV = [];
+            const locationIdCandidatesV = [];
+
+            if (account?.id) accountIdCandidatesV.push(String(account.id));
+            if (business?.accountId) accountIdCandidatesV.push(String(business.accountId));
+            if (targetLocation?.metadata?.locationId) locationIdCandidatesV.push(String(targetLocation.metadata.locationId));
+            if (targetLocation?.locationId) locationIdCandidatesV.push(String(targetLocation.locationId));
+
+            [account?.name, business?.name, business?.accountName, targetLocation?.name, state?.locationData?.name, state?.selectedLocation?.name]
+              .filter(Boolean)
+              .forEach((nm) => {
+                const { accountId: a, locationId: l } = extractFromName(String(nm));
+                if (a) accountIdCandidatesV.push(String(a));
+                if (l) locationIdCandidatesV.push(String(l));
+              });
+
+            let accountIdV = accountIdCandidatesV.find(Boolean);
+            let locationIdV = locationIdCandidatesV.find(Boolean);
+
+            // Attempt API resolution if missing
+            if (!accountIdV || !locationIdV) {
+              try {
+                console.warn('[Velocity] Resolving missing IDs via GMBService...');
+                const accessToken = await GMBService.getAccessToken();
+                const accounts = await GMBService.getAccounts(accessToken);
+                const firstAccount = Array.isArray(accounts) && accounts.length ? accounts[0] : null;
+                if (!accountIdV && firstAccount?.name?.includes('accounts/')) {
+                  accountIdV = String(firstAccount.name).split('/')[1];
+                }
+                if (accountIdV) {
+                  const accountNameFull = `accounts/${accountIdV}`;
+                  const locs = await GMBService.getLocations(accessToken, accountNameFull);
+                  const myTitle = targetLocation?.title || business?.title || business?.businessName || '';
+                  const myPlaceId = targetLocation?.metadata?.placeId || targetLocation?.placeId || business?.placeId || business?.place_id || null;
+                  const myLat = targetLocation?.latlng?.latitude ?? business?.latlng?.latitude ?? null;
+                  const myLng = targetLocation?.latlng?.longitude ?? business?.latlng?.longitude ?? null;
+                  const byPlaceId = (loc) => myPlaceId && (loc?.metadata?.placeId === myPlaceId);
+                  const byTitle = (loc) => myTitle && (loc?.title && String(loc.title).toLowerCase() === String(myTitle).toLowerCase());
+                  const byProximity = (loc) => {
+                    try {
+                      const ll = loc?.latlng; if (!ll || myLat == null || myLng == null) return false;
+                      const dLat = Math.abs((ll.latitude ?? ll.lat) - myLat);
+                      const dLng = Math.abs((ll.longitude ?? ll.lng) - myLng);
+                      return (dLat + dLng) < 0.02;
+                    } catch { return false; }
+                  };
+                  const match = Array.isArray(locs) ? (locs.find(byPlaceId) || locs.find(byTitle) || locs.find(byProximity)) : null;
+                  if (match?.name?.includes('locations/')) {
+                    locationIdV = String(match.name).split('/').pop();
+                    console.debug('[Velocity] Resolved locationId via API:', locationIdV);
+                  }
+                }
+              } catch (e) {
+                console.warn('[Velocity] Failed to resolve IDs via GMBService:', e);
+              }
+            }
+
+            if (!accountIdV || !locationIdV) {
+              console.warn('[Velocity] Missing accountId or locationId; skipping live velocity fetch', { accountIdV, locationIdV });
+            } else {
+              const token = await GMBService.getAccessToken();
+              const { reviewsCount } = await VelocityService.fetchLast30DaysReviews(accountIdV, locationIdV, token);
+              const benchmarkReviewCount = 20;
+              const vResult = VelocityService.calculateVelocityScore(reviewsCount, benchmarkReviewCount);
+              velocityScore = vResult.velocityScore;
+              velocityLevel = vResult.level;
+              reviewsLast30Days = vResult.reviewsLast30Days;
+              velocityRecommendations = vResult.recommendations;
+
+              console.log('=== VELOCITY SCORING RESULTS (LIVE) ===');
+              console.log('Reviews Last 30 Days:', reviewsLast30Days);
+              console.log('Velocity Score:', velocityScore);
+              console.log('Velocity Level:', velocityLevel);
+              console.log('Performance Percentage:', Math.round((velocityScore / 12) * 100) + '%');
+              console.log('Velocity Recommendations:', velocityRecommendations);
+              console.log('================================');
+            }
+          } catch (err) {
+            console.warn('[Velocity] Live velocity fetch failed:', err);
+          }
+
+          // Calculate GMB Feed Score (assign to outer-scoped vars) - API only, no CSV/local fallbacks
+          try {
+            // Robustly derive accountId and locationId from multiple shapes
+            const extractFromName = (nameStr) => {
+              if (typeof nameStr !== 'string') return { accountId: undefined, locationId: undefined };
+              const parts = nameStr.split('/');
+              const aIdx = parts.indexOf('accounts');
+              const lIdx = parts.indexOf('locations');
+              return {
+                accountId: aIdx !== -1 && parts[aIdx + 1] ? parts[aIdx + 1] : undefined,
+                locationId: lIdx !== -1 && parts[lIdx + 1] ? parts[lIdx + 1] : undefined,
+              };
+            };
+
+            const accountIdCandidates = [];
+            const locationIdCandidates = [];
+
+            // Direct IDs
+            if (account?.id) accountIdCandidates.push(String(account.id));
+            if (business?.accountId) accountIdCandidates.push(String(business.accountId));
+            if (targetLocation?.metadata?.locationId) locationIdCandidates.push(String(targetLocation.metadata.locationId));
+            if (targetLocation?.locationId) locationIdCandidates.push(String(targetLocation.locationId));
+
+            // From names that may contain both accounts/{id}/locations/{id}
+            [account?.name, business?.name, business?.accountName, targetLocation?.name, state?.locationData?.name, state?.selectedLocation?.name]
+              .filter(Boolean)
+              .forEach((nm) => {
+                const { accountId: a, locationId: l } = extractFromName(String(nm));
+                if (a) accountIdCandidates.push(String(a));
+                if (l) locationIdCandidates.push(String(l));
+              });
+
+            // Final chosen values
+            let accountId = accountIdCandidates.find(Boolean);
+            let locationIdFromName = locationIdCandidates.find(Boolean);
+
+            // If either is missing, try to resolve by fetching accounts/locations
+            if (!accountId || !locationIdFromName) {
+              try {
+                console.warn('[GMBFeed] Attempting to resolve missing IDs via GMBService...', {
+                  haveAccountId: !!accountId, haveLocationId: !!locationIdFromName
+                });
+                const accessToken = await GMBService.getAccessToken();
+                const accounts = await GMBService.getAccounts(accessToken);
+                // Prefer explicit account match if any candidate equals fetched account id
+                const firstAccount = Array.isArray(accounts) && accounts.length > 0 ? accounts[0] : null;
+                if (!accountId && firstAccount?.name?.includes('accounts/')) {
+                  accountId = String(firstAccount.name).split('/')[1];
+                }
+
+                if (accountId) {
+                  const accountNameFull = `accounts/${accountId}`;
+                  const locs = await GMBService.getLocations(accessToken, accountNameFull);
+                  const myTitle = targetLocation?.title || business?.title || business?.businessName || '';
+                  const myPlaceId = targetLocation?.metadata?.placeId || targetLocation?.placeId || business?.placeId || business?.place_id || null;
+                  const myLat = targetLocation?.latlng?.latitude ?? business?.latlng?.latitude ?? null;
+                  const myLng = targetLocation?.latlng?.longitude ?? business?.latlng?.longitude ?? null;
+
+                  const byPlaceId = (loc) => myPlaceId && (loc?.metadata?.placeId === myPlaceId);
+                  const byTitle = (loc) => myTitle && (loc?.title && String(loc.title).toLowerCase() === String(myTitle).toLowerCase());
+                  const byProximity = (loc) => {
+                    try {
+                      const ll = loc?.latlng;
+                      if (!ll || myLat == null || myLng == null) return false;
+                      const dLat = Math.abs((ll.latitude ?? ll.lat) - myLat);
+                      const dLng = Math.abs((ll.longitude ?? ll.lng) - myLng);
+                      return (dLat + dLng) < 0.02; // ~ within a couple km
+                    } catch { return false; }
+                  };
+                  const match = Array.isArray(locs) ? (locs.find(byPlaceId) || locs.find(byTitle) || locs.find(byProximity)) : null;
+                  if (match?.name?.includes('locations/')) {
+                    locationIdFromName = String(match.name).split('/').pop();
+                    console.debug('[GMBFeed] Resolved locationId via API:', locationIdFromName);
+                  }
+                }
+              } catch (resolveErr) {
+                console.warn('[GMBFeed] Failed to resolve IDs via GMBService:', resolveErr);
+              }
+            }
+
+            if (!accountId || !locationIdFromName) {
+              console.warn('[GMBFeed] Missing accountId or locationId; skipping GMB Feed scoring', {
+                accountIdCandidates,
+                locationIdCandidates,
+                targetLocationName: targetLocation?.name,
+                businessName: business?.name,
+                accountName: account?.name
+              });
+            } else {
+              const accessToken = await GMBService.getAccessToken();
+              const { postsCount } = await GMBFeedService.fetchLast90DaysPosts(accountId, locationIdFromName, accessToken);
+
+              postsLast90Days = postsCount || 0;
+              const gmbFeedResult = GMBFeedService.calculateGMBFeedScore(postsLast90Days, 8);
+              
+              gmbFeedScore = gmbFeedResult.feedScore;
+              gmbFeedLevel = gmbFeedResult.level;
+              gmbFeedRecommendations = gmbFeedResult.recommendations;
+
+              console.log('=== GMB FEED SCORING RESULTS ===');
+              console.log('GMB Feed Score:', gmbFeedScore);
+              console.log('GMB Feed Level:', gmbFeedLevel);
+              console.log('Posts Last 90 Days:', postsLast90Days);
+              console.log('Feed Recommendations:', gmbFeedRecommendations);
+              console.log('Raw Calculation: MIN((' + postsLast90Days + ' / 8) * 30, 30) = ' + gmbFeedScore);
+              console.log('================================');
+            }
+          } catch (error) {
+            console.error('[GMBFeed] Error calculating GMB Feed score:', error);
+          }
 
           // Removed competitor products scraping and product-based comparison bonus
           // Proceed with generic competitor analysis without product data
@@ -1594,90 +1863,6 @@ const ProfileStrengthResults = () => {
             score += reviewsPts;
             console.log('Review-based points computed:', { myTotal, compAvg, reviewsPts, capped: reviewsPts === 30 });
           }
-          
-          // 11.b) Velocity scoring (new reviews in last 30d vs competitor avg total reviews)
-          try {
-            // Get account info from available data sources - try multiple fallbacks
-            let accId = account?.id;
-            if (!accId) accId = business?.accountId || business?.accountName;
-            if (!accId && typeof business?.name === 'string' && business.name.includes('accounts/')) {
-              const parts = String(business.name).split('/');
-              const idx = parts.indexOf('accounts');
-              if (idx !== -1 && parts[idx + 1]) accId = parts[idx + 1];
-            }
-            
-            // Try state sources
-            if (!accId && state?.account?.id) accId = state.account.id;
-            if (!accId && state?.selectedAccount?.id) accId = state.selectedAccount.id;
-            if (!accId && state?.business?.accountId) accId = state.business.accountId;
-            if (!accId && state?.locationData?.accountId) accId = state.locationData.accountId;
-            if (!accId && state?.selectedLocation?.accountId) accId = state.selectedLocation.accountId;
-            
-            // Try extracting from location name pattern: accounts/{accountId}/locations/{locationId}
-            if (!accId && targetLocation?.name) {
-              const fullLocationName = String(targetLocation.name);
-              if (fullLocationName.includes('accounts/') && fullLocationName.includes('/locations/')) {
-                const match = fullLocationName.match(/accounts\/([^\/]+)\/locations/);
-                if (match && match[1]) accId = match[1];
-              }
-            }
-            
-            const accountName = accId ? (String(accId).includes('accounts/') ? String(accId) : `accounts/${accId}`) : undefined;
-            const accountId = (accountName && accountName.includes('accounts/')) ? accountName.split('/')[1] : undefined;
-            const locationName = targetLocation?.name || '';
-            const locationIdFromName = locationName ? String(locationName).split('/').pop() : undefined;
-
-            // Debug logging for Velocity prerequisites
-            console.log('[Velocity] Debug prerequisites:', {
-              accountId,
-              locationIdFromName,
-              compAvg,
-              accId,
-              accountName,
-              account: account ? { id: account.id, name: account.name } : null,
-              business: business ? { 
-                accountId: business.accountId, 
-                accountName: business.accountName, 
-                name: business.name 
-              } : null,
-              targetLocation: targetLocation ? { name: targetLocation.name } : null,
-              state: state ? {
-                selectedAccount: state.selectedAccount,
-                account: JSON.stringify(state.account),
-                locationData: JSON.stringify(state.locationData),
-                selectedLocation: JSON.stringify(state.selectedLocation),
-                business: JSON.stringify(state.business)
-              } : null
-            });
-
-            if (accountId && locationIdFromName && compAvg > 0) {
-              updateProgress('Calculating review velocity...', 97, ['Competitor Analysis']);
-              // Fetch count of reviews in last 30 days
-              const newReviews30 = await GMBService.getNewReviewsCountLast30Days(undefined, accountId, locationIdFromName);
-              const rawVelocity = (newReviews30 / compAvg) * 12;
-              velocityPts = Math.min(12, Number.isFinite(rawVelocity) ? rawVelocity : 0);
-              score += velocityPts;
-              console.log('[Velocity] Computation:', {
-                newReviews30,
-                compAvg,
-                rawVelocity: Number.isFinite(rawVelocity) ? rawVelocity.toFixed(3) : rawVelocity,
-                finalPoints: velocityPts,
-                formula: 'MIN((New_Reviews_30d / AvgCompetitorReviews) * 12, 12)',
-                maxPoints: 12
-              });
-              // Structured velocity log via service helper
-              CompetitorDiscoveryService.logVelocityCalculation({
-                newReviews30,
-                avgCompetitorReviews: compAvg,
-                rawPoints: rawVelocity,
-                finalPoints: velocityPts
-              });
-            } else {
-              console.log('[Velocity] Skipped: missing account/location or compAvg <= 0', { accountId, locationIdFromName, compAvg });
-            }
-          } catch (ve) {
-            console.warn('[Velocity] Failed to compute velocity score:', ve);
-          }
           console.groupEnd();
         }
       } catch (e) {
@@ -1688,23 +1873,36 @@ const ProfileStrengthResults = () => {
       try {
         console.groupCollapsed('[Profile Strength] Scoring Breakdown');
         console.log('Account verificationState:', account?.verificationState);
+        // Note: Velocity and GMB Feed variables are now declared in proper scope above
+
+        const score = verPts + namePts + addrPts + phonePts + descPts + websitePts + hoursPts + labelPts + catBasePts + catExtraPts + catCityPts + socialPts + appointmentsPts + serviceAreaPts + bookApptPts + qaPts + reviewRatingPts + responseRatePts + reviewsPts;
+
         console.log('Target location:', targetLocation?.name || targetLocation?.title || '(none)');
         console.log('Title:', businessTitle);
-        console.log('City:', city);
-        console.log('Address used:', addr);
-        console.log('Selected keywords:', keywords);
-        console.table([
-          { factor: 'Verification', details: { isVerified, isSoftSuspended, isUnverified }, points: verPts },
-          { factor: 'Business name contains city', details: { containsCity: !!(businessTitle && city && businessTitle.toLowerCase().includes(city.toLowerCase())) }, points: namePts },
-          { factor: 'Address', details: { hasCity, hasKeyword, hasAnyAddressFields }, points: addrPts },
+        
+        console.groupEnd();
+      } catch (_) {}
+
+      if (isMounted) {
+        // Map details to existing in-scope variables to avoid no-undef lints
+        const hasAddress = !!displayAddress;
+        const labelCount = Array.isArray(targetLocation?.labels) ? targetLocation.labels.length : 0;
+        const additionalCount = typeof extraCount === 'number' ? extraCount : 0;
+        const catMentionsCity = typeof hasCityInCategory === 'boolean' ? hasCityInCategory : false;
+        const descLength = typeof wordCount === 'number' ? wordCount : 0;
+
+        setScoreBreakdown([
+          { factor: 'Verification', details: { verified: isVerified }, points: verPts },
+          { factor: 'Business name contains city', details: { hasCity }, points: namePts },
+          { factor: 'Address', details: { hasAddress, hasCity, hasKeyword, addr: displayAddress }, points: addrPts },
           { factor: 'Phone number', details: { hasPhone }, points: phonePts },
-          { factor: 'Description length', details: { wordCount }, points: descPts },
+          { factor: 'Description length', details: { descLength }, points: descPts },
           { factor: 'Website link', details: { hasWebsite }, points: websitePts },
           { factor: 'Timings (hours)', details: { hasHours }, points: hoursPts },
-          { factor: 'Labels', details: { hasLabels }, points: labelPts },
-          { factor: 'Categories (primary)', details: { hasPrimary: !!primaryCategory }, points: catBasePts },
-          { factor: 'Categories (additional)', details: { additionalCount: Array.isArray(additionalCats) ? additionalCats.length : 0 }, points: catExtraPts },
-          { factor: 'Category mentions city', details: { hasCityInCategory }, points: catCityPts },
+          { factor: 'Labels', details: { labelCount, hasLabels }, points: labelPts },
+          { factor: 'Categories (primary)', details: { hasPrimary }, points: catBasePts },
+          { factor: 'Categories (additional)', details: { additionalCount }, points: catExtraPts },
+          { factor: 'Category mentions city', details: { catMentionsCity }, points: catCityPts },
           { factor: 'Social media attached', details: { hasSocial }, points: socialPts },
           { factor: 'Appointments link', details: { hasAppt }, points: appointmentsPts },
           { factor: 'Service area', details: { hasServiceArea }, points: serviceAreaPts },
@@ -1712,19 +1910,31 @@ const ProfileStrengthResults = () => {
           { factor: 'Q&A section present', details: { hasQASection }, points: qaPts },
           { factor: 'Review Rating', details: { myRating, capped: reviewRatingPts === 20 }, points: reviewRatingPts },
           { factor: 'Response Rate', details: { responseRate: `${responseRate}%` }, points: responseRatePts },
-          { factor: 'Reviews vs competitors', details: {}, points: reviewsPts },
-          { factor: 'Velocity (30d)', details: { formula: 'min((new30/compAvg)*12,12)' }, points: velocityPts },
-          { factor: 'TOTAL (raw)', details: {}, points: score }
+          { factor: 'Reviews vs competitors', details: { myTotal, compAvg }, points: reviewsPts },
+          { factor: 'Velocity Score', details: { 
+            velocityScore: velocityScore,
+            reviewsLast30Days: reviewsLast30Days,
+            competitorsAnalyzed: competitors.length,
+            benchmarkReviewCount: 20,
+            velocityPercentage: (velocityScore / 12) * 100,
+            velocityRecommendations: velocityRecommendations
+          }, points: velocityScore },
+          { factor: 'GMB Feed', details: {
+            postsLast90Days: postsLast90Days,
+            benchmarkPostCount: 8,
+            feedPercentage: (gmbFeedScore / 30) * 100,
+            feedLevel: gmbFeedLevel,
+            feedRecommendations: gmbFeedRecommendations
+          }, points: gmbFeedScore },
+          { factor: 'TOTAL (raw)', details: {}, points: score + velocityScore + gmbFeedScore }
         ]);
-        console.groupEnd();
-      } catch (_) {}
 
-      updateProgress('Finalizing analysis...', 98, ['Competitor Analysis']);
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      if (isMounted) {
-        // Round to nearest integer before saving
-        setProfileScore(Math.round(score));
+        updateProgress('Finalizing analysis...', 98, ['Competitor Analysis']);
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Round to nearest integer before saving (include velocity and GMB feed scores)
+        const totalScore = score + velocityScore + gmbFeedScore;
+        setProfileScore(Math.round(totalScore));
         updateProgress('Analysis complete!', 100, ['Final Score Calculation']);
         await new Promise(resolve => setTimeout(resolve, 1000));
         setIsCalculating(false);
@@ -1741,6 +1951,65 @@ const ProfileStrengthResults = () => {
   const handleViewHeatMap = () => {
     // Handle view heat map action
     console.log('View Heat Map clicked');
+  };
+
+  // Export current score breakdown to CSV (one row per factor)
+  const handleExportCSV = () => {
+    try {
+      const rows = [];
+      // Header/summary rows
+      rows.push(['Report', 'Profile Strength Results']);
+      rows.push(['Generated At', new Date().toISOString()]);
+      rows.push(['Account', resolvedAccountName || '']);
+      rows.push(['Location', displayAddress || '']);
+      rows.push(['Total Score', `${profileScore} / 300`]);
+      rows.push([]); // blank line
+
+      // Column headers for breakdown
+      rows.push(['Factor', 'Points', 'Details']);
+
+      const toDetailString = (details) => {
+        if (!details || typeof details !== 'object') return '';
+        try {
+          return Object.entries(details)
+            .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join('|') : String(v)}`)
+            .join('; ');
+        } catch {
+          return JSON.stringify(details);
+        }
+      };
+
+      (Array.isArray(scoreBreakdown) ? scoreBreakdown : []).forEach(item => {
+        rows.push([
+          item?.factor ?? '',
+          typeof item?.points === 'number' ? item.points : '',
+          toDetailString(item?.details)
+        ]);
+      });
+
+      // Convert to CSV text
+      const csv = rows
+        .map(row => row.map(cell => {
+          const text = cell == null ? '' : String(cell);
+          // Escape quotes and wrap if needed
+          const escaped = text.replace(/"/g, '""');
+          return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
+        }).join(','))
+        .join('\n');
+
+      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const niceName = (resolvedAccountName || 'profile').replace(/[^a-z0-9\-]+/gi, '_').toLowerCase();
+      a.href = url;
+      a.download = `${niceName}_profile_strength.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('[Export CSV] Failed to export CSV:', err);
+    }
   };
 
   const toggleKeyword = (kw) => {
@@ -1870,9 +2139,14 @@ const ProfileStrengthResults = () => {
             </AboutSection>
           </ResultsSection>
 
-          <ViewHeatMapButton onClick={handleViewHeatMap}>
-            View Heat Map
-          </ViewHeatMapButton>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <ViewHeatMapButton onClick={handleViewHeatMap}>
+              View Heat Map
+            </ViewHeatMapButton>
+            <ViewHeatMapButton onClick={handleExportCSV}>
+              Export CSV
+            </ViewHeatMapButton>
+          </div>
 
         </ContentSection>
       </MainContent>

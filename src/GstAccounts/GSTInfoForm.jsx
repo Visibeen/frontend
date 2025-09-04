@@ -160,21 +160,47 @@ const GSTInfoForm = () => {
     if (invoice?.paymentLink) return invoice.paymentLink;
     const explicit = process.env.REACT_APP_RAZORPAY_PAYMENT_LINK;
     if (explicit) {
-      const u = new URL(explicit, window.location.origin);
-      if (invoice?.id) u.searchParams.set('invoiceId', invoice.id);
-      if (invoice?.amount) u.searchParams.set('amount', String(invoice.amount));
-      return u.toString();
+      try {
+        const u = new URL(explicit, window.location.origin);
+        if (invoice?.id) u.searchParams.set('invoiceId', invoice.id);
+        if (invoice?.amount) u.searchParams.set('amount', String(invoice.amount));
+        return u.toString();
+      } catch (_) {
+        // If explicit is a short link without protocol, prepend https
+        const safe = explicit.startsWith('http') ? explicit : `https://${explicit}`;
+        return safe;
+      }
     }
+
+    const shortFromEnv = process.env.REACT_APP_RAZORPAY_SHORT_LINK; // e.g., https://rzp.io/l/visibeen-pay
+    if (shortFromEnv) {
+      try {
+        const u = new URL(shortFromEnv);
+        if (invoice?.id) u.searchParams.set('invoiceId', invoice.id);
+        if (invoice?.amount) u.searchParams.set('amount', String(invoice.amount));
+        return u.toString();
+      } catch (_) {
+        const safe = shortFromEnv.startsWith('http') ? shortFromEnv : `https://${shortFromEnv}`;
+        return safe;
+      }
+    }
+
     const base = (process.env.REACT_APP_API_BASE_URL || '').replace(/\/$/, '');
     if (base) {
       return `${base}/payments/razorpay?invoiceId=${encodeURIComponent(invoice?.id || '')}&amount=${encodeURIComponent(String(invoice?.amount || ''))}`;
     }
-    // Fallback to a generic Razorpay short link pattern if nothing is configured
-    const fallbackShortLink = 'https://rzp.io/l/visibeen-pay';
-    const u2 = new URL(fallbackShortLink);
-    if (invoice?.id) u2.searchParams.set('invoiceId', invoice.id);
-    if (invoice?.amount) u2.searchParams.set('amount', String(invoice.amount));
-    return u2.toString();
+
+    // Final fallback to a generic Razorpay short link
+    const fallbackShortLink = process.env.REACT_APP_RAZORPAY_FALLBACK || 'https://rzp.io/l/visibeen-pay';
+    try {
+      const u2 = new URL(fallbackShortLink);
+      if (invoice?.id) u2.searchParams.set('invoiceId', invoice.id);
+      if (invoice?.amount) u2.searchParams.set('amount', String(invoice.amount));
+      return u2.toString();
+    } catch (_) {
+      const safe = fallbackShortLink.startsWith('http') ? fallbackShortLink : `https://${fallbackShortLink}`;
+      return safe;
+    }
   };
 
   return (

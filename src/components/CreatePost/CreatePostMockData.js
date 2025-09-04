@@ -1,5 +1,3 @@
-// Mock data for the Create Post page
-
 export const mockRootProps = {
   userProfile: {
     name: "Karen Abshire",

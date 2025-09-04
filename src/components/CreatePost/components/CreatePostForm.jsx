@@ -4,12 +4,12 @@ import { styled } from '@mui/material/styles';
 import ColorPicker from './ColorPicker';
 
 const FormContainer = styled(Stack)(({ theme }) => ({
-  gap: '24px',
+  gap: '20px',
   width: '100%'
 }));
 
 const FieldContainer = styled(Stack)(({ theme }) => ({
-  gap: '8px'
+  gap: '6px'
 }));
 
 const FieldLabel = styled(Typography)(({ theme }) => ({
@@ -29,19 +29,19 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
       border: 'none'
     },
     '& input': {
-      padding: '12px 0'
+      padding: '10px 0'
     },
     '& textarea': {
-      padding: '12px 0'
+      padding: '10px 0'
     }
   }
 }));
 
 const ActionButtons = styled(Stack)(({ theme }) => ({
   flexDirection: 'row',
-  gap: '20px',
+  gap: '16px',
   justifyContent: 'center',
-  marginTop: '32px'
+  marginTop: '24px'
 }));
 
 const CancelButton = styled(Button)(({ theme }) => ({
@@ -111,7 +111,7 @@ const CreatePostForm = ({ initialData, onCancel, onNext }) => {
         <FieldLabel>Name</FieldLabel>
         <StyledTextField
           value={formData.name}
-          onChange={handleInputChange('name')}
+          InputProps={{ readOnly: true }}
           variant="outlined"
           fullWidth
         />

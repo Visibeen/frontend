@@ -1,10 +1,13 @@
-import React, { useRef, useState } from 'react';
-import { Box, Stack, Typography, Button, TextField, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { getYourData } from '../../utils/yourDataStore';
+import { Box, Stack, Typography, Button, TextField, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress, CircularProgress } from '@mui/material';
+import { styled, keyframes } from '@mui/material/styles';
 import { useLocation, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import DropdownArrowIcon from '../icons/DropdownArrowIcon';
-import EditIcon from '../icons/EditIcon';
+import CompetitorDiscoveryService from '../../services/CompetitorDiscoveryService';
+import ReviewsScoring from '../Performance/components/ReviewsScoring';
+import AnalysisLoadingPopup from '../ProfileStrengthResults/components/AnalysisLoadingPopup';
 
 const MainContent = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -189,6 +192,8 @@ const ProfileStrengthAnalysis = () => {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [newKeyword, setNewKeyword] = useState('');
+  const [showAnalysisPopup, setShowAnalysisPopup] = useState(false);
+  const [competitorScoreData, setCompetitorScoreData] = useState(null);
 
   const accountSelectRef = useRef(null);
   const keywordsSelectRef = useRef(null);
@@ -221,7 +226,10 @@ const ProfileStrengthAnalysis = () => {
     setNewKeyword('');
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    // Show analysis popup
+    setShowAnalysisPopup(true);
+
     // Merge predefined selected + manual keywords (manual split by comma)
     const manualParts = manualKeywords
       .split(',')
@@ -229,121 +237,129 @@ const ProfileStrengthAnalysis = () => {
       .filter(Boolean);
     const keywords = [...selectedKeywords, ...manualParts].slice(0, 3);
 
+    // Run competitor discovery in the background
+    try {
+      const selectedBiz = accounts.find(a => a.name === selectedAccount) || {};
+      const raw = selectedBiz?.raw || location.state?.selected || {};
+      
+      console.log('[Competitor Discovery] Debug - selectedAccount:', selectedAccount);
+      console.log('[Competitor Discovery] Debug - selectedBiz:', selectedBiz);
+      console.log('[Competitor Discovery] Debug - raw data:', raw);
+      console.log('[Competitor Discovery] Debug - location.state:', location.state);
+      
+      let latitude = raw?.latlng?.latitude;
+      let longitude = raw?.latlng?.longitude;
+      const placeId = raw?.id || raw?.place_id;
+      
+      console.log('[Competitor Discovery] Debug - initial latitude:', latitude);
+      console.log('[Competitor Discovery] Debug - initial longitude:', longitude);
+      console.log('[Competitor Discovery] Debug - placeId:', placeId);
+      
+      // If we don't have coordinates, try different approaches
+      if (!latitude || !longitude) {
+        // Try to fetch from place ID first
+        if (placeId) {
+          console.log('[Competitor Discovery] Fetching coordinates from place ID:', placeId);
+          try {
+            const placeDetails = await CompetitorDiscoveryService.getPlaceDetails(placeId);
+            
+            if (placeDetails?.geometry?.location) {
+              latitude = placeDetails.geometry.location.lat;
+              longitude = placeDetails.geometry.location.lng;
+              console.log('[Competitor Discovery] Fetched coordinates - lat:', latitude, 'lng:', longitude);
+            }
+          } catch (placeError) {
+            console.warn('[Competitor Discovery] Failed to fetch place details from place ID:', placeError);
+          }
+        }
+        
+        // If still no coordinates, try geocoding the address
+        if ((!latitude || !longitude) && raw?.address) {
+          console.log('[Competitor Discovery] Attempting to geocode address:', raw.address);
+          try {
+            const geocodeResult = await CompetitorDiscoveryService.geocodeAddress(raw.address);
+            if (geocodeResult?.lat && geocodeResult?.lng) {
+              latitude = geocodeResult.lat;
+              longitude = geocodeResult.lng;
+              console.log('[Competitor Discovery] Geocoded coordinates - lat:', latitude, 'lng:', longitude);
+            }
+          } catch (geocodeError) {
+            console.warn('[Competitor Discovery] Failed to geocode address:', geocodeError);
+          }
+        }
+        
+        // Final fallback: use a default location (Delhi, India as example)
+        if (!latitude || !longitude) {
+          console.warn('[Competitor Discovery] Using default location (Delhi, India) as fallback');
+          latitude = 28.6139;
+          longitude = 77.2090;
+        }
+      }
+      
+      const allKeywords = [...selectedKeywords, ...manualKeywords.split(',').map(k => k.trim()).filter(Boolean)].slice(0, 3);
+      const primaryKeyword = allKeywords[0];
+      
+      console.log('[Competitor Discovery] Debug - selectedKeywords:', selectedKeywords);
+      console.log('[Competitor Discovery] Debug - manualKeywords:', manualKeywords);
+      console.log('[Competitor Discovery] Debug - allKeywords:', allKeywords);
+      console.log('[Competitor Discovery] Debug - primaryKeyword:', primaryKeyword);
+
+      if (latitude && longitude && primaryKeyword) {
+        console.log('[Competitor Discovery] Starting analysis for keyword:', primaryKeyword);
+        
+        const competitors = await CompetitorDiscoveryService.findCompetitors({
+          latitude,
+          longitude,
+          keyword: primaryKeyword,
+          excludePlaceId: placeId
+        });
+
+        // Just pass the competitor data to ProfileStrengthResults for velocity calculation there
+        console.log('[Competitor Discovery] Found competitors:', competitors.length);
+        
+        // Navigate to results with raw competitor data (velocity calculation will happen in ProfileStrengthResults)
+        navigate('/profile-strength-results', {
+          state: {
+            business: selectedBiz,
+            keywords,
+            address,
+            competitors: competitors, // Pass raw competitor data
+            selected: raw
+          }
+        });
+        return; // Exit early since we've navigated
+      } else {
+        console.warn('[Competitor Discovery] Missing location or keyword. Skipping analysis.');
+        console.warn('[Competitor Discovery] Missing data - latitude:', latitude, 'longitude:', longitude, 'primaryKeyword:', primaryKeyword);
+      }
+    } catch (error) {
+      console.error('Failed to run competitor discovery:', error);
+    }
+
     // Resolve selected business for address and id
     const selectedBiz = accounts.find(a => a.name === selectedAccount) || null;
-    // If we have the raw GMB location, format like BusinessProfile.jsx
     const raw = selectedBiz?.raw || location.state?.selected || null;
     let address = selectedBiz?.address || raw?.address || raw?.formattedAddress || '';
-    // Always prefer storefrontAddress when available to build a complete address
+    
     if (raw?.storefrontAddress) {
       const sa = raw.storefrontAddress;
       const parts = [];
       if (Array.isArray(sa.addressLines) && sa.addressLines.length) parts.push(sa.addressLines.join(', '));
       if (sa.locality) parts.push(sa.locality);
-      const tail = [sa.administrativeArea, sa.postalCode].filter(Boolean).join(' ');
-      if (tail) parts.push(tail);
-      const full = parts.join(', ').trim();
-      if (full) address = full;
+      if (sa.administrativeArea) parts.push(sa.administrativeArea);
+      if (sa.postalCode) parts.push(sa.postalCode);
+      if (sa.regionCode) parts.push(sa.regionCode);
+      address = parts.join(', ');
     }
 
-    // Build a robust account object: ensure id is always an Account ID (not a Location ID)
-    const parseAccountIdFromName = (name) => {
-      if (typeof name !== 'string') return undefined;
-      // Expected shapes: "accounts/<accId>/locations/<locId>" or just "accounts/<accId>"
-      const parts = name.split('/');
-      const idx = parts.indexOf('accounts');
-      if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
-      return undefined;
-    };
-
-    const selectedRawName = raw?.name || location.state?.selected?.name;
-    const derivedAccId = selectedBiz?.accountId 
-      || parseAccountIdFromName(selectedRawName)
-      || parseAccountIdFromName(location.state?.selected?.name);
-
-    const account = selectedBiz
-      ? {
-          id: derivedAccId, // strictly an Account ID
-          name: selectedBiz.name,
-          locationId: selectedBiz.locationId,
-          verificationState: raw?.verificationState || raw?.verification_status,
-          accountName: derivedAccId ? `accounts/${derivedAccId}` : undefined
-        }
-      : {
-          id: (location.state?.selected?.accountId) || parseAccountIdFromName(location.state?.selected?.name),
-          name: selectedAccount,
-          locationId: location.state?.selected?.locationId || location.state?.selected?.id,
-          verificationState: location.state?.selected?.verificationState || location.state?.selected?.verification_status,
-          accountName: ((location.state?.selected?.accountId) || parseAccountIdFromName(location.state?.selected?.name))
-            ? `accounts/${(location.state?.selected?.accountId) || parseAccountIdFromName(location.state?.selected?.name)}`
-            : undefined
-        };
-
-    // Ensure business object has all required fields for scoring
-    const businessPayload = {
-      ...raw,
-      title: raw?.title || raw?.name || raw?.businessName || selectedBiz?.name,
-      businessName: raw?.businessName || raw?.name || raw?.title || selectedBiz?.name,
-      address: address,
-      formattedAddress: address,
-      locationId: selectedBiz?.locationId || raw?.locationId || raw?.id,
-      accountId: selectedBiz?.accountId || raw?.accountId,
-      accountName: selectedBiz?.accountId || raw?.accountName,
-      name: raw?.name || (raw?.id ? `locations/${raw.id}` : (selectedBiz?.locationId ? `locations/${selectedBiz.locationId}` : undefined)),
-      id: raw?.id || selectedBiz?.locationId,
-      // Ensure storefrontAddress is properly structured for city extraction
-      storefrontAddress: raw?.storefrontAddress || {
-        addressLines: address ? [address.split(',')[0]] : [],
-        locality: raw?.storefrontAddress?.locality || extractCityFromAddress(address),
-        administrativeArea: raw?.storefrontAddress?.administrativeArea || extractStateFromAddress(address),
-        postalCode: raw?.storefrontAddress?.postalCode || extractPostalCodeFromAddress(address)
-      }
-    };
-
-    // Helper functions to extract address components
-    function extractCityFromAddress(addr) {
-      if (!addr) return '';
-      const parts = addr.split(',').map(p => p.trim());
-      // For "SCO 7 Hermitage Centralis, VIP Road, Zirakpur, Punjab 140603"
-      // Find the part that comes before the state/postal code part
-      for (let i = parts.length - 1; i >= 0; i--) {
-        const part = parts[i];
-        // If this part contains digits (postal code), skip it
-        if (/\d/.test(part)) continue;
-        // If this part looks like a state (contains common state names), skip it
-        if (/punjab|haryana|delhi|maharashtra|gujarat|rajasthan|karnataka|tamil nadu|kerala|andhra pradesh|telangana|west bengal|bihar|uttar pradesh|madhya pradesh|odisha|jharkhand|chhattisgarh|uttarakhand|himachal pradesh|jammu|kashmir|goa|manipur|meghalaya|tripura|arunachal pradesh|mizoram|nagaland|sikkim/i.test(part)) continue;
-        // This should be the city
-        return part;
-      }
-      // Fallback: if we have at least 3 parts, take the third-to-last
-      return parts.length >= 3 ? parts[parts.length - 3] : (parts.length >= 2 ? parts[parts.length - 2] : '');
-    }
-
-    function extractStateFromAddress(addr) {
-      if (!addr) return '';
-      const parts = addr.split(',').map(p => p.trim());
-      const lastPart = parts[parts.length - 1] || '';
-      // Extract state from "State PostalCode" format
-      const stateMatch = lastPart.match(/^([A-Za-z\s]+)\s+\d+/);
-      return stateMatch ? stateMatch[1].trim() : '';
-    }
-
-    function extractPostalCodeFromAddress(addr) {
-      if (!addr) return '';
-      const postalMatch = addr.match(/\b\d{6}\b/); // 6-digit postal code
-      return postalMatch ? postalMatch[0] : '';
-    }
-
-    // Navigate to profile strength results page with state
+    // Navigate to results without competitor data (fallback case)
     navigate('/profile-strength-results', {
       state: {
-        account,
+        business: selectedBiz,
         keywords,
         address,
-        business: businessPayload,
-        businesses: passedBusinesses,
-        locationData: raw,
-        selectedLocation: raw
+        competitors: [], // No competitors found
+        selected: raw
       }
     });
   };
@@ -386,21 +402,17 @@ const ProfileStrengthAnalysis = () => {
                           overflowY: 'auto'
                         }}
                       >
-                        {(accounts.length ? accounts : [{ id: 'acc-1', name: 'Account 1' }, { id: 'acc-2', name: 'Account 2' }]).map((acc) => (
+                        {accounts.map((acc) => (
                           <Box
-                            key={acc.id}
+                            key={acc.name}
+                            sx={{
+                              padding: '12px 16px',
+                              cursor: 'pointer',
+                              '&:hover': { backgroundColor: '#F9FAFB' }
+                            }}
                             onClick={() => {
                               setSelectedAccount(acc.name);
                               setAccountMenuOpen(false);
-                              // Scroll to and focus keywords selector
-                              if (keywordsSelectRef.current) {
-                                keywordsSelectRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              }
-                            }}
-                            sx={{
-                              padding: '10px 14px',
-                              cursor: 'pointer',
-                              '&:hover': { backgroundColor: '#F9FAFB' }
                             }}
                           >
                             {acc.name}
@@ -469,10 +481,14 @@ const ProfileStrengthAnalysis = () => {
             </ContinueButton>
           
           </FormSection>
-
-              
         </ContentSection>
       </MainContent>
+
+      {/* Analysis Loading Popup */}
+      <AnalysisLoadingPopup 
+        open={showAnalysisPopup}
+        onClose={() => setShowAnalysisPopup(false)}
+      />
     </DashboardLayout>
   );
 };

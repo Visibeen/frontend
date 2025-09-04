@@ -4,9 +4,8 @@
  * using the client ID and secret from the .env file
  */
 
-import { auth, provider } from '../firebase';
+import { auth, provider, signInWithPopup } from '../firebase';
 import { GoogleAuthProvider } from 'firebase/auth';
-import { signInWithGoogleOnce } from '../utils/googlePopupAuth';
 import oauthConfig from '../config/oauth';
 import tokenManager from '../auth/TokenManager';
 import { registerGoogleRefresher } from '../auth/googleRefresher';
@@ -108,33 +107,23 @@ class GMBService {
     }
     
     if (res.status === 401) {
-      // Try refresh once
+      // try refresh
       const newToken = await tokenManager.getValidAccessToken('google');
       const retryHeaders = {
         ...headers,
         Authorization: `Bearer ${newToken}`,
       };
+      // Remove project header if it caused issues before
       if (this.projectId && headers['X-Goog-User-Project']) {
         delete retryHeaders['X-Goog-User-Project'];
       }
       res = await fetch(url, { ...options, headers: retryHeaders });
-      // If still unauthorized, clear tokens and redirect to login
-      if (res.status === 401 && typeof window !== 'undefined') {
-        try {
-          tokenManager.remove('google');
-          localStorage.removeItem('googleAccessToken');
-          sessionStorage.removeItem('googleAccessToken');
-        } catch (_) {}
-        window.alert('Your Google session has expired. Please log in again.');
-        window.location.href = '/login';
-        return res;
-      }
     }
     return res;
   }
 
   /**
-   * Get media (photos) for a specific location
+   * Get media (photos and videos) for a specific location
    * Uses GMB v4 media endpoint.
    * @param {string} accessToken - Google OAuth access token
    * @param {string} accountId - Account ID string (e.g., '12345')
@@ -167,6 +156,89 @@ class GMBService {
   }
 
   /**
+   * Upload video to a specific location
+   * Uses GMB v4 media endpoint.
+   * @param {string} accessToken - Google OAuth access token
+   * @param {string} accountId - Account ID string (e.g., '12345')
+   * @param {string} locationId - Location ID string (e.g., '67890')
+   * @param {File} videoFile - Video file to upload
+   * @returns {Promise<Object>} Upload result
+   */
+  async uploadVideo(accessToken, accountId, locationId, videoFile) {
+    try {
+      if (!accountId || !locationId) {
+        throw new Error('Invalid accountId or locationId');
+      }
+
+      if (!videoFile) {
+        throw new Error('Video file is required');
+      }
+
+      // Validate file type
+      const allowedTypes = ['video/mp4', 'video/mov', 'video/avi'];
+      if (!allowedTypes.includes(videoFile.type)) {
+        throw new Error('Invalid video format. Only MP4, MOV, and AVI files are supported.');
+      }
+
+      // Validate file size (100MB limit)
+      const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+      if (videoFile.size > maxSize) {
+        throw new Error('Video file size must be less than 100MB');
+      }
+
+      // Create FormData for multipart upload
+      const formData = new FormData();
+      formData.append('media', videoFile);
+
+      // First, create the media item metadata
+      const mediaMetadata = {
+        mediaFormat: 'VIDEO',
+        category: 'PROFILE',
+        description: videoFile.name || 'Business video'
+      };
+
+      const response = await this._googleFetch(
+        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(mediaMetadata)
+        },
+        accessToken
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to create video media item');
+      }
+
+      const mediaItem = await response.json();
+      
+      // Now upload the actual video file
+      const uploadResponse = await this._googleFetch(
+        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media/${mediaItem.name}/mediaFiles`,
+        {
+          method: 'POST',
+          body: formData
+        },
+        accessToken
+      );
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error?.message || 'Failed to upload video file');
+      }
+
+      return mediaItem;
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get Google OAuth token using Firebase Authentication
    * Enhanced with better refresh token handling and storage
    * @returns {Promise<string>} The access token
@@ -184,12 +256,7 @@ class GMBService {
         'include_granted_scopes': true
       });
 
-      const result = await signInWithGoogleOnce(auth, provider, (p) => {
-        p.setCustomParameters({
-          prompt: 'consent',
-          include_granted_scopes: 'true'
-        });
-      });
+      const result = await signInWithPopup(auth, provider);
       
       // Get the OAuth access token (not Firebase ID token)
       const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -473,90 +540,6 @@ class GMBService {
     } catch (error) {
       console.error('Error fetching reviews:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Get count of new reviews in the last 30 days for a specific location
-   * Uses the same Reviews v4 endpoint and filters by review timestamp.
-   * @param {string} accessToken - Google OAuth access token (optional; auto-resolved if not provided)
-   * @param {string} accountId - Account ID string (e.g., '12345') or full name 'accounts/12345'
-   * @param {string} locationId - Location ID string (e.g., '67890') or full name 'locations/67890'
-   * @returns {Promise<number>} Count of reviews created/updated in the last 30 days
-   */
-  async getNewReviewsCountLast30Days(accessToken, accountId, locationId) {
-    try {
-      if (!accountId || !locationId) {
-        throw new Error('accountId and locationId are required');
-      }
-
-      const token = await this._getAccessToken(accessToken);
-      const acc = String(accountId).includes('accounts/') ? String(accountId).split('/')[1] : String(accountId);
-      const loc = String(locationId).includes('locations/') ? String(locationId).split('/')[1] : String(locationId);
-
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      let newCount = 0;
-      let nextPageToken = null;
-
-      // We page until there are no more pages OR we detect that the page's reviews are all older than 30 days
-      // Note: API may not be sorted strictly; we conservatively scan all pages but short-circuit if an entire page is old
-      do {
-        const url = `https://mybusiness.googleapis.com/v4/accounts/${acc}/locations/${loc}/reviews` +
-                    (nextPageToken ? `?pageToken=${encodeURIComponent(nextPageToken)}` : '');
-
-        const response = await this._googleFetch(
-          url,
-          { method: 'GET' },
-          token
-        );
-
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          console.warn('[GMBService] getNewReviewsCountLast30Days failed:', { status: response.status, error: err });
-          break;
-        }
-
-        const data = await response.json();
-        const pageReviews = Array.isArray(data?.reviews) ? data.reviews : [];
-
-        let pageAllOld = pageReviews.length > 0; // assume old until proven new
-        for (const r of pageReviews) {
-          const ts = r?.createTime || r?.updateTime || r?.reviewTime || null;
-          let d = null;
-          if (ts) {
-            // createTime can be RFC3339; Date can parse it
-            d = new Date(ts);
-          }
-          if (d && !isNaN(d.getTime())) {
-            if (d >= thirtyDaysAgo) {
-              newCount += 1;
-              pageAllOld = false; // found a recent one
-            }
-          } else {
-            // If timestamp missing or unparsable, skip safely
-            pageAllOld = false; // do not prematurely stop due to unknown
-          }
-        }
-
-        // Stop early if this page had items and all of them were older than 30 days
-        if (pageReviews.length > 0 && pageAllOld) {
-          break;
-        }
-
-        nextPageToken = data?.nextPageToken || null;
-        // Safety: avoid huge scans
-        if (newCount > 5000) {
-          console.warn('[GMBService] Aborting review scan after 5000 recent reviews (unlikely)');
-          break;
-        }
-      } while (nextPageToken);
-
-      return newCount;
-    } catch (error) {
-      console.error('[GMBService] Error counting new reviews (30d):', error);
-      return 0;
     }
   }
 

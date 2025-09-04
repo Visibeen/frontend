@@ -10,6 +10,7 @@ import LocationIcon from '../../icons/LocationIcon';
 import VerifiedCheckIcon from '../../icons/VerifiedCheckIcon';
 import StarRatingIcon from '../../icons/StarRatingIcon';
 import AddPhotoIcon from '../../icons/AddPhotoIcon';
+import VideoIcon from '../../icons/VideoIcon';
 import WebsiteGlobeIcon from '../../icons/WebsiteGlobeIcon';
 import DirectionsIcon from '../../icons/DirectionsIcon';
 import ShareIcon from '../../icons/ShareIcon';
@@ -20,6 +21,8 @@ import QRCodeIcon from '../../icons/QRCodeIcon';
 import SwitchAccountIcon from '../../icons/SwitchAccountIcon';
 import ProfileGaugeIcon from '../../icons/ProfileGaugeIcon';
 import CloseIcon from '@mui/icons-material/Close';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import EditIcon from '@mui/icons-material/Edit';
 
 // Styled Components
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -279,6 +282,103 @@ const AddPhotoButton = styled(Box)(({ theme }) => ({
 }));
 
 const AddPhotoText = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '12px',
+  fontWeight: 400,
+  color: '#0B91D6'
+}));
+
+// Video Section Styles
+const VideosSection = styled(Box)(({ theme }) => ({
+  marginTop: '18px'
+}));
+
+const VideosTitle = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '16px',
+  fontWeight: 600,
+  color: '#121927',
+  marginBottom: '18px'
+}));
+
+const VideosGrid = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  gap: '18px',
+  alignItems: 'center'
+}));
+
+const VideoItem = styled(Box)(({ theme }) => ({
+  width: '120px',
+  height: '133px',
+  borderRadius: '12px',
+  overflow: 'hidden',
+  position: 'relative',
+  cursor: 'pointer',
+  backgroundColor: '#f3f4f6',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  '&:hover': {
+    backgroundColor: '#e5e7eb'
+  }
+}));
+
+const VideoDuration = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  bottom: '8px',
+  right: '8px',
+  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  color: '#ffffff',
+  padding: '2px 6px',
+  borderRadius: '4px',
+  fontSize: '10px',
+  fontWeight: 500,
+  fontFamily: 'Inter, sans-serif'
+}));
+
+const VideoThumbnail = styled('img')(({ theme }) => ({
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover'
+}));
+
+const VideoPlayButton = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: '40px',
+  height: '40px',
+  borderRadius: '50%',
+  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#ffffff',
+  '&:hover': {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    transform: 'translate(-50%, -50%) scale(1.1)'
+  }
+}));
+
+const AddVideoButton = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '23px',
+  width: '120px',
+  height: '133px',
+  cursor: 'pointer',
+  border: '2px dashed #d1d5db',
+  borderRadius: '12px',
+  '&:hover': {
+    borderColor: '#0B91D6',
+    backgroundColor: '#f8f9fa'
+  }
+}));
+
+const AddVideoText = styled(Typography)(({ theme }) => ({
   fontFamily: 'Inter, sans-serif',
   fontSize: '12px',
   fontWeight: 400,
@@ -1002,6 +1102,17 @@ const BusinessProfile = () => {
   // Photo popup state
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null); // { original, proxy }
+
+  // Video state
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [videoUploadOpen, setVideoUploadOpen] = useState(false);
+  const [videos, setVideos] = useState([]);
+  const [videosRefreshing, setVideosRefreshing] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoUploadError, setVideoUploadError] = useState('');
+  const [videoUploadSuccess, setVideoUploadSuccess] = useState(false);
+
   const [currentAccount, setCurrentAccount] = useState(null);
   const [verificationState, setVerificationState] = useState({
     loading: true,
@@ -1010,7 +1121,10 @@ const BusinessProfile = () => {
     raw: null,
     isVerified: false,
   });
-  
+
+  // Get locationId from URL params early
+  const locationId = searchParams.get('id');
+
   // State for managing expanded views
   // Handlers for photo modal
   const handlePhotoClick = (originalSrc, proxied) => {
@@ -1023,6 +1137,103 @@ const BusinessProfile = () => {
     setPhotoModalOpen(false);
     setSelectedPhoto(null);
   };
+
+  // Video handlers
+  const handleVideoClick = (video) => {
+    setSelectedVideo(video);
+    setVideoModalOpen(true);
+  };
+
+  const closeVideoModal = () => {
+    setVideoModalOpen(false);
+    setSelectedVideo(null);
+  };
+
+  const handleVideoUpload = () => {
+    setVideoUploadOpen(true);
+  };
+
+  const uploadVideoToGMB = async (file) => {
+    try {
+      setVideoUploading(true);
+      setVideoUploadError('');
+
+      const accessToken = await GMBService.getAccessToken();
+      const accountId = currentAccount?.name?.split('/').pop();
+
+      if (!accountId || !locationId) {
+        throw new Error('Missing account or location information');
+      }
+
+      // Validate file size (100MB limit)
+      if (file.size > 75 * 1024 * 1024) {
+        throw new Error('Video file size must be less than 75MB');
+      }
+
+      // Validate file type
+      const allowedTypes = ['video/mp4', 'video/mov', 'video/avi', 'video/quicktime'];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error('Please select a valid video file (MP4, MOV, or AVI)');
+      }
+
+      console.log('Uploading video to GMB:', file.name, file.size, file.type);
+
+      // Upload video to GMB using the service
+      const result = await GMBService.uploadVideo(accessToken, accountId, locationId, file);
+
+      console.log('Video uploaded successfully:', result);
+
+      // Refresh videos list from GMB
+      await refreshVideos();
+
+      setVideoUploadSuccess(true);
+      setVideoUploadOpen(false);
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setVideoUploadSuccess(false), 3000);
+
+      return result;
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      setVideoUploadError(error.message);
+      throw error;
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
+  const refreshVideos = useCallback(async () => {
+    try {
+      setVideosRefreshing(true);
+      const accessToken = await GMBService.getAccessToken();
+      const accountId = currentAccount?.name?.split('/').pop();
+
+      if (!accountId || !locationId) {
+        console.warn('Cannot refresh videos: missing account or location');
+        return;
+      }
+
+      const updatedVideos = await GMBService.getMedia(accessToken, accountId, locationId);
+      const videos = updatedVideos.filter(i => i.mediaFormat === 'VIDEO' && (i.googleUrl || i.thumbnailUrl || i.sourceUrl));
+
+      const processedVideos = videos.map(video => ({
+        id: video.name?.split('/').pop() || Math.random().toString(),
+        name: video.description || 'Business Video',
+        url: video.googleUrl || video.sourceUrl || video.thumbnailUrl,
+        thumbnail: video.thumbnailUrl || video.googleUrl || video.sourceUrl,
+        duration: video.duration || '00:00',
+        uploadDate: video.createTime || new Date().toISOString()
+      }));
+
+      setVideos(processedVideos);
+      console.log('Videos refreshed:', processedVideos.length);
+    } catch (error) {
+      console.error('Error refreshing videos:', error);
+    } finally {
+      setVideosRefreshing(false);
+    }
+  }, [currentAccount, locationId]);
+
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [showPerformanceDetails, setShowPerformanceDetails] = useState(false);
   const [showFeedDetails, setShowFeedDetails] = useState(false);
@@ -1046,7 +1257,6 @@ const BusinessProfile = () => {
   const [productsLoading, setProductsLoading] = useState(false);
   const [servicesLoading, setServicesLoading] = useState(false);
 
-  const locationId = searchParams.get('id');
   const open = Boolean(anchorEl);
 
   // Mock data for products and services
@@ -1138,18 +1348,18 @@ const BusinessProfile = () => {
       console.log('[BusinessProfile] No locationId, returning early');
       return;
     }
-    
+
     setLocalPostsLoading(true);
     try {
       // Direct API call without using notification service for account detection
       const accessToken = await GMBService.getAccessToken();
       console.log('[BusinessProfile] Got access token, fetching accounts...');
-      
+
       const accounts = await GMBService.getAccounts(accessToken);
       console.log('[BusinessProfile] Available accounts:', accounts);
-      
+
       let foundAccountId = null;
-      
+
       // Search through accounts to find the one that owns this location
       for (const account of accounts) {
         try {
@@ -1158,7 +1368,7 @@ const BusinessProfile = () => {
             const locId = loc.name?.split('/').pop();
             return locId === locationId;
           });
-          
+
           if (matchingLocation) {
             foundAccountId = account.name.split('/').pop();
             console.log('[BusinessProfile] Found account for location:', foundAccountId);
@@ -1168,7 +1378,7 @@ const BusinessProfile = () => {
           console.warn('[BusinessProfile] Error checking account:', account.name, err);
         }
       }
-      
+
       if (foundAccountId) {
         console.log('[BusinessProfile] Fetching local posts for account:', foundAccountId, 'location:', locationId);
         const posts = await GMBService.getLocalPosts(accessToken, foundAccountId, locationId);
@@ -1266,17 +1476,17 @@ const BusinessProfile = () => {
         try {
           setNotificationLoading(true);
           const accessToken = await GMBService.getAccessToken();
-          
+
           // Add notification listener
           GMBNotificationService.addListener(handleNotifications);
-          
+
           // Get initial notifications
           const initialNotifications = await GMBNotificationService.getRecentNotifications(accessToken, locationId);
           setNotifications(initialNotifications);
-          
+
           // Start polling for new notifications (every 5 minutes)
           GMBNotificationService.startPolling(accessToken, locationId, 300000);
-          
+
           console.log('Notification system started for location:', locationId);
         } catch (error) {
           console.error('Error starting notification system:', error);
@@ -1284,14 +1494,14 @@ const BusinessProfile = () => {
           setNotificationLoading(false);
         }
       };
-      
+
       // Fetch local posts for GMB Feed
       console.log('[BusinessProfile] About to call fetchLocalPosts for locationId:', locationId);
       fetchLocalPosts();
-      
+
       startNotifications();
     }
-    
+
     // Cleanup on unmount
     return () => {
       GMBNotificationService.removeListener(handleNotifications);
@@ -1302,17 +1512,17 @@ const BusinessProfile = () => {
   // Fetch products and services from GMB API
   const fetchProductsAndServices = async () => {
     if (!locationId) return;
-    
+
     try {
       const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
-      
+
       // Fetch products
       setProductsLoading(true);
       try {
         console.log('[BusinessProfile] Fetching products for location:', locationId);
         const productsData = await GMBService.getProducts(locationId, accessToken);
         console.log('[BusinessProfile] Products fetched:', productsData);
-        
+
         // Transform API data to match our component structure
         const transformedProducts = productsData.map((product, index) => ({
           id: product.name?.split('/').pop() || index + 1,
@@ -1321,7 +1531,7 @@ const BusinessProfile = () => {
           image: product.media?.[0]?.sourceUrl || '/api/placeholder/200/120',
           description: product.description || ''
         }));
-        
+
         setProducts(transformedProducts);
       } catch (error) {
         console.warn('Error fetching products:', error);
@@ -1337,12 +1547,12 @@ const BusinessProfile = () => {
         const servicesData = await GMBService.getServices(locationId, accessToken);
         console.log('[BusinessProfile] Services fetched:', servicesData);
         
-        // Transform API data to match our component structure (services: name only)
+        // Transform API data to match our component structure
         const transformedServices = servicesData.map((service, index) => ({
           id: service.name?.split('/').pop() || index + 1,
           title: (service.serviceId || service.name || `Service ${index + 1}`).replace(/_/g, ' ')
         }));
-        
+
         setServices(transformedServices);
       } catch (error) {
         console.warn('Error fetching services:', error);
@@ -1350,7 +1560,7 @@ const BusinessProfile = () => {
       } finally {
         setServicesLoading(false);
       }
-      
+
     } catch (error) {
       console.error('Error fetching products and services:', error);
       setProductsLoading(false);
@@ -1365,7 +1575,7 @@ const BusinessProfile = () => {
       console.log('[Switch Account] Starting to fetch profiles...');
       const accounts = await GMBService.getAccounts(accessToken);
       console.log('[Switch Account] Found accounts:', accounts.length);
-      
+
       if (accounts.length === 0) {
         setAvailableProfiles([]);
         return;
@@ -1397,7 +1607,7 @@ const BusinessProfile = () => {
           if (verificationState === 'VERIFIED') mappedStatus = 'verified';
           else if (verificationState === 'PENDING_VERIFICATION' || verificationState === 'PENDING') mappedStatus = 'pending_verification';
           else if (verificationState === 'SUSPENDED') mappedStatus = 'suspended';
-          
+
           return {
             id: account.name?.split('/').pop(),
             name: account.accountName || 'Business Account',
@@ -1415,10 +1625,10 @@ const BusinessProfile = () => {
       const normalized = await Promise.all(allLocations.map(async ({ account, loc }) => {
         const id = loc.name?.split('/').pop();
         const address = loc.storefrontAddress?.addressLines?.join(', ') ||
-                        loc.storefrontAddress?.locality ||
-                        loc.storefrontAddress?.administrativeArea ||
-                        'Address not available';
-                
+          loc.storefrontAddress?.locality ||
+          loc.storefrontAddress?.administrativeArea ||
+          'Address not available';
+
         // Fetch verification via VoiceOfMerchantState API (same as dashboard)
         let simplifiedStatus = 'unknown';
         let hasVOM = false;
@@ -1433,9 +1643,9 @@ const BusinessProfile = () => {
         // Map to UI status (same logic as dashboard)
         const status = (
           (hasVOM || simplifiedStatus === 'verified') ? 'verified' :
-          simplifiedStatus === 'suspended' ? 'suspended' :
-          simplifiedStatus === 'pending_verification' ? 'pending_verification' :
-          'unverified'
+            simplifiedStatus === 'suspended' ? 'suspended' :
+              simplifiedStatus === 'pending_verification' ? 'pending_verification' :
+                'unverified'
         );
 
         return {
@@ -1513,7 +1723,7 @@ const BusinessProfile = () => {
           // Map GMB verification states to our status format
           let mappedStatus = 'unverified';
           const verificationState = account.verificationState;
-          
+
           if (verificationState === 'VERIFIED') {
             mappedStatus = 'verified';
           } else if (verificationState === 'PENDING_VERIFICATION' || verificationState === 'PENDING') {
@@ -1523,7 +1733,7 @@ const BusinessProfile = () => {
           } else if (verificationState === 'UNVERIFIED' || !verificationState) {
             mappedStatus = 'unverified';
           }
-          
+
           return {
             id: account.name?.split('/').pop(),
             name: account.accountName || 'Business Account',
@@ -1630,35 +1840,51 @@ const BusinessProfile = () => {
           setReviewsData({ reviews: [] });
         }
 
-        // Fetch media (photos) for this location directly
+        // Fetch media (photos and videos) for this location directly
         try {
           console.log('Fetching media for account/location:', accountId, actualLocationId);
           let items = await GMBService.getMedia(undefined, accountId, actualLocationId);
-          // Filter photos and items with at least one usable URL
-          items = items.filter(i => (i.mediaFormat === 'PHOTO' || !i.mediaFormat) && (i.googleUrl || i.thumbnailUrl || i.sourceUrl));
-          
-          // Separate cover photos from regular photos
-          const coverPhotos = items.filter(i => i.category === 'COVER' || i.category === 'PROFILE');
-          const regularPhotos = items.filter(i => i.category !== 'COVER' && i.category !== 'PROFILE');
-          
+
+          // Separate videos from photos
+          const videos = items.filter(i => i.mediaFormat === 'VIDEO' && (i.googleUrl || i.thumbnailUrl || i.sourceUrl));
+          const photos = items.filter(i => (i.mediaFormat === 'PHOTO' || !i.mediaFormat) && (i.googleUrl || i.thumbnailUrl || i.sourceUrl));
+
+          // Process videos
+          const processedVideos = videos.map(video => ({
+            id: video.name?.split('/').pop() || Math.random().toString(),
+            name: video.description || 'Business Video',
+            url: video.googleUrl || video.sourceUrl || video.thumbnailUrl,
+            thumbnail: video.thumbnailUrl || video.googleUrl || video.sourceUrl,
+            duration: video.duration || '00:00',
+            uploadDate: video.createTime || new Date().toISOString()
+          }));
+
+          setVideos(processedVideos);
+          console.log('Videos fetched:', processedVideos.length);
+
+          // Process photos - separate cover photos from regular photos
+          const coverPhotos = photos.filter(i => i.category === 'COVER' || i.category === 'PROFILE');
+          const regularPhotos = photos.filter(i => i.category !== 'COVER' && i.category !== 'PROFILE');
+
           // Sort by createTime desc if present
           const sortByTime = (a, b) => {
             const ta = a.createTime ? Date.parse(a.createTime) : 0;
             const tb = b.createTime ? Date.parse(b.createTime) : 0;
             return tb - ta;
           };
-          
+
           coverPhotos.sort(sortByTime);
           regularPhotos.sort(sortByTime);
-          
+
           // Combine with cover photos first
           const sortedItems = [...coverPhotos, ...regularPhotos];
-          
+
           console.log('Media items (photos) after filter/sort:', sortedItems.length, 'Cover photos:', coverPhotos.length);
           setMediaItems(sortedItems);
         } catch (mediaErr) {
           console.warn('Error fetching media:', mediaErr);
           setMediaItems([]);
+          setVideos([]);
         }
 
         // Fetch performance metrics for this location
@@ -1681,10 +1907,10 @@ const BusinessProfile = () => {
     };
 
     fetchLocationData();
-    
+
     // Fetch available profiles for the dropdown
     fetchAvailableProfiles();
-    
+
     // Fetch products and services
     fetchProductsAndServices();
   }, [locationId]);
@@ -1748,12 +1974,12 @@ const BusinessProfile = () => {
 
   // Build review link for QR code with robust fallbacks
   const safeReviewLink = (() => {
-    if (currentPlaceId) {
-      return `https://search.google.com/local/writereview?placeid=${currentPlaceId}`;
-    }
-    if (mapsUri) {
-      return mapsUri;
-    }
+    // if (currentPlaceId) {
+    //   return `https://search.google.com/local/writereview?placeid=${currentPlaceId}`;
+    // }
+    // if (mapsUri) {
+    //   return mapsUri;
+    // }
     const encodedAddress = encodeURIComponent(businessAddress || '');
     if (encodedAddress) {
       return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
@@ -1767,7 +1993,7 @@ const BusinessProfile = () => {
   ];
   const qrSrc = safeReviewLink ? qrProviders[qrProviderIndex](safeReviewLink) : ''
   const shareUrl = mapsUri || window.location.href;
-  const shareText = `${businessTitle} on Google`; 
+  const shareText = `${businessTitle} on Google`;
   const openShareMenu = (event) => setShareAnchorEl(event.currentTarget);
   const closeShareMenu = () => setShareAnchorEl(null);
   const handleNativeShare = async () => {
@@ -1777,7 +2003,7 @@ const BusinessProfile = () => {
       } else {
         window.open(shareUrl, '_blank');
       }
-    } catch (_) {}
+    } catch (_) { }
     closeShareMenu();
   };
   const handleCopyLink = async () => {
@@ -1810,14 +2036,14 @@ const BusinessProfile = () => {
     return map[key] || 0;
   };
   const numericRatings = reviews.map(r => toNumericRating(r.starRating));
-  
+
   // Get the actual total review count from the reviews API response
   const actualTotalFromAPI = reviewsData?.totalReviewCount || reviewsData?.total || null;
-  
+
   // Since locationData comes from GMB locations API (not reviews API), it won't have totalReviewCount
   // We need to use the totalReviewCount from the reviews API response directly
   const totalReviews = actualTotalFromAPI || numericRatings.length;
-  
+
   console.log('BusinessProfile totalReviews calculation:', {
     reviewsData: reviewsData,
     actualTotalFromAPI,
@@ -1867,7 +2093,7 @@ const BusinessProfile = () => {
     try {
       const accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
       const accountId = currentAccount?.name?.split('/').pop();
-      
+
       if (!accountId || !locationId) {
         throw new Error('Missing account or location information');
       }
@@ -1875,27 +2101,27 @@ const BusinessProfile = () => {
       // Upload photo to GMB
       const result = await GMBService.uploadMedia(accessToken, accountId, locationId, file);
       console.log('Photo uploaded successfully:', result);
-      
+
       // Refresh media items to show the new photo
       const items = await GMBService.getMedia(undefined, accountId, locationId);
       const filteredItems = items.filter(i => (i.mediaFormat === 'PHOTO' || !i.mediaFormat) && (i.googleUrl || i.thumbnailUrl || i.sourceUrl));
-      
+
       // Separate cover photos from regular photos
       const coverPhotos = filteredItems.filter(i => i.category === 'COVER' || i.category === 'PROFILE');
       const regularPhotos = filteredItems.filter(i => i.category !== 'COVER' && i.category !== 'PROFILE');
-      
+
       const sortByTime = (a, b) => {
         const ta = a.createTime ? Date.parse(a.createTime) : 0;
         const tb = b.createTime ? Date.parse(b.createTime) : 0;
         return tb - ta;
       };
-      
+
       coverPhotos.sort(sortByTime);
       regularPhotos.sort(sortByTime);
-      
+
       const sortedItems = [...coverPhotos, ...regularPhotos];
       setMediaItems(sortedItems);
-      
+
       return result;
     } catch (error) {
       console.error('Error uploading photo to GMB:', error);
@@ -2104,17 +2330,17 @@ const BusinessProfile = () => {
                         height={220}
                         onError={() => setQrProviderIndex((i) => (i + 1) % 2)}
                       />
-                      <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>{safeReviewLink}</Typography>
+                      {/* <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>{safeReviewLink}</Typography> */}
                     </Box>
                   ) : (
                     <Typography sx={{ fontSize: '14px' }}>Review link unavailable.</Typography>
                   )}
                 </DialogContent>
                 <DialogActions>
-                  {safeReviewLink && (
+                  {/* {safeReviewLink && (
                     <Button onClick={() => window.open(safeReviewLink, '_blank', 'noopener,noreferrer')}>Open link</Button>
-                  )}
-                  <Button onClick={() => setQrOpen(false)}>Close</Button>
+                  )} */}
+                  {/* <Button onClick={() => setQrOpen(false)}>Close</Button> */}
                 </DialogActions>
               </Dialog>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
@@ -2124,9 +2350,9 @@ const BusinessProfile = () => {
                     {isVerified ? (
                       <>
                         <VerifiedCheckIcon width={11} height={12} color="#34A853" />
-                        <Typography sx={{ 
-                          fontSize: '12px', 
-                          fontWeight: 500, 
+                        <Typography sx={{
+                          fontSize: '12px',
+                          fontWeight: 500,
                           color: '#34A853',
                           backgroundColor: '#F0F9F4',
                           padding: '2px 8px',
@@ -2136,9 +2362,9 @@ const BusinessProfile = () => {
                         </Typography>
                       </>
                     ) : (
-                      <Typography sx={{ 
-                        fontSize: '12px', 
-                        fontWeight: 500, 
+                      <Typography sx={{
+                        fontSize: '12px',
+                        fontWeight: 500,
                         color: '#EF4444',
                         backgroundColor: '#FEF2F2',
                         padding: '2px 8px',
@@ -2166,15 +2392,30 @@ const BusinessProfile = () => {
               <ContactGrid>
                 <ContactItem>
                   <ContactLabel>Primary Number:</ContactLabel>
-                  <ContactValue>{primaryPhone}</ContactValue>
+                  <ContactValue>
+                    {primaryPhone}
+                    <IconButton size="small" sx={{ ml: 1 }} onClick={() => setEditProfileOpen(true)} aria-label="Edit primary number">
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </ContactValue>
                 </ContactItem>
                 <ContactItem>
                   <ContactLabel>Secondary Number:</ContactLabel>
-                  <ContactValue>{locationData?.secondaryPhone || 'Not available'}</ContactValue>
+                  <ContactValue>
+                    {locationData?.secondaryPhone || 'Not available'}
+                    <IconButton size="small" sx={{ ml: 1 }} onClick={() => setEditProfileOpen(true)} aria-label="Edit secondary number">
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </ContactValue>
                 </ContactItem>
                 <ContactItem>
                   <ContactLabel>Manager Number:</ContactLabel>
-                  <ContactValue>{locationData?.managerPhone || 'Not available'}</ContactValue>
+                  <ContactValue>
+                    {locationData?.managerPhone || 'Not available'}
+                    <IconButton size="small" sx={{ ml: 1 }} onClick={() => setEditProfileOpen(true)} aria-label="Edit manager number">
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </ContactValue>
                 </ContactItem>
               </ContactGrid>
 
@@ -2182,8 +2423,15 @@ const BusinessProfile = () => {
               <HoursValue>Open ⋅ Closes 7 pm</HoursValue>
 
               <PhotosSection>
-                <PhotosTitle>Photos</PhotosTitle>
-                
+                <PhotosTitle>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>Photos</span>
+                    <IconButton size="small" onClick={() => setPhotoUploadOpen(true)} aria-label="Add or edit photos">
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </PhotosTitle>
+
                 {/* Cover Photo Display */}
                 {mediaItems && mediaItems.length > 0 && (
                   (() => {
@@ -2192,7 +2440,7 @@ const BusinessProfile = () => {
                       const originalSrc = coverPhoto.googleUrl || coverPhoto.thumbnailUrl || coverPhoto.sourceUrl || '';
                       const proxied = originalSrc ? buildProxyUrl(originalSrc) : null;
                       const initialSrc = proxied || originalSrc;
-                      
+
                       return (
                         <CoverPhotoContainer
                           onClick={() => handlePhotoClick(originalSrc, proxied)}
@@ -2282,7 +2530,7 @@ const BusinessProfile = () => {
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                               />
                             ) : (
-                              <img 
+                              <img
                                 src={placeholderSmall}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 alt="No image available"
@@ -2294,13 +2542,13 @@ const BusinessProfile = () => {
                   ) : (
                     <>
                       <PhotoItem>
-                        <img 
+                        <img
                           src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEzMyIgdmlld0JveD0iMCAwIDEyMCAxMzMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTMzIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEg4MFY5M0g0MFY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+Cg=="
                           alt="No photos available"
                         />
                       </PhotoItem>
                       <PhotoItem>
-                        <img 
+                        <img
                           src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEzMyIgdmlld0JveD0iMCAwIDEyMCAxMzMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTMzIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEg4MFY5M0g0MFY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+Cg=="
                           alt="No photos available"
                         />
@@ -2313,6 +2561,226 @@ const BusinessProfile = () => {
                   </AddPhotoButton>
                 </PhotosGrid>
               </PhotosSection>
+
+              {/* Videos Section */}
+              <VideosSection>
+                <VideosTitle>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between', width: '100%' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      Videos
+                      {videos.length > 0 && (
+                        <Badge
+                          badgeContent={videos.length}
+                          color="primary"
+                          sx={{
+                            '& .MuiBadge-badge': {
+                              fontSize: '10px',
+                              minWidth: '18px',
+                              height: '18px',
+                              backgroundColor: '#0B91D6'
+                            }
+                          }}
+                        />
+                      )}
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <IconButton
+                        onClick={() => setVideoUploadOpen(true)}
+                        size="small"
+                        sx={{ 
+                          color: '#0B91D6',
+                          '&:hover': { 
+                            backgroundColor: 'rgba(11, 145, 214, 0.1)' 
+                          }
+                        }}
+                        title="Add or edit videos"
+                        aria-label="Add or edit videos"
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    <IconButton
+                      onClick={refreshVideos}
+                      size="small"
+                      disabled={videosRefreshing}
+                      sx={{ 
+                        color: '#0B91D6',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(11, 145, 214, 0.1)' 
+                        }
+                      }}
+                      title="Refresh videos"
+                    >
+                      {videosRefreshing ? (
+                        <CircularProgress size={16} color="inherit" />
+                      ) : (
+                        <RefreshIcon />
+                      )}
+                    </IconButton>
+                    </Box>
+                  </Box>
+                </VideosTitle>
+                <VideosGrid>
+                  {loading ? (
+                    <>
+                      <VideoItem>
+                        <Box sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          color: '#9ca3af'
+                        }}>
+                          <CircularProgress size={20} color="inherit" />
+                          <Typography sx={{ fontSize: '10px', textAlign: 'center' }}>
+                            Loading videos...
+                          </Typography>
+                        </Box>
+                      </VideoItem>
+                      <VideoItem>
+                        <Box sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          color: '#9ca3af'
+                        }}>
+                          <CircularProgress size={20} color="inherit" />
+                          <Typography sx={{ fontSize: '10px', textAlign: 'center' }}>
+                            Loading videos...
+                          </Typography>
+                        </Box>
+                      </VideoItem>
+                    </>
+                  ) : videos && videos.length > 0 ? (
+                    videos.slice(0, 2).map((video, index) => (
+                      <VideoItem
+                        key={video.id || `video-${index}`}
+                        onClick={() => handleVideoClick(video)}
+                        role="button"
+                        aria-label="Open video"
+                      >
+                        {video.thumbnail ? (
+                          <VideoThumbnail
+                            src={video.thumbnail}
+                            alt={`Video ${index + 1}`}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <Box sx={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: '#f3f4f6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <VideoIcon width={32} height={32} color="#9ca3af" />
+                          </Box>
+                        )}
+                        <VideoPlayButton>
+                          <Box component="span" sx={{ fontSize: '20px' }}>▶</Box>
+                        </VideoPlayButton>
+                        <VideoDuration>{video.duration}</VideoDuration>
+                      </VideoItem>
+                    ))
+                  ) : (
+                    <>
+                      <VideoItem>
+                        <Box sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          color: '#9ca3af'
+                        }}>
+                          <VideoIcon width={32} height={32} />
+                          <Typography sx={{ fontSize: '10px', textAlign: 'center' }}>
+                            No videos yet
+                          </Typography>
+                          <Typography sx={{ fontSize: '8px', textAlign: 'center', opacity: 0.7 }}>
+                            Videos from GMB profile
+                          </Typography>
+                        </Box>
+                      </VideoItem>
+                      <VideoItem>
+                        <Box sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          color: '#9ca3af'
+                        }}>
+                          <VideoIcon width={32} height={32} />
+                          <Typography sx={{ fontSize: '10px', textAlign: 'center' }}>
+                            No videos yet
+                          </Typography>
+                          <Typography sx={{ fontSize: '8px', textAlign: 'center', opacity: 0.7 }}>
+                            Videos from GMB profile
+                          </Typography>
+                        </Box>
+                      </VideoItem>
+                    </>
+                  )}
+                  <AddVideoButton onClick={handleVideoUpload}>
+                    <VideoIcon width={24} height={24} color="#0B91D6" />
+                    <AddVideoText>Add Video to GMB</AddVideoText>
+                  </AddVideoButton>
+                </VideosGrid>
+                {videos.length > 2 && (
+                  <Box sx={{ mt: 2, textAlign: 'center' }}>
+                    <Button
+                      variant="text"
+                      sx={{
+                        color: '#0B91D6',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        textTransform: 'none',
+                        '&:hover': {
+                          backgroundColor: 'transparent',
+                          textDecoration: 'underline'
+                        }
+                      }}
+                    >
+                      View All Videos ({videos.length})
+                    </Button>
+                  </Box>
+                )}
+                {!loading && videos.length === 0 && (
+                  <Box sx={{ mt: 2, textAlign: 'center' }}>
+                    {/* <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                      No videos found in your Google My Business profile
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      Upload a video to get started, or check your GMB account for existing videos
+                    </Typography> */}
+                  </Box>
+                )}
+              </VideosSection>
+
+              {/* Video Upload Success Message */}
+              {videoUploadSuccess && (
+                <Alert
+                  severity="success"
+                  sx={{
+                    mt: 2,
+                    mb: 2,
+                    '& .MuiAlert-message': {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }
+                  }}
+                >
+                  <VideoIcon width={20} height={20} />
+                  Video uploaded successfully to Google My Business! It will appear in your business profile shortly.
+                </Alert>
+              )}
 
               {/* Photo Modal */}
               <Modal open={photoModalOpen} onClose={closePhotoModal} aria-labelledby="photo-modal">
@@ -2331,8 +2799,8 @@ const BusinessProfile = () => {
                         bgcolor: 'rgba(255, 255, 255, 0.9)',
                         border: '2px solid #EF232A',
                         zIndex: 1000,
-                        '&:hover': { 
-                          bgcolor: 'rgba(255, 255, 255, 1)', 
+                        '&:hover': {
+                          bgcolor: 'rgba(255, 255, 255, 1)',
                           color: '#d32f2f',
                           transform: 'translateX(-50%) scale(1.1)'
                         }
@@ -2374,9 +2842,52 @@ const BusinessProfile = () => {
                 </Box>
               </Modal>
 
+              {/* Video Modal */}
+              <Modal open={videoModalOpen} onClose={closeVideoModal} aria-labelledby="video-modal">
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                  <Box sx={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', outline: 'none' }}>
+                    {/* Top close button */}
+                    <IconButton
+                      aria-label="Close"
+                      onClick={closeVideoModal}
+                      sx={{
+                        position: 'absolute',
+                        top: '-50px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        color: '#EF232A',
+                        bgcolor: 'rgba(255, 255, 255, 0.9)',
+                        border: '2px solid #EF232A',
+                        zIndex: 1000,
+                        '&:hover': {
+                          bgcolor: 'rgba(255, 255, 255, 1)',
+                          color: '#d32f2f',
+                          transform: 'translateX(-50%) scale(1.1)'
+                        }
+                      }}
+                      size="large"
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                    {selectedVideo && (
+                      <video
+                        controls
+                        style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', display: 'block' }}
+                        src={selectedVideo.url}
+                        onError={(e) => {
+                          console.error('Video playback error:', e);
+                        }}
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    )}
+                  </Box>
+                </Box>
+              </Modal>
+
               {/* Edit Profile Dialog */}
-              <Dialog 
-                open={editProfileOpen} 
+              <Dialog
+                open={editProfileOpen}
                 onClose={() => setEditProfileOpen(false)}
                 maxWidth="md"
                 fullWidth
@@ -2399,8 +2910,20 @@ const BusinessProfile = () => {
                       variant="outlined"
                     />
                     <TextField
-                      label="Phone Number"
+                      label="Primary Number"
                       defaultValue={locationData?.phoneNumbers.primaryPhone || 'Not available'}
+                      fullWidth
+                      variant="outlined"
+                    />
+                    <TextField
+                      label="Secondary Number"
+                      defaultValue={locationData?.phoneNumbers.SecondaryNumber || 'Not available'}
+                      fullWidth
+                      variant="outlined"
+                    />
+                    <TextField
+                      label="Manager Number"
+                      defaultValue={locationData?.phoneNumbers.SecondaryNumber || 'Not available'}
                       fullWidth
                       variant="outlined"
                     />
@@ -2424,8 +2947,8 @@ const BusinessProfile = () => {
               </Dialog>
 
               {/* Photo Upload Dialog */}
-              <Dialog 
-                open={photoUploadOpen} 
+              <Dialog
+                open={photoUploadOpen}
                 onClose={() => setPhotoUploadOpen(false)}
                 maxWidth="sm"
                 fullWidth
@@ -2465,6 +2988,73 @@ const BusinessProfile = () => {
                 </DialogActions>
               </Dialog>
 
+              {/* Video Upload Dialog */}
+              <Dialog
+                open={videoUploadOpen}
+                onClose={() => setVideoUploadOpen(false)}
+                maxWidth="sm"
+                fullWidth
+              >
+                <DialogTitle>Add Video to Google My Business</DialogTitle>
+                <DialogContent>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                    <Typography variant="body2" color="textSecondary">
+                      Upload a video to add to your Google My Business profile. Videos help customers learn about your business and services.
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" sx={{ fontStyle: 'italic' }}>
+                      Note: Videos are uploaded directly to your Google My Business account and will appear in your business profile.
+                    </Typography>
+
+                    {videoUploadError && (
+                      <Alert severity="error" sx={{ mt: 1 }}>
+                        {videoUploadError}
+                      </Alert>
+                    )}
+
+                    {videoUploading ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 3 }}>
+                        <CircularProgress size={40} />
+                        <Typography variant="body2" color="textSecondary">
+                          Uploading video... Please wait.
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <>
+                        <Input
+                          type="file"
+                          accept="video/*"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              try {
+                                await uploadVideoToGMB(file);
+                                // Show success message
+                                console.log('Video uploaded successfully!');
+                              } catch (error) {
+                                console.error('Failed to upload video:', error);
+                                // Error is already set in state
+                              }
+                            }
+                          }}
+                          sx={{ mt: 2 }}
+                        />
+                        <Typography variant="caption" color="textSecondary">
+                          Supported formats: MP4, MOV, AVI. Max size: 75MB. Max duration: 30 seconds.
+                        </Typography>
+                      </>
+                    )}
+                  </Box>
+                </DialogContent>
+                <DialogActions>
+                  <Button
+                    onClick={() => setVideoUploadOpen(false)}
+                    disabled={videoUploading}
+                  >
+                    {videoUploading ? 'Uploading...' : 'Cancel'}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
               <ActionsGrid>
                 <ActionButton onClick={() => websiteUrl !== 'Not available' && window.open(websiteUrl, '_blank')}>
                   <WebsiteGlobeIcon width={17} height={17} color="#121927" />
@@ -2477,16 +3067,16 @@ const BusinessProfile = () => {
                   console.log('Full locationData:', JSON.stringify(locationData, null, 2));
                   console.log('Location name:', locationData?.name);
                   console.log('Extracted location ID:', locationData?.name?.split('/').pop());
-                  
+
                   if (mapsUri) {
                     console.log('Opening maps with URI:', mapsUri);
                     window.open(mapsUri, '_blank');
                   } else {
                     // Fallback: create Google Maps URL with address
-                    const encodedAddress = encodeURIComponent(businessAddress);
-                    const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-                    console.log('Using fallback URL:', fallbackUrl);
-                    window.open(fallbackUrl, '_blank');
+                    // const encodedAddress = encodeURIComponent(businessAddress);
+                    // const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+                    // console.log('Using fallback URL:', fallbackUrl);
+                    // window.open(fallbackUrl, '_blank');
                   }
                 }}>
                   <DirectionsIcon width={16} height={16} color="#121927" />
@@ -2546,20 +3136,20 @@ const BusinessProfile = () => {
                   </ProductsViewAllButton>
                 </SectionHeader>
                 <TabsContainer>
-                  <TabButton 
-                    active={activeTab === 'products'} 
+                  <TabButton
+                    active={activeTab === 'products'}
                     onClick={() => setActiveTab('products')}
                   >
                     Products
                   </TabButton>
-                  <TabButton 
-                    active={activeTab === 'services'} 
+                  <TabButton
+                    active={activeTab === 'services'}
                     onClick={() => setActiveTab('services')}
                   >
                     Services
                   </TabButton>
                 </TabsContainer>
-                
+
                 <ProductsGrid>
                   {(productsLoading || servicesLoading) ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '120px', gridColumn: '1 / -1' }}>
@@ -2567,38 +3157,30 @@ const BusinessProfile = () => {
                     </Box>
                   ) : (activeTab === 'products' ? products : services).length > 0 ? (
                     (activeTab === 'products' ? products : services).slice(0, 2).map((item) => (
-                      activeTab === 'services' ? (
-                        <ProductCard key={item.id}>
-                          <ProductContent>
-                            <ProductTitle>{item.title}</ProductTitle>
-                          </ProductContent>
-                        </ProductCard>
-                      ) : (
-                        <ProductCard key={item.id}>
-                          <ProductImage 
-                            src={item.image} 
-                            alt={item.title}
-                            onError={(e) => {
-                              e.target.style.backgroundColor = '#f3f4f6';
-                              e.target.style.display = 'flex';
-                              e.target.style.alignItems = 'center';
-                              e.target.style.justifyContent = 'center';
-                              e.target.innerHTML = '<span style=\"color: #9ca3af; font-size: 12px;\">No Image</span>';
-                            }}
-                          />
-                          <ProductContent>
-                            <ProductTitle>{item.title}</ProductTitle>
-                            <ProductPrice>{item.price}</ProductPrice>
-                          </ProductContent>
-                        </ProductCard>
-                      )
+                      <ProductCard key={item.id}>
+                        <ProductImage 
+                          src={item.image} 
+                          alt={item.title}
+                          onError={(e) => {
+                            e.target.style.backgroundColor = '#f3f4f6';
+                            e.target.style.display = 'flex';
+                            e.target.style.alignItems = 'center';
+                            e.target.style.justifyContent = 'center';
+                            e.target.innerHTML = '<span style="color: #9ca3af; font-size: 12px;">No Image</span>';
+                          }}
+                        />
+                        <ProductContent>
+                          <ProductTitle>{item.title}</ProductTitle>
+                          <ProductPrice>{item.price}</ProductPrice>
+                        </ProductContent>
+                      </ProductCard>
                     ))
                   ) : (
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'center', 
-                      alignItems: 'center', 
-                      minHeight: '120px', 
+                    <Box sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      minHeight: '120px',
                       gridColumn: '1 / -1',
                       color: '#6b7280',
                       fontSize: '14px'
@@ -2664,22 +3246,22 @@ const BusinessProfile = () => {
             <PerformanceCard>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                 <SectionTitle>Latest Feed</SectionTitle>
-                <Badge 
-                  badgeContent={newNotificationCount} 
-                  color="error" 
-                  sx={{ 
-                    '& .MuiBadge-badge': { 
-                      fontSize: '10px', 
-                      minWidth: '16px', 
-                      height: '16px' 
-                    } 
+                <Badge
+                  badgeContent={newNotificationCount}
+                  color="error"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      fontSize: '10px',
+                      minWidth: '16px',
+                      height: '16px'
+                    }
                   }}
                 >
-                  <Button 
-                    size="small" 
+                  <Button
+                    size="small"
                     onClick={() => setNewNotificationCount(0)}
-                    sx={{ 
-                      fontSize: '10px', 
+                    sx={{
+                      fontSize: '10px',
                       color: '#0B91D6',
                       textTransform: 'none',
                       minWidth: 'auto',
@@ -2698,13 +3280,13 @@ const BusinessProfile = () => {
                     return (
                       <FeedItem key={notification.id}>
                         <FeedHeader>
-                          <Box sx={{ 
-                            width: '18px', 
-                            height: '18px', 
-                            borderRadius: '50%', 
-                            backgroundColor: notification.icon === 'review-red' ? '#EF232A' : 
-                                           notification.icon === 'photo' ? '#0B91D6' : 
-                                           notification.icon === 'post' ? '#9C27B0' : '#34A853' 
+                          <Box sx={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            backgroundColor: notification.icon === 'review-red' ? '#EF232A' :
+                              notification.icon === 'photo' ? '#0B91D6' :
+                                notification.icon === 'post' ? '#9C27B0' : '#34A853'
                           }} />
                           <FeedTitle>{notification.title}</FeedTitle>
                         </FeedHeader>
@@ -2825,17 +3407,17 @@ const BusinessProfile = () => {
                 <FeedGrid>
                   {(showAllGMBFeed ? localPosts : localPosts.slice(0, 9)).map((post, index) => {
                     console.log('[BusinessProfile] Processing post:', post.name, 'media:', post.media);
-                    
+
                     // Extract post data - check multiple possible image sources
                     const postMedia = post.media?.[0]; // Get first media item if available
                     let originalSrc = '';
-                    
+
                     if (postMedia) {
                       // Try different possible image URL fields
-                      originalSrc = postMedia.sourceUrl || 
-                                   postMedia.googleUrl || 
-                                   postMedia.thumbnailUrl || 
-                                   postMedia.url || '';
+                      originalSrc = postMedia.sourceUrl ||
+                        postMedia.googleUrl ||
+                        postMedia.thumbnailUrl ||
+                        postMedia.url || '';
                       console.log('[BusinessProfile] Found media in post:', originalSrc);
                     } else if (post.photos && post.photos.length > 0) {
                       // Check if photos array exists
@@ -2845,24 +3427,24 @@ const BusinessProfile = () => {
                     } else {
                       console.log('[BusinessProfile] No media found in post');
                     }
-                    
+
                     const imgSrc = originalSrc;
                     const created = post.createTime ? new Date(post.createTime) : null;
                     const dateText = created
                       ? `Posted on - ${created.toLocaleString(undefined, {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          timeZoneName: 'short'
-                        })}`
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZoneName: 'short'
+                      })}`
                       : 'Date not available';
-                    
+
                     // Get post content
                     const heading = post.summary || post.callToAction?.actionType || post.topicType || 'Local Post';
                     const description = post.event?.title || post.offer?.couponCode || '';
-                    
+
                     return (
                       <FeedCardItem key={post.name || `post-${index}`}>
                         {imgSrc ? (
@@ -2954,34 +3536,26 @@ const BusinessProfile = () => {
               <CloseIcon />
             </CloseButton>
           </ModalHeader>
-          
+
           <ModalProductsGrid>
             {(activeTab === 'products' ? products : services).map((item) => (
-              activeTab === 'services' ? (
-                <ProductCard key={item.id}>
-                  <ProductContent>
-                    <ProductTitle>{item.title}</ProductTitle>
-                  </ProductContent>
-                </ProductCard>
-              ) : (
-                <ProductCard key={item.id}>
-                  <ProductImage 
-                    src={item.image} 
-                    alt={item.title}
-                    onError={(e) => {
-                      e.target.style.backgroundColor = '#f3f4f6';
-                      e.target.style.display = 'flex';
-                      e.target.style.alignItems = 'center';
-                      e.target.style.justifyContent = 'center';
-                      e.target.innerHTML = '<span style=\"color: #9ca3af; font-size: 12px;\">No Image</span>';
-                    }}
-                  />
-                  <ProductContent>
-                    <ProductTitle>{item.title}</ProductTitle>
-                    <ProductPrice>{item.price}</ProductPrice>
-                  </ProductContent>
-                </ProductCard>
-              )
+              <ProductCard key={item.id}>
+                <ProductImage 
+                  src={item.image} 
+                  alt={item.title}
+                  onError={(e) => {
+                    e.target.style.backgroundColor = '#f3f4f6';
+                    e.target.style.display = 'flex';
+                    e.target.style.alignItems = 'center';
+                    e.target.style.justifyContent = 'center';
+                    e.target.innerHTML = '<span style="color: #9ca3af; font-size: 12px;">No Image</span>';
+                  }}
+                />
+                <ProductContent>
+                  <ProductTitle>{item.title}</ProductTitle>
+                  <ProductPrice>{item.price}</ProductPrice>
+                </ProductContent>
+              </ProductCard>
             ))}
           </ModalProductsGrid>
         </ModalContent>

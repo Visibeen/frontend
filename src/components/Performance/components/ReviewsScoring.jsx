@@ -140,11 +140,27 @@ const ReviewsScoring = ({
       // Log competitor data to console as requested
       CompetitorDiscoveryService.logCompetitorData(foundCompetitors, userBusinessData);
 
-      // Calculate reviews scoring
-      const scoring = CompetitorDiscoveryService.calculateReviewsScore(
-        foundCompetitors, 
-        userBusinessData
+      // Calculate comprehensive scoring including velocity
+      console.log('[ReviewsScoring] Calculating comprehensive score with velocity...');
+      console.log('[ReviewsScoring] User business data:', userBusinessData);
+      
+      const scoring = CompetitorDiscoveryService.calculateComprehensiveScore(
+        userBusinessData, 
+        foundCompetitors,
+        {
+          reviewsLast30Days: userBusinessData?.velocity?.last30Days || userBusinessData?.reviewVelocity?.last30Days,
+          benchmarkReviewCount: 5 // Default benchmark
+        }
       );
+      
+      console.log('[ReviewsScoring] Comprehensive scoring result:', scoring);
+      console.log('[ReviewsScoring] Velocity score details:', {
+        velocityScore: scoring.velocityScore,
+        velocityPercentage: scoring.velocityPercentage,
+        velocityLevel: scoring.velocityLevel,
+        reviewsLast30Days: scoring.reviewsLast30Days,
+        benchmarkReviewCount: scoring.benchmarkReviewCount
+      });
 
       setScoreData(scoring);
       setDiscoveryComplete(true);
@@ -247,7 +263,7 @@ const ReviewsScoring = ({
             Score Breakdown
           </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   Rating Score: {analysis.ratingScore}/100
@@ -259,7 +275,7 @@ const ReviewsScoring = ({
                 />
               </Box>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   Reviews Count Score: {analysis.reviewsCountScore}/100
@@ -271,7 +287,22 @@ const ReviewsScoring = ({
                 />
               </Box>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Velocity Score: {scoreData.velocityScore || 0}/12
+                </Typography>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={(scoreData.velocityScore || 0) * 100 / 12} 
+                  sx={{ height: 8, borderRadius: 4 }}
+                />
+                <Typography variant="caption" color="textSecondary">
+                  {scoreData.velocityLevel || 'N/A'} ({scoreData.velocityPercentage || 0}%)
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={3}>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   Competitors Analyzed: {analysis.competitorsAnalyzed}
@@ -284,6 +315,56 @@ const ReviewsScoring = ({
               </Box>
             </Grid>
           </Grid>
+
+          {/* Velocity Analysis Section */}
+          {scoreData.velocityScore !== undefined && (
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                Velocity Analysis
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <MetricBox>
+                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#0B91D6' }}>
+                      {scoreData.reviewsLast30Days || 0}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Reviews Last 30 Days
+                    </Typography>
+                  </MetricBox>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <MetricBox>
+                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#6b7280' }}>
+                      {scoreData.benchmarkReviewCount || 5}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Benchmark (Target)
+                    </Typography>
+                  </MetricBox>
+                </Grid>
+              </Grid>
+              
+              {scoreData.velocityRecommendations && scoreData.velocityRecommendations.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
+                    Velocity Recommendations
+                  </Typography>
+                  <List>
+                    {scoreData.velocityRecommendations.map((recommendation, index) => (
+                      <ListItem key={index} sx={{ pl: 0 }}>
+                        <ListItemIcon>
+                          <TrendingUpIcon color="primary" />
+                        </ListItemIcon>
+                        <ListItemText primary={recommendation} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
+            </Grid>
+          )}
         </Grid>
 
         {analysis.recommendations && analysis.recommendations.length > 0 && (
@@ -349,7 +430,7 @@ const ReviewsScoring = ({
 
   return (
     <SectionContainer>
-      <SectionTitle>Reviews & Rating Competitive Analysis</SectionTitle>
+      <SectionTitle>Comprehensive Competitive Analysis (Reviews + Velocity)</SectionTitle>
       
       <ScoreCard>
         <CardContent>
@@ -386,7 +467,10 @@ const ReviewsScoring = ({
                   {scoreData.score}
                 </ScoreNumber>
                 <Typography variant="h6" color="textSecondary">
-                  Reviews Competitive Score
+                  Comprehensive Competitive Score
+                </Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
+                  Reviews (70%) + Velocity (30%)
                 </Typography>
                 <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
                   Based on {competitors.length} competitors analyzed
