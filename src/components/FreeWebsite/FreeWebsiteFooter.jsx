@@ -153,12 +153,10 @@ const SocialIcon = styled(IconButton)(({ theme }) => ({
 
 const FreeWebsiteFooter = () => {
   const [email, setEmail] = useState('');
-
   const handleEmailSubmit = () => {
     console.log('Email submitted:', email);
     setEmail('');
   };
-
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleEmailSubmit();
