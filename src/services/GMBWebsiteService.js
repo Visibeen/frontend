@@ -41,8 +41,11 @@ class GMBWebsiteService {
       
       // Step 4: Get additional data for the location
       const locationId = this.extractLocationId(primaryLocation.name);
+      const accountId = this.extractAccountId(accountName);
       let reviews = null;
       let attributes = null;
+      let photos = null;
+      let services = null;
       
       try {
         // Try to get reviews (optional)
@@ -60,13 +63,32 @@ class GMBWebsiteService {
         console.warn('[GMBWebsiteService] Could not fetch attributes:', error.message);
       }
 
+      try {
+        // Try to get photos (optional)
+        photos = await GMBService.getPhotos(accessToken, accountId, locationId, 20);
+        console.log(`[GMBWebsiteService] Fetched ${photos?.length || 0} photos`);
+      } catch (error) {
+        console.warn('[GMBWebsiteService] Could not fetch photos:', error.message);
+      }
+
+      try {
+        // Try to get services (optional)
+        services = await GMBService.getServices(primaryLocation.name, accessToken);
+        console.log(`[GMBWebsiteService] Fetched ${services?.length || 0} services`);
+      } catch (error) {
+        console.warn('[GMBWebsiteService] Could not fetch services:', error.message);
+      }
+
       // Step 5: Combine all GMB data
       const gmbData = {
         account: firstAccount,
         location: primaryLocation,
         reviews: reviews,
         attributes: attributes,
-        locationId: locationId
+        photos: photos,
+        services: services,
+        locationId: locationId,
+        accountId: accountId
       };
 
       console.log('[GMBWebsiteService] GMB data structure:', {
@@ -74,6 +96,10 @@ class GMBWebsiteService {
         hasLocation: !!gmbData.location,
         hasReviews: !!gmbData.reviews,
         hasAttributes: !!gmbData.attributes,
+        hasPhotos: !!gmbData.photos,
+        hasServices: !!gmbData.services,
+        photoCount: gmbData.photos?.length || 0,
+        serviceCount: gmbData.services?.length || 0,
         locationTitle: gmbData.location?.title,
         businessName: gmbData.location?.title
       });
@@ -111,6 +137,17 @@ class GMBWebsiteService {
   extractLocationId(locationName) {
     if (!locationName) return null;
     const parts = locationName.split('/');
+    return parts[parts.length - 1];
+  }
+
+  /**
+   * Extract account ID from account name
+   * @param {string} accountName - e.g., "accounts/123"
+   * @returns {string} Account ID
+   */
+  extractAccountId(accountName) {
+    if (!accountName) return null;
+    const parts = accountName.split('/');
     return parts[parts.length - 1];
   }
 

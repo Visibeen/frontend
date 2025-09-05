@@ -66,7 +66,6 @@ function GoogleConnect() {
 
             // Persist token via TokenManager (plus legacy storage)
             try {
-                sessionStorage.setItem('googleAccessToken', googleAccessToken);
                 localStorage.setItem('googleAccessToken', googleAccessToken);
             } catch (_) {}
             if (googleAccessToken) {

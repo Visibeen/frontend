@@ -7,7 +7,6 @@ import DashboardLayout from '../Layouts/DashboardLayout';
 import DropdownArrowIcon from '../icons/DropdownArrowIcon';
 import CompetitorDiscoveryService from '../../services/CompetitorDiscoveryService';
 import ReviewsScoring from '../Performance/components/ReviewsScoring';
-import AnalysisLoadingPopup from '../ProfileStrengthResults/components/AnalysisLoadingPopup';
 
 const MainContent = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -192,7 +191,6 @@ const ProfileStrengthAnalysis = () => {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [newKeyword, setNewKeyword] = useState('');
-  const [showAnalysisPopup, setShowAnalysisPopup] = useState(false);
   const [competitorScoreData, setCompetitorScoreData] = useState(null);
 
   const accountSelectRef = useRef(null);
@@ -227,8 +225,7 @@ const ProfileStrengthAnalysis = () => {
   };
 
   const handleContinue = async () => {
-    // Show analysis popup
-    setShowAnalysisPopup(true);
+    // Start analysis and navigate to results without showing a separate popup here
 
     // Merge predefined selected + manual keywords (manual split by comma)
     const manualParts = manualKeywords
@@ -484,11 +481,7 @@ const ProfileStrengthAnalysis = () => {
         </ContentSection>
       </MainContent>
 
-      {/* Analysis Loading Popup */}
-      <AnalysisLoadingPopup 
-        open={showAnalysisPopup}
-        onClose={() => setShowAnalysisPopup(false)}
-      />
+      {/* Analysis popup removed; results page will handle showing the unified loading popup */}
     </DashboardLayout>
   );
 };

@@ -1,11 +1,11 @@
-// Simple namespaced token storage with sessionStorage preferred
+// Simple namespaced token storage using localStorage only
 // Frontend-only apps cannot securely store secrets; this aims for best-effort hygiene.
 
 const STORAGE_KEY = 'auth_tokens';
 
 function readAll() {
   try {
-    const s = sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY);
+    const s = localStorage.getItem(STORAGE_KEY);
     return s ? JSON.parse(s) : {};
   } catch (e) {
     console.warn('TokenStorage read error', e);
@@ -15,9 +15,6 @@ function readAll() {
 
 function writeAll(obj) {
   const s = JSON.stringify(obj);
-  try {
-    sessionStorage.setItem(STORAGE_KEY, s);
-  } catch (_) {}
   try {
     localStorage.setItem(STORAGE_KEY, s);
   } catch (_) {}

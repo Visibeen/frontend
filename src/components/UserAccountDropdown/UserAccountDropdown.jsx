@@ -3,7 +3,8 @@ import { Box, Typography, Avatar, Menu, MenuItem, Divider, IconButton } from '@m
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { AccountCircle, Logout, Person } from '@mui/icons-material';
-import { getSession, clearSession } from '../../utils/authUtils';
+import { getSession, clearSession, getAutoToken } from '../../utils/authUtils';
+import Api from '../../services/api';
 import tokenManager from '../../auth/TokenManager';
 import AutoTokenManager from '../../utils/autoTokenUtils';
 
@@ -203,21 +204,59 @@ const UserAccountDropdown = () => {
       
       // Get the auth token for the API call
       const session = getSession();
-      const token = session?.token || session?.access_token;
+      // Use robust auto token extraction with multiple fallbacks
+      let token = getAutoToken();
+      if (!token && session) {
+        token = session.token || session.access_token || session.accessToken || session.authToken || session.bearer_token || session.user?.token;
+      }
+      const refreshToken = session?.refresh_token || session?.refreshToken || localStorage.getItem('refresh_token') || localStorage.getItem('googleRefreshToken');
+      const toBearer = (raw) => {
+        if (!raw || typeof raw !== 'string') return null;
+        const t = raw.trim();
+        return /^Bearer\s+/i.test(t) ? t : `Bearer ${t}`;
+      };
 
-      // Call the logout API
-      const response = await fetch('http://52.44.140.230:8089/api/v1/customer/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `${token}` })
+      // Call the logout API via centralized ApiService.request with noAuth to avoid refresh/redirect on 401
+      try {
+        if (!token || String(token).trim().length === 0) {
+          console.warn('[Logout] No token available to send to backend. Skipping server logout.');
+          throw new Error('no_token');
         }
-      });
-
-      if (response.ok) {
+        let res = await Api.request('/customer/auth/logout', {
+          method: 'POST',
+          noAuth: true,
+          headers: {
+            'Content-Type': 'application/json',
+            // IMPORTANT: backend matches DB where token = header value, so send raw token
+            Authorization: token || ''
+          },
+          body: JSON.stringify({
+            refreshToken: refreshToken || undefined,
+            refresh_token: refreshToken || undefined,
+            revokeAll: true
+          })
+        });
         console.log('Successfully logged out from server');
-      } else {
-        console.warn('Logout API call failed, but continuing with local logout');
+      } catch (e) {
+        // Fallback: retry once with Bearer token in case DB stored token with prefix
+        try {
+          await Api.request('/customer/auth/logout', {
+            method: 'POST',
+            noAuth: true,
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify({
+              refreshToken: refreshToken || undefined,
+              refresh_token: refreshToken || undefined,
+              revokeAll: true
+            })
+          });
+          console.log('Successfully logged out from server (fallback with Bearer)');
+        } catch (e2) {
+          console.warn('Logout API call failed (both raw and Bearer). Continuing with local logout');
+        }
       }
     } catch (error) {
       console.error('Error calling logout API:', error);

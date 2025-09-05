@@ -7,6 +7,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import tokenManager from '../../auth/TokenManager';
 import PerformanceDashboard from './PerformanceDashboard';
 import { savePerformanceSnapshot, getYourData } from '../../utils/yourDataStore';
+import { getSession } from '../../utils/authUtils';
 
 const PageContainer = styled(Box)(({ theme }) => ({
   maxWidth: '1200px',
@@ -96,9 +97,15 @@ const Performance = () => {
       try {
         setProfilesLoading(true);
         
-        // First try to get profiles from localStorage (cached from Dashboard)
+        // Determine current user identity for cache scoping
+        const session = getSession() || {};
+        const currentOwner = session?.user?.email || session?.email || session?.user?.id || session?.id || session?.accountName || 'anonymous';
+
+        // First try to get profiles from localStorage (cached from Dashboard), but only if owner matches
         const cachedProfiles = localStorage.getItem('availableGMBProfiles');
-        if (cachedProfiles) {
+        const cachedOwner = localStorage.getItem('availableGMBProfilesOwner');
+        const cacheOwnerMatches = cachedOwner && String(cachedOwner) === String(currentOwner);
+        if (cachedProfiles && cacheOwnerMatches) {
           try {
             const profiles = JSON.parse(cachedProfiles);
             if (Array.isArray(profiles) && profiles.length > 0) {
@@ -122,7 +129,7 @@ const Performance = () => {
         let accessToken;
         try {
           // Try to get existing token from storage first
-          accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
+          accessToken = localStorage.getItem('googleAccessToken');
           
           if (!accessToken) {
             // Try TokenManager without triggering new auth
@@ -181,8 +188,9 @@ const Performance = () => {
           fullLocationName: loc.name // Store full GMB location name format
         }));
         
-        // Cache profiles for future use
+        // Cache profiles for future use (scoped by owner)
         localStorage.setItem('availableGMBProfiles', JSON.stringify(profiles));
+        localStorage.setItem('availableGMBProfilesOwner', String(currentOwner));
         
         setAvailableProfiles(profiles);
         
@@ -249,7 +257,7 @@ const Performance = () => {
         let accessToken;
         try {
           // Try to get existing token from storage first
-          accessToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
+          accessToken = localStorage.getItem('googleAccessToken');
           
           if (!accessToken) {
             // Try TokenManager without triggering new auth

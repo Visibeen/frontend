@@ -47,6 +47,15 @@ class ApiService {
         return sessionToken;
     }
 
+    // Ensure the Authorization header uses the correct Bearer format
+    normalizeAuthToken(rawToken) {
+        if (!rawToken || typeof rawToken !== 'string') return null;
+        const token = rawToken.trim();
+        // If already starts with Bearer (any case), return as-is
+        if (/^Bearer\s+/i.test(token)) return token;
+        return `Bearer ${token}`;
+    }
+
     prepareHeaders(customHeaders = {}) {
         const token = this.getAutoToken();
         const baseHeaders = {
@@ -54,9 +63,10 @@ class ApiService {
         };
 
         if (token) {
+            const auth = this.normalizeAuthToken(token);
             return {
                 ...baseHeaders,
-                'Authorization': `${token}`,
+                'Authorization': auth,
                 ...customHeaders
             };
         }
@@ -81,7 +91,7 @@ class ApiService {
         console.log('[API] Request Details:', {
             url,
             method: config.method || 'GET',
-            headers: config.headers,
+            hasAuth: !!(config.headers && config.headers.Authorization),
             hasBody: !!config.body
         });
 
