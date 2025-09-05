@@ -48,7 +48,6 @@ function GoogleConnect() {
             if (googleAccessToken) {
                 tokenManager.set('google', { access_token: googleAccessToken, token_type: 'Bearer' });
                 try { localStorage.setItem('googleAccessToken', googleAccessToken); } catch (_) {}
-                try { sessionStorage.setItem('googleAccessToken', googleAccessToken); } catch (_) {}
             }
 
             // Verify GMB access by calling Google My Business API

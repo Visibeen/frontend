@@ -71,6 +71,7 @@ const ProductTemplateDisplay = () => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const dropdownRef = useRef(null);
   const shareRef = useRef(null);
+  const largePreviewRef = useRef(null);
 
   // Load account info when component mounts
   useEffect(() => {
@@ -183,163 +184,28 @@ const ProductTemplateDisplay = () => {
  
   const downloadImage = async () => {
     try {
-      // Get the large preview element
-      const previewElement = document.querySelector('.large-preview');
-      if (!previewElement) {
-        console.error('Preview element not found');
+      if (!largePreviewRef.current) {
+        console.error('Large preview container not found');
         return;
       }
 
-      // Create canvas
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(largePreviewRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
 
-      // Get the image element
-      const imgElement = previewElement.querySelector('img');
-      if (!imgElement) {
-        console.error('Image element not found');
-        return;
-      }
-
-      // Set canvas size with higher resolution for better text quality
-      const baseWidth = imgElement.naturalWidth || 800;
-      const baseHeight = imgElement.naturalHeight || 600;
-      canvas.width = baseWidth * 2;
-      canvas.height = baseHeight * 2;
-      
-      // Scale the context for high DPI
-      ctx.scale(2, 2);
-
-      // Create a new image to avoid CORS issues
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      
-      img.onload = () => {
-        // Draw the image at the correct scaled size
-        ctx.drawImage(img, 0, 0, baseWidth, baseHeight);
-        
-        // Draw footer at the bottom of the image
-        const footerHeight = 100; // Increased footer height for better spacing
-        const footerY = baseHeight - footerHeight;
-        const footerX = 0;
-        const footerWidth = baseWidth;
-        
-        // Draw footer background - semi-transparent overlay like the reference
-        ctx.fillStyle = `${customFooterColor}cc`; // Semi-transparent
-        ctx.fillRect(footerX, footerY, footerWidth, footerHeight);
-        
-        // Draw text with exact positioning like reference
-        if (accountInfo) {
-          const selectedFont = getFontFamily(selectedFontStyle);
-          
-          // Company name - centered at top of footer (like "MEDICAL" in reference)
-          if (accountInfo.businessName) {
-            ctx.font = `bold 28px Arial, sans-serif`;
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.fillText(accountInfo.businessName.toUpperCase(), footerWidth/2, footerY + 30);
-          }
-          
-          // Address - left aligned with better spacing
-          if (accountInfo.address) {
-            ctx.font = `18px Arial, sans-serif`;
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'left';
-            ctx.fillText(`Address: ${accountInfo.address}`, 25, footerY + 55);
-          }
-          
-          // Contact - left aligned with better spacing
-          if (accountInfo.contact) {
-            ctx.font = `18px Arial, sans-serif`;
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'left';
-            ctx.fillText(`Contact: ${accountInfo.contact}`, 25, footerY + 80);
-          }
-          
-          // Website - right aligned with better spacing
-          if (accountInfo.website) {
-            ctx.font = `18px Arial, sans-serif`;
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'right';
-            ctx.fillText(`Website: ${accountInfo.website}`, footerWidth - 25, footerY + 80);
-          }
-        } else {
-          // Fallback text if no account info
-          ctx.font = `bold 28px Arial, sans-serif`;
-          ctx.fillStyle = '#ffffff';
-          ctx.textAlign = 'center';
-          ctx.fillText('VISIBEN', footerWidth/2, footerY + 30);
-          
-          ctx.font = `18px Arial, sans-serif`;
-          ctx.fillStyle = '#ffffff';
-          ctx.textAlign = 'left';
-          ctx.fillText('Address: Your Business Address', 25, footerY + 55);
-          ctx.fillText('Contact: Your Contact Number', 25, footerY + 80);
-          
-          ctx.textAlign = 'right';
-          ctx.fillText('Website: www.yourwebsite.com', footerWidth - 25, footerY + 80);
-        }
-
-        // Draw uploaded logo if present
-        if (uploadedLogo && isLogoUploaded) {
-          const logoImg = new Image();
-          logoImg.crossOrigin = 'anonymous';
-          logoImg.onload = () => {
-            const logoSize = 80; // Larger logo for better visibility
-            const logoX = 30; // Better positioned
-            const logoY = 30;
-            
-            // Draw logo background with better styling
-            ctx.fillStyle = 'rgba(255,255,255,0.9)';
-            ctx.fillRect(logoX - 5, logoY - 5, logoSize + 10, logoSize + 10);
-            
-            // Draw logo
-            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
-            
-            // Convert canvas to blob and download
-            canvas.toBlob((blob) => {
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = `visibeen-edm-${Date.now()}.png`;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              URL.revokeObjectURL(url);
-            }, 'image/png');
-          };
-          logoImg.src = uploadedLogo;
-        } else {
-          // Convert canvas to blob and download
-          canvas.toBlob((blob) => {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `visibeen-edm-${Date.now()}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }, 'image/png');
-        }
-      };
-
-      img.onerror = () => {
-        // Fallback: download the original image
-        const link = document.createElement('a');
-        link.href = imgElement.src;
-        link.download = `visibeen-edm-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      };
-
-      // Set the image source
-      img.src = imgElement.src;
-      
+      const link = document.createElement('a');
+      link.download = `visibeen-edm-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png', 1.0);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
-      console.error('Error downloading image:', error);
-      // Fallback: try to download the original image
+      console.error('Error downloading image with html2canvas:', error);
+      // Fallback: try to download the main image if present
       const imgElement = document.querySelector('.large-preview img');
       if (imgElement) {
         const link = document.createElement('a');
@@ -394,7 +260,7 @@ const ProductTemplateDisplay = () => {
         </div>
         {/* Large Preview */}
         <div className="large-preview">
-          <div style={{ position: 'relative' }}>
+          <div ref={largePreviewRef} style={{ position: 'relative' }}>
             <ImageWithAccountInfo imageSrc={mainImg} imageIndex={templateData[currentTemplate].indexOf(mainImg)} isMainPreview={true} 
                 logoPosition={logoPosition} isDraggingLogo={isDraggingLogo} 
                 handleLogoMouseDown={handleLogoMouseDown} handleLogoMouseMove={handleLogoMouseMove} handleLogoMouseUp={handleLogoMouseUp}
