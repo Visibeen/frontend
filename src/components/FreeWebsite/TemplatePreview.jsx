@@ -15,7 +15,7 @@ import { mockRootProps as template5MockData } from '../Template5/Template5MockDa
 import Template6 from '../Template6/Template6';
 import { mockRootProps as template6MockData } from '../Template6/Template6MockData';
 
-const PreviewOverlay = styled(Box)(({ theme }) => ({
+const PreviewOverlay = styled(Box)(({ theme, fullscreen }) => ({
   position: 'fixed',
   top: 0,
   left: 0,
@@ -27,18 +27,18 @@ const PreviewOverlay = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'center',
   zIndex: 1000,
-  padding: '40px'
+  padding: fullscreen ? '0px' : '40px'
 }));
 
-const PreviewContainer = styled(Box)(({ theme }) => ({
+const PreviewContainer = styled(Box)(({ theme, fullscreen }) => ({
   backgroundColor: '#ffffff',
-  borderRadius: '12px',
+  borderRadius: fullscreen ? '0px' : '12px',
   padding: '0px',
-  width: '95vw',
-  height: '95vh',
+  width: fullscreen ? '100vw' : '95vw',
+  height: fullscreen ? '100vh' : '95vh',
   overflow: 'auto',
   position: 'relative',
-  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+  boxShadow: fullscreen ? 'none' : '0 4px 20px rgba(0, 0, 0, 0.1)'
 }));
 
 const PreviewHeader = styled(Stack)(({ theme }) => ({
@@ -81,13 +81,28 @@ const PreviewImage = styled('img')(({ theme }) => ({
 const PreviewActions = styled(Stack)(({ theme }) => ({
   flexDirection: 'row',
   gap: '16px',
-  marginTop: '24px',
-  justifyContent: 'center'
+  position: 'fixed',
+  bottom: '24px',
+  left: '50%',
+  transform: 'translateX(-50%)',
+  justifyContent: 'center',
+  zIndex: 1001
+}));
+
+const ActionButton = styled(Button)(({ theme, color }) => ({
+  backgroundColor: color || '#4285F4',
+  color: '#ffffff',
+  borderRadius: '8px',
+  padding: '8px 16px',
+  fontWeight: 600,
+  '&:hover': {
+    backgroundColor: color ? `${color}DD` : '#3367D6',
+  }
 }));
 
 
 
-const TemplatePreview = ({ template, onClose, onUseTemplate, onViewLive }) => {
+const TemplatePreview = ({ template, onClose, onUseTemplate, onViewLive, onChangeTemplate, fullscreen = false }) => {
   if (!template) return null;
 
   const renderTemplateContent = () => {
@@ -139,15 +154,30 @@ const TemplatePreview = ({ template, onClose, onUseTemplate, onViewLive }) => {
   };
 
   return (
-    <PreviewOverlay onClick={onClose}>
-      <PreviewContainer onClick={(e) => e.stopPropagation()}>
+    <PreviewOverlay onClick={onClose} fullscreen={fullscreen}>
+      <PreviewContainer onClick={(e) => e.stopPropagation()} fullscreen={fullscreen}>
         <CloseButton aria-label="Close preview" onClick={onClose}>
           <CloseIcon fontSize="small" />
         </CloseButton>
         
         {renderTemplateContent()}
         
-
+        <PreviewActions>
+          <ActionButton 
+            onClick={() => onUseTemplate(template)}
+            color="#4CAF50"
+          >
+            Use Template
+          </ActionButton>   
+          {onChangeTemplate && (
+            <ActionButton 
+              onClick={onChangeTemplate}
+              color="#FF9800"
+            >
+              Change Template
+            </ActionButton>
+          )}
+        </PreviewActions>
       </PreviewContainer>
     </PreviewOverlay>
   );

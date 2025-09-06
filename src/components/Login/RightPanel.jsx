@@ -102,9 +102,9 @@ const RightPanel = () => {
 
       // Store token for later use
       try {
-        sessionStorage.setItem('googleAccessToken', googleAccessToken);
         localStorage.setItem('googleAccessToken', googleAccessToken);
       } catch (_) {}
+
       if (googleAccessToken) {
         tokenManager.set('google', { access_token: googleAccessToken, token_type: 'Bearer' });
       }

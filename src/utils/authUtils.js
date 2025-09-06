@@ -5,28 +5,27 @@ export const setSession = (user) => {
     return;
   }
   
+  // Normalize token field to user.token if missing
+  if (!user.token) {
+    const candidate = user.access_token || user.accessToken || user.authToken || user.bearer_token || user?.user?.token;
+    if (candidate) {
+      user.token = candidate;
+    }
+  }
+
   localStorage.setItem('user', JSON.stringify(user));
-  sessionStorage.setItem('user', JSON.stringify(user));
   
   // Add this: Store token separately for backend compatibility
   if (user.token) {
     localStorage.setItem('authToken', user.token);
-    sessionStorage.setItem('authToken', user.token);
   }
 };
 
 
 export const getSession = () => {
   try {
-    // Check sessionStorage first, then localStorage
-    let data = sessionStorage.getItem('user');
-    if (!data) {
-      data = localStorage.getItem('user');
-      // If found in localStorage, sync to sessionStorage
-      if (data) {
-        sessionStorage.setItem('user', data);
-      }
-    }
+    // Use only localStorage
+    const data = localStorage.getItem('user');
     return data ? JSON.parse(data) : null;
   } catch (error) {
     console.error('Error getting session:', error);
@@ -37,33 +36,32 @@ export const getSession = () => {
 export const clearSession = () => {
   // Clear user session data
   localStorage.removeItem('user');
-  sessionStorage.removeItem('user');
   localStorage.removeItem('userData');
-  sessionStorage.removeItem('userData');
+  // Clear cached GMB profiles to prevent stale data after account switch
+  localStorage.removeItem('availableGMBProfiles');
+  localStorage.removeItem('availableGMBProfilesOwner');
+  // Clear EDMS cached data
+  localStorage.removeItem('accountInfo');
+  localStorage.removeItem('accountInfoOwner');
+  localStorage.removeItem('uploadedLogo');
+  localStorage.removeItem('isLogoUploaded');
+  localStorage.removeItem('selectedFontStyle');
+  localStorage.removeItem('visibeen.selectedFooterId');
   
   // Clear backend/database tokens
   localStorage.removeItem('authToken');
-  sessionStorage.removeItem('authToken');
   localStorage.removeItem('access_token');
-  sessionStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
-  sessionStorage.removeItem('refresh_token');
   localStorage.removeItem('token');
-  sessionStorage.removeItem('token');
   
   // Clear Google tokens
   localStorage.removeItem('googleAccessToken');
-  sessionStorage.removeItem('googleAccessToken');
   localStorage.removeItem('google_token');
-  sessionStorage.removeItem('google_token');
   localStorage.removeItem('googleRefreshToken');
-  sessionStorage.removeItem('googleRefreshToken');
   
   // Clear any other potential token storage
   localStorage.removeItem('bearer_token');
-  sessionStorage.removeItem('bearer_token');
   localStorage.removeItem('id_token');
-  sessionStorage.removeItem('id_token');
   
   // Clear URL parameters if possible
   if (typeof window !== 'undefined') {

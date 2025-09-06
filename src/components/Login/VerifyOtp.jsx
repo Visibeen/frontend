@@ -7,8 +7,8 @@ function VerifyOtp() {
   const navigate  = useNavigate();
 
   /* 1️⃣  Get the email saved in ForgotPassword.jsx*/
-  const email = sessionStorage.getItem('resetEmail');
-  console.log('✅ Email from sessionStorage:', email);
+  const email = localStorage.getItem('resetEmail');
+  console.log('✅ Email from localStorage:', email);
   
   // Ensure email is a string, not an object
   const emailString = typeof email === 'string' ? email : email?.email || '';

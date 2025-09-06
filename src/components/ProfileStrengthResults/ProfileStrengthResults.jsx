@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Box, Stack, Typography, Button, TextField, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress, CircularProgress } from '@mui/material';
+import { Box, Stack, Typography, Button, TextField, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress, CircularProgress, Switch, FormControlLabel } from '@mui/material';
 import { styled, keyframes } from '@mui/material/styles';
 import { useLocation } from 'react-router-dom';
 import DashboardLayout from '../Layouts/DashboardLayout';
@@ -10,6 +10,8 @@ import VelocityService from '../../services/VelocityService';
 import GMBFeedService from '../../services/GMBFeedService';
 import PhoneValidationService from '../../services/PhoneValidationService';
 import EditIcon from '@mui/icons-material/Edit';
+import AnalysisLoadingPopup from './components/AnalysisLoadingPopup';
+import GaugeResultsPopup from './components/GaugeResultsPopup';
 
 const MainContent = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -395,7 +397,21 @@ const ProfileStrengthResults = () => {
   const [completedSteps, setCompletedSteps] = useState([]);
   const [stepProgress, setStepProgress] = useState(0);
   const [scoreBreakdown, setScoreBreakdown] = useState([]);
+  // User preference: near-instant analysis toggle
+  const [fastAnalysis, setFastAnalysis] = useState(true);
   
+  // Controls the results popup that shows the animated gauge once analysis completes
+  const [showGaugePopup, setShowGaugePopup] = useState(false);
+
+  // When analysis finishes (isCalculating -> false), open the popup and animate the gauge
+  useEffect(() => {
+    if (!isCalculating) {
+      const t = setTimeout(() => setShowGaugePopup(true), 250);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [isCalculating]);
+
 
   // Ensure target location is always set with available data
   useEffect(() => {
@@ -542,7 +558,9 @@ const ProfileStrengthResults = () => {
             // Media (photos) requires accountId and locationId
             try {
               if (accountId && locationIdFromName) {
-                let items = await GMBService.getMedia(undefined, accountId, locationIdFromName);
+                console.debug('[Results] Fetching media with', { accountId, locationIdFromName });
+                // Fetch all media with default pageSize=50 (now paginated internally)
+                let items = await GMBService.getMedia(undefined, accountId, locationIdFromName, 50);
                 items = Array.isArray(items) ? items : [];
                 // Filter to photos with a usable URL
                 items = items.filter(i => (i.mediaFormat === 'PHOTO' || !i.mediaFormat) && (i.googleUrl || i.thumbnailUrl || i.sourceUrl));
@@ -553,7 +571,10 @@ const ProfileStrengthResults = () => {
                   return tb - ta;
                 });
                 setMediaItems(items);
-                console.debug('[Results] Media items fetched:', items.length);
+                const sample = items.slice(0, 3).map(i => ({ name: i.name, format: i.mediaFormat, created: i.createTime, url: i.googleUrl || i.thumbnailUrl || i.sourceUrl }));
+                // Also compute total photo count via dedicated counter to validate versus items length
+                const totalPhotoCount = await GMBService.getMediaCount(undefined, accountId, locationIdFromName, 50);
+                console.debug('[Results] Media items fetched (after pagination/filter/sort):', items.length, 'sample:', sample, 'totalPhotoCount:', totalPhotoCount);
               }
             } catch (mediaErr) {
               console.warn('[Results] Error fetching media:', mediaErr);
@@ -635,12 +656,15 @@ const ProfileStrengthResults = () => {
   // Compute profile strength score out of 300 based on provided rules
   useEffect(() => {
     let isMounted = true;
+    // Speed control for UX: lower = faster analysis (0 = instant)
+    const speedFactor = fastAnalysis ? 0 : 0.25; // instant vs fast
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, Math.max(0, Math.floor(ms * speedFactor))));
     const computeScore = async () => {
       if (!isMounted) return;
       setIsCalculating(true);
       setCurrentStep('Initializing analysis...');
       setStepProgress(0);
-      await new Promise(resolve => setTimeout(resolve, 800)); // Brief pause for UX
+      await wait(800); // Brief pause for UX
       let score = 0;
       let verPts = 0, namePts = 0, addrPts = 0, phonePts = 0;
       
@@ -653,7 +677,7 @@ const ProfileStrengthResults = () => {
 
       // 1) Verification status (respect Dashboard-passed status/flags)
       updateProgress('Checking verification status...', 10);
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await wait(600);
       const verificationStateRaw = account?.verificationState || '';
       const verificationState = String(verificationStateRaw).toUpperCase();
       const dashStatus = String(business?.status || state?.selected?.status || '').toLowerCase();
@@ -676,7 +700,7 @@ const ProfileStrengthResults = () => {
       else if (isUnverified) verPts = -100; // not specified; assuming 0
       score += verPts;
       updateProgress('Analyzing business name...', 20, ['Verification Status']);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await wait(500);
 
       // 2) Business name contains city
       const businessTitle = targetLocation?.title || business?.title || business?.businessName || '';
@@ -688,7 +712,7 @@ const ProfileStrengthResults = () => {
       }
       score += namePts;
       updateProgress('Evaluating address completeness...', 35, ['Business Name Analysis']);
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await wait(600);
 
       // 3) Address scoring
       const addr = displayAddress;
@@ -706,7 +730,7 @@ const ProfileStrengthResults = () => {
       }
       score += addrPts;
       updateProgress('Checking contact information...', 45, ['Address Analysis']);
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await wait(400);
 
       // 4) Phone number with uniqueness check
       const primaryPhone = targetLocation?.phoneNumbers?.primaryPhone || 
@@ -747,7 +771,7 @@ const ProfileStrengthResults = () => {
       phonePts = phoneScoreResult.score;
       score += phonePts;
       updateProgress('Analyzing business description...', 55, ['Contact Information']);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await wait(500);
 
       // 5) Description length
       let descPts = 0;
@@ -756,13 +780,12 @@ const ProfileStrengthResults = () => {
       if (wordCount > 0 && wordCount <= 400) {
         descPts = 5;
       } else if (wordCount >= 700) {
-        descPts = 10;
       } else {
         descPts = 0; // between 401 and 699, or empty
       }
       score += descPts;
       updateProgress('Checking website presence...', 65, ['Description Analysis']);
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await wait(200); // Speed up analysis by reducing wait time
 
       // 6) Website link presence
       let websitePts = 0;
@@ -770,7 +793,7 @@ const ProfileStrengthResults = () => {
       websitePts = hasWebsite ? 5 : 0;
       score += websitePts;
       updateProgress('Evaluating business hours...', 72, ['Website Analysis']);
-      await new Promise(resolve => setTimeout(resolve, 450));
+      await wait(225); // Speed up analysis by reducing wait time
 
       // 7) Business hours (timings)
       let hoursPts = 0;
@@ -778,7 +801,7 @@ const ProfileStrengthResults = () => {
       hoursPts = hasHours ? 5 : 0;
       score += hoursPts;
       updateProgress('Checking business labels...', 78, ['Business Hours']);
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await wait(200); // Speed up analysis by reducing wait time
 
       // 8) Labels
       let labelPts = 0;
@@ -786,7 +809,7 @@ const ProfileStrengthResults = () => {
       labelPts = hasLabels ? 10 : 0;
       score += labelPts;
       updateProgress('Analyzing business categories...', 85, ['Labels Analysis']);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await wait(250); // Speed up analysis by reducing wait time
 
       // 8.0) Categories scoring: +25 for primary, +5 for first additional, +5 for second additional
       let catBasePts = 0;
@@ -1003,6 +1026,234 @@ const ProfileStrengthResults = () => {
       score += qaPts;
       console.log('[Score] Q&A check:', { hasQASection, awarded: qaPts });
 
+      // 8.6) Photos scoring (+30 max points)
+      let photosPts = 0;
+      updateProgress('Analyzing business photos...', 82, ['Q&A Analysis']);
+      await wait(600);
+
+      // Determine if business is hotel/restaurant type
+      const isHotelRestaurant = () => {
+        const catNames = extractCatNames().map(n => n.toLowerCase());
+        const hotelRestaurantKeywords = [
+          'hotel', 'motel', 'resort', 'inn', 'lodge', 'bed and breakfast', 'hostel',
+          'restaurant', 'cafe', 'bar', 'pub', 'bistro', 'diner', 'eatery', 'food',
+          'pizza', 'burger', 'sushi', 'chinese', 'italian', 'mexican', 'indian',
+          'bakery', 'coffee', 'fast food', 'fine dining', 'casual dining'
+        ];
+        return catNames.some(cat => hotelRestaurantKeywords.some(keyword => cat.includes(keyword)));
+      };
+
+      const isHotelRestaurantBusiness = isHotelRestaurant();
+      
+      // Fetch photos from GMB Media API
+      let photos = [];
+      let hasCoverPhoto = false;
+      let hasLogoPhoto = false;
+      let hasMenuPhotos = false;
+      let totalPhotos = 0;
+
+      // Get account and location IDs for media API call
+      // Extract accountId from targetLocation (which should have been set by the earlier account discovery logic)
+      let accountId = undefined;
+      if (targetLocation?.name && targetLocation.name.includes('accounts/')) {
+        const parts = String(targetLocation.name).split('/');
+        const idx = parts.indexOf('accounts');
+        if (idx !== -1 && parts[idx + 1]) accountId = parts[idx + 1];
+      }
+      
+      // Fallback to original account/business data if targetLocation doesn't have account info
+      if (!accountId) {
+        accountId = account?.id;
+        if (!accountId) accountId = business?.accountId || business?.accountName;
+        if (!accountId && typeof business?.name === 'string' && business.name.includes('accounts/')) {
+          const parts = String(business.name).split('/');
+          const idx = parts.indexOf('accounts');
+          if (idx !== -1 && parts[idx + 1]) accountId = parts[idx + 1];
+        }
+      }
+
+      // Extract locationId properly - only from GMB resource names, not business names
+      let locationId = undefined;
+      const locationName = targetLocation?.name || '';
+      
+      // Only extract locationId if locationName looks like a GMB resource path
+      if (locationName && locationName.includes('accounts/') && locationName.includes('locations/')) {
+        locationId = String(locationName).split('/').pop();
+      } else if (targetLocation?.locationId) {
+        locationId = targetLocation.locationId;
+      } else if (business?.locationId) {
+        locationId = business.locationId;
+      } else if (business?.id && String(business.id).match(/^\d+$/)) {
+        // If business.id is numeric, it might be the location ID
+        locationId = business.id;
+      }
+      
+      // Additional fallback: if we have reviewsData with account/location info, use that
+      if (!accountId && reviewsData?.reviews?.length > 0) {
+        const firstReview = reviewsData.reviews[0];
+        if (firstReview?.name && firstReview.name.includes('accounts/')) {
+          const parts = String(firstReview.name).split('/');
+          const idx = parts.indexOf('accounts');
+          if (idx !== -1 && parts[idx + 1]) accountId = parts[idx + 1];
+          
+          // Also try to extract locationId from review name
+          const locIdx = parts.indexOf('locations');
+          if (locIdx !== -1 && parts[locIdx + 1] && !locationId) {
+            locationId = parts[locIdx + 1];
+          }
+        }
+      }
+      
+      // Fallback discovery: if we have a locationId but still no accountId, try to discover via accounts → locations
+      if (!accountId && locationId) {
+        try {
+          const accountsList = await GMBService.getAccounts();
+          if (Array.isArray(accountsList)) {
+            for (const acc of accountsList) {
+              const accName = acc?.name; // 'accounts/<id>'
+              const accIdCandidate = typeof accName === 'string' && accName.includes('accounts/') ? accName.split('/')[1] : undefined;
+              if (!accIdCandidate) continue;
+              try {
+                const locs = await GMBService.getLocations(undefined, accName);
+                const match = Array.isArray(locs)
+                  ? locs.find(loc => {
+                      const locName = String(loc?.name || '');
+                      const idFromName = locName && locName.includes('locations/') ? locName.split('/').pop() : '';
+                      return idFromName === String(locationId);
+                    })
+                  : null;
+                if (match) {
+                  accountId = accIdCandidate;
+                  break;
+                }
+              } catch (locErr) {
+                console.warn('[Photos] Discovery: failed to list locations for', accName, locErr?.message || locErr);
+              }
+            }
+          }
+        } catch (discErr) {
+          console.warn('[Photos] Account discovery via locationId failed:', discErr?.message || discErr);
+        }
+      }
+
+      
+      try {
+
+        if (accountId && locationId) {
+          console.log('[Photos] Fetching media from GMB API:', { accountId, locationId });
+          
+          const accessToken = await GMBService.getAccessToken();
+          const mediaUrl = `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media`;
+          
+          const response = await GMBService._googleFetch(
+            mediaUrl,
+            { method: 'GET' },
+            accessToken
+          );
+
+          if (response.ok) {
+            const mediaData = await response.json();
+            photos = Array.isArray(mediaData.mediaItems) ? mediaData.mediaItems : [];
+            totalPhotos = photos.length;
+            
+            console.log('[Photos] Successfully fetched media data:', {
+              totalItems: totalPhotos,
+              mediaUrl,
+              sampleItem: photos[0] || 'none'
+            });
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            console.warn('[Photos] Failed to fetch media from GMB API:', {
+              status: response.status,
+              error: errorData,
+              mediaUrl
+            });
+          }
+        } else {
+          console.warn('[Photos] Missing accountId or locationId for media API call:', {
+            accountId,
+            locationId,
+            accountCandidates: [account?.id, business?.accountId, business?.accountName],
+            locationCandidates: [targetLocation?.name]
+          });
+        }
+      } catch (error) {
+        console.error('[Photos] Error fetching media from GMB API:', error);
+      }
+
+      // Analyze photo types
+      photos.forEach((photo, index) => {
+        const description = (photo.description || '').toLowerCase();
+        const mediaFormat = (photo.mediaFormat || '').toLowerCase();
+        const categoryType = (photo.categoryType || '').toLowerCase();
+        
+        // Check for cover photo (usually the first photo or one with cover/hero keywords)
+        if (index === 0 || description.includes('cover') || description.includes('hero') || 
+            description.includes('main') || description.includes('banner') ||
+            categoryType.includes('cover') || categoryType.includes('profile')) {
+          hasCoverPhoto = true;
+        }
+        
+        // Check for logo photo
+        if (description.includes('logo') || description.includes('brand') || 
+            description.includes('sign') || description.includes('storefront') ||
+            categoryType.includes('logo') || categoryType.includes('exterior')) {
+          hasLogoPhoto = true;
+        }
+        
+        // Check for menu photos (for hotel/restaurant businesses)
+        if (description.includes('menu') || description.includes('food') || 
+            description.includes('dish') || description.includes('meal') ||
+            description.includes('drink') || description.includes('beverage') ||
+            categoryType.includes('food') || categoryType.includes('menu')) {
+          hasMenuPhotos = true;
+        }
+      });
+
+      // If no explicit cover photo found but photos exist, assume first photo is cover
+      if (!hasCoverPhoto && totalPhotos > 0) {
+        hasCoverPhoto = true;
+      }
+
+      // Calculate photo score based on business type
+      let coverPts = 0;
+      let logoPts = 0;
+      let menuPts = 0;
+      let volumePts = 0;
+
+      if (isHotelRestaurantBusiness) {
+        // Hotel/Restaurant scoring: cover(2) + logo(4) + menu(8) + volume(20) = max 34, capped at 30
+        coverPts = hasCoverPhoto ? 2 : 0;
+        logoPts = hasLogoPhoto ? 4 : 0;
+        menuPts = hasMenuPhotos ? 8 : 0;
+        volumePts = totalPhotos >= 5 ? 20 : 0;
+      } else {
+        // Regular business scoring: cover(3) + logo(7) + volume(20) = max 30
+        coverPts = hasCoverPhoto ? 3 : 0;
+        logoPts = hasLogoPhoto ? 7 : 0;
+        volumePts = totalPhotos >= 5 ? 20 : 0;
+      }
+
+      photosPts = Math.min(30, coverPts + logoPts + menuPts + volumePts);
+      score += photosPts;
+
+      console.log('[Score] Photos analysis:', {
+        businessType: isHotelRestaurantBusiness ? 'Hotel/Restaurant' : 'Regular',
+        totalPhotos,
+        hasCoverPhoto,
+        hasLogoPhoto,
+        hasMenuPhotos: isHotelRestaurantBusiness ? hasMenuPhotos : 'N/A',
+        apiEndpoint: accountId && locationId ? `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media` : 'N/A',
+        scoring: {
+          cover: `${hasCoverPhoto ? '✓' : '✗'} ${coverPts}pts`,
+          logo: `${hasLogoPhoto ? '✓' : '✗'} ${logoPts}pts`,
+          menu: isHotelRestaurantBusiness ? `${hasMenuPhotos ? '✓' : '✗'} ${menuPts}pts` : 'N/A',
+          volume: `${totalPhotos >= 5 ? '✓' : '✗'} ${volumePts}pts (${totalPhotos}/5)`
+        },
+        totalAwarded: photosPts,
+        maxPossible: 30
+      });
+
       // 9) Review Rating scoring
       let reviewRatingPts = 0;
       updateProgress('Fetching business rating...', 88, ['Categories & Services']);
@@ -1134,116 +1385,291 @@ const ProfileStrengthResults = () => {
       } else {
         console.log('[Review Rating] No points awarded - rating must be > 1.0');
       }
-
+      
       // 10) Response Rate scoring
       let responseRatePts = 0;
       updateProgress('Fetching response rate data...', 90, ['Review Rating']);
       await new Promise(resolve => setTimeout(resolve, 400));
-      
-      // Check for response rate in existing data first (including Your Data store that backs CSV export)
-      const responseRateCandidates = {
-        performanceDataResponseRate: performanceData?.responseRate,
-        performanceDataAvgResponseRate: performanceData?.averageResponseRate,
-        performanceDataMessagingResponseRate: performanceData?.messagingResponseRate,
-        targetLocationResponseRate: targetLocation?.responseRate,
-        businessResponseRate: business?.responseRate
-      };
 
-      // Prefer stored values from Your Data (same as CSV export source)
-      let responseRateFromStore90d;
-      let responseRateFromStore30d;
+      // STEP A: Compute from live reviews (90d) – mirrors BusinessProfile logic
+      // Derive stable account and location names/ids from multiple sources
+      let responseRate = 0;
       try {
-        const yd = getYourData ? getYourData() : null;
-        const psSnap = yd?.profileStrength || {};
-        const bpSnap = yd?.businessProfile || {};
-        const toNum = (v) => {
-          if (typeof v === 'number') return v;
-          const n = parseFloat(v);
-          return Number.isFinite(n) ? n : undefined;
-        };
-        responseRateFromStore90d = toNum(psSnap.responseRate90d) ?? toNum(bpSnap.responseRate90d);
-        responseRateFromStore30d = toNum(psSnap.responseRate30d) ?? toNum(bpSnap.responseRate30d);
-      } catch (_) {}
+        // 1) Try to get full resource names directly
+        let accName = undefined;
+        let locName = undefined;
+        const tlName = targetLocation?.name;
+        if (typeof tlName === 'string' && tlName.includes('accounts/') && tlName.includes('locations/')) {
+          locName = tlName; // accounts/<id>/locations/<id>
+          accName = tlName.split('/').slice(0,2).join('/'); // accounts/<id>
+        }
 
-      let responseRate = (
-        (responseRateFromStore90d && responseRateFromStore90d > 0 ? responseRateFromStore90d : undefined) ??
-        (responseRateFromStore30d && responseRateFromStore30d > 0 ? responseRateFromStore30d : undefined) ??
-        (performanceData?.responseRate ?? performanceData?.averageResponseRate ?? performanceData?.messagingResponseRate) ??
-        targetLocation?.responseRate ??
-        business?.responseRate ??
-        0
-      );
-
-      if (responseRateFromStore90d || responseRateFromStore30d) {
-        console.log('[Response Rate] Using value from Your Data store', {
-          responseRateFromStore90d,
-          responseRateFromStore30d,
-          chosen: responseRate
-        });
-      }
-      
-      // If no response rate found in existing data, fetch from GMB API for last 90 days
-      if (!responseRate || responseRate === 0) {
-        try {
-          // Get account info from available data sources
-          let accId = account?.id;
-          if (!accId) accId = business?.accountId || business?.accountName;
+        // 2) If missing, build from available IDs
+        if (!accName) {
+          let accId = account?.id || business?.accountId || business?.accountName;
+          // allow parsing from account.name if present
+          if (!accId && typeof account?.name === 'string' && account.name.includes('accounts/')) {
+            const parts = String(account.name).split('/');
+            const idx = parts.indexOf('accounts');
+            if (idx !== -1 && parts[idx + 1]) accId = parts[idx + 1];
+          }
           if (!accId && typeof business?.name === 'string' && business.name.includes('accounts/')) {
             const parts = String(business.name).split('/');
             const idx = parts.indexOf('accounts');
             if (idx !== -1 && parts[idx + 1]) accId = parts[idx + 1];
           }
-          
-          const accountName = accId ? (String(accId).includes('accounts/') ? String(accId) : `accounts/${accId}`) : undefined;
-          const accountId = (accountName && accountName.includes('accounts/')) ? accountName.split('/')[1] : undefined;
-          const locationName = targetLocation?.name || '';
-          const locationIdFromName = locationName ? String(locationName).split('/').pop() : undefined;
-          
-          if (accountId && locationIdFromName) {
-            console.log('[Response Rate] Fetching response rate from GMB API for last 90 days');
-            
-            // Calculate date range for last 90 days
+          // parse from state businesses if needed
+          if (!accId && Array.isArray(state?.businesses)) {
+            const withAcc = state.businesses.find(b => b?.accountId || b?.accountName || (typeof b?.name === 'string' && b.name.includes('accounts/')));
+            if (withAcc) {
+              accId = withAcc.accountId || withAcc.accountName;
+              if (!accId && typeof withAcc.name === 'string' && withAcc.name.includes('accounts/')) {
+                const parts = String(withAcc.name).split('/');
+                const idx = parts.indexOf('accounts');
+                if (idx !== -1 && parts[idx + 1]) accId = parts[idx + 1];
+              }
+            }
+          }
+          if (accId) accName = String(accId).includes('accounts/') ? String(accId) : `accounts/${accId}`;
+        }
+
+        let locationId = undefined;
+        if (!locName) {
+          // Prefer extracting from resource names or explicit IDs
+          if (typeof tlName === 'string' && tlName.includes('accounts/') && tlName.includes('locations/')) {
+            locationId = tlName.split('/').pop();
+          } else if (targetLocation?.locationId) {
+            locationId = targetLocation.locationId;
+          } else if (targetLocation?.metadata?.locationId) {
+            locationId = targetLocation.metadata.locationId;
+          } else if (business?.locationId) {
+            locationId = business.locationId;
+          } else if (business?.id && String(business.id).match(/^\d+$/)) {
+            locationId = business.id;
+          } else if (typeof business?.name === 'string' && business.name.includes('accounts/') && business.name.includes('locations/')) {
+            locationId = String(business.name).split('/').pop();
+          } else if (typeof state?.locationData?.name === 'string' && state.locationData.name.includes('locations/')) {
+            locationId = String(state.locationData.name).split('/').pop();
+          } else if (typeof state?.selectedLocation?.name === 'string' && state.selectedLocation.name.includes('locations/')) {
+            locationId = String(state.selectedLocation.name).split('/').pop();
+          } else if (state?.locationData?.locationId) {
+            locationId = state.locationData.locationId;
+          } else if (state?.selectedLocation?.locationId) {
+            locationId = state.selectedLocation.locationId;
+          }
+          if (accName && locationId) {
+            locName = `${accName}/locations/${locationId}`;
+          }
+        }
+
+        try {
+          console.debug('[Response Rate] Derived resource names:', {
+            accName,
+            locName,
+            candidates: {
+              account: { id: account?.id, name: account?.name },
+              business: { accountId: business?.accountId, accountName: business?.accountName, name: business?.name, locationId: business?.locationId, id: business?.id },
+              targetLocation: { name: targetLocation?.name, locationId: targetLocation?.locationId, metaLocationId: targetLocation?.metadata?.locationId },
+              stateNames: { locData: state?.locationData?.name, selectedLoc: state?.selectedLocation?.name },
+              stateIds: { locDataId: state?.locationData?.locationId, selectedLocId: state?.selectedLocation?.locationId }
+            }
+          });
+        } catch {}
+
+        // 3) Final fallback discovery via accounts -> locations if still missing
+        if ((!accName || !locName)) {
+          try {
+            const accountsListRR = await GMBService.getAccounts();
+            let discoveredAccIdRR = undefined;
+            let discoveredLocNameRR = undefined;
+            const selNameRR = business?.title || business?.businessName || business?.name || '';
+            const locIdRR = locationId || targetLocation?.locationId || business?.locationId || (typeof tlName === 'string' && tlName.includes('locations/') ? String(tlName).split('/').pop() : undefined);
+            if (Array.isArray(accountsListRR)) {
+              for (const acc of accountsListRR) {
+                const accResName = acc?.name; // 'accounts/<id>'
+                const accIdCandidateRR = typeof accResName === 'string' && accResName.includes('accounts/') ? accResName.split('/')[1] : undefined;
+                if (!accIdCandidateRR) continue;
+                try {
+                  const locsRR = await GMBService.getLocations(undefined, accResName);
+                  const byIdRR = (loc) => (loc?.name && (loc.name.includes(String(locIdRR)) || String(loc.name).split('/').pop() === String(locIdRR)));
+                  const byTitleRR = (loc) => selNameRR && loc?.title && String(loc.title).toLowerCase() === String(selNameRR).toLowerCase();
+                  const matchRR = Array.isArray(locsRR) ? (locsRR.find(byIdRR) || locsRR.find(byTitleRR)) : null;
+                  if (matchRR?.name) {
+                    discoveredAccIdRR = accIdCandidateRR;
+                    discoveredLocNameRR = matchRR.name;
+                    break;
+                  }
+                } catch (e) {
+                  console.warn('[Response Rate] Fallback discovery: failed to list locations for', accResName, e?.message || e);
+                }
+              }
+            }
+            if (!accName && discoveredAccIdRR) accName = `accounts/${discoveredAccIdRR}`;
+            if (!locName && discoveredLocNameRR) locName = discoveredLocNameRR;
+          } catch (e) {
+            console.warn('[Response Rate] Fallback discovery failed:', e?.message || e);
+          }
+        }
+
+        if (accName && locName) {
+          console.log('[Response Rate] Computing from live reviews (90d)...', { accName, locName });
+          const rr = await GMBService.getResponseRateFromReviews(undefined, accName, locName, 90);
+          if (rr?.responseRate > 0) {
+            responseRate = rr.responseRate;
+            console.log('[Response Rate] Using value from live reviews', {
+              responseRate: `${responseRate.toFixed(2)}%`,
+              counted: rr.counted,
+              replied: rr.replied,
+              windowDays: rr.days
+            });
+          } else {
+            console.log('[Response Rate] Live reviews yielded 0 or no data; will try Performance API next.');
+          }
+        } else {
+          console.log('[Response Rate] Missing account or location name for reviews-based computation.');
+        }
+      } catch (error) {
+        console.warn('[Response Rate] Error computing from live reviews:', error);
+      }
+
+      // STEP B: Try Performance API as secondary (90 days)
+      if (!responseRate || responseRate === 0) {
+        try {
+          // Reuse and extend derivation for Performance API
+          let accountName = undefined;
+          let locationIdFromName = undefined;
+          const tlName2 = targetLocation?.name;
+          if (typeof tlName2 === 'string' && tlName2.includes('accounts/') && tlName2.includes('locations/')) {
+            accountName = tlName2.split('/').slice(0,2).join('/');
+            locationIdFromName = tlName2.split('/').pop();
+          }
+          if (!accountName) {
+            let accId2 = account?.id || business?.accountId || business?.accountName;
+            if (!accId2 && typeof account?.name === 'string' && account.name.includes('accounts/')) {
+              const parts = String(account.name).split('/');
+              const idx = parts.indexOf('accounts');
+              if (idx !== -1 && parts[idx + 1]) accId2 = parts[idx + 1];
+            }
+            if (!accId2 && typeof business?.name === 'string' && business.name.includes('accounts/')) {
+              const parts = String(business.name).split('/');
+              const idx = parts.indexOf('accounts');
+              if (idx !== -1 && parts[idx + 1]) accId2 = parts[idx + 1];
+            }
+            if (!accId2 && Array.isArray(state?.businesses)) {
+              const withAcc2 = state.businesses.find(b => b?.accountId || b?.accountName || (typeof b?.name === 'string' && b.name.includes('accounts/')));
+              if (withAcc2) {
+                accId2 = withAcc2.accountId || withAcc2.accountName;
+                if (!accId2 && typeof withAcc2.name === 'string' && withAcc2.name.includes('accounts/')) {
+                  const parts = String(withAcc2.name).split('/');
+                  const idx = parts.indexOf('accounts');
+                  if (idx !== -1 && parts[idx + 1]) accId2 = parts[idx + 1];
+                }
+              }
+            }
+            if (accId2) accountName = String(accId2).includes('accounts/') ? String(accId2) : `accounts/${accId2}`;
+          }
+          if (!locationIdFromName) {
+            let locId2 = undefined;
+            if (typeof tlName2 === 'string' && tlName2.includes('locations/')) locId2 = String(tlName2).split('/').pop();
+            if (!locId2 && targetLocation?.locationId) locId2 = targetLocation.locationId;
+            if (!locId2 && targetLocation?.metadata?.locationId) locId2 = targetLocation.metadata.locationId;
+            if (!locId2 && business?.locationId) locId2 = business.locationId;
+            if (!locId2 && business?.id && String(business.id).match(/^\d+$/)) locId2 = business.id;
+            if (!locId2 && typeof business?.name === 'string' && business.name.includes('locations/')) locId2 = String(business.name).split('/').pop();
+            if (!locId2 && typeof state?.locationData?.name === 'string' && state.locationData.name.includes('locations/')) locId2 = String(state.locationData.name).split('/').pop();
+            if (!locId2 && typeof state?.selectedLocation?.name === 'string' && state.selectedLocation.name.includes('locations/')) locId2 = String(state.selectedLocation.name).split('/').pop();
+            if (!locId2 && state?.locationData?.locationId) locId2 = state.locationData.locationId;
+            if (!locId2 && state?.selectedLocation?.locationId) locId2 = state.selectedLocation.locationId;
+            if (accountName && locId2) locationIdFromName = String(locId2);
+          }
+
+          try {
+            console.debug('[Response Rate] Performance API derived:', { accountName, locationIdFromName });
+          } catch {}
+
+          // Final fallback discovery for Performance API if still missing pieces
+          if (!accountName || !locationIdFromName) {
+            try {
+              const accountsListPerf = await GMBService.getAccounts();
+              const selNamePerf = business?.title || business?.businessName || business?.name || '';
+              let discoveredAccIdPerf = undefined;
+              let discoveredLocIdPerf = undefined;
+              if (Array.isArray(accountsListPerf)) {
+                for (const acc of accountsListPerf) {
+                  const accResName = acc?.name; // 'accounts/<id>'
+                  const accIdCandidatePerf = typeof accResName === 'string' && accResName.includes('accounts/') ? accResName.split('/')[1] : undefined;
+                  if (!accIdCandidatePerf) continue;
+                  try {
+                    const locsPerf = await GMBService.getLocations(undefined, accResName);
+                    const byTitlePerf = (loc) => selNamePerf && loc?.title && String(loc.title).toLowerCase() === String(selNamePerf).toLowerCase();
+                    const matchPerf = Array.isArray(locsPerf) ? (locsPerf.find(byTitlePerf)) : null;
+                    if (matchPerf?.name?.includes('locations/')) {
+                      discoveredAccIdPerf = accIdCandidatePerf;
+                      discoveredLocIdPerf = String(matchPerf.name).split('/').pop();
+                      break;
+                    }
+                  } catch (e) {
+                    console.warn('[Response Rate] Performance fallback: failed to list locations for', accResName, e?.message || e);
+                  }
+                }
+              }
+              if (!accountName && discoveredAccIdPerf) accountName = `accounts/${discoveredAccIdPerf}`;
+              if (!locationIdFromName && discoveredLocIdPerf) locationIdFromName = discoveredLocIdPerf;
+            } catch (e) {
+              console.warn('[Response Rate] Performance fallback discovery failed:', e?.message || e);
+            }
+          }
+
+          if (accountName && locationIdFromName) {
+            console.log('[Response Rate] Fetching via Performance API (90d)...');
             const now = new Date();
             const start = new Date(now);
             start.setDate(now.getDate() - 90);
-            
             const dateRange = {
-              startDate: {
-                year: start.getFullYear(),
-                month: start.getMonth() + 1,
-                day: start.getDate()
-              },
-              endDate: {
-                year: now.getFullYear(),
-                month: now.getMonth() + 1,
-                day: now.getDate()
-              }
+              startDate: { year: start.getFullYear(), month: start.getMonth() + 1, day: start.getDate() },
+              endDate: { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() }
             };
-            
-            // Fetch response rate metrics from GMB API
             const responseMetrics = await GMBService.getResponseRateMetrics(undefined, locationIdFromName, dateRange);
-            
-            if (responseMetrics?.responseRate) {
+            if (responseMetrics?.responseRate && responseMetrics.responseRate > 0) {
               responseRate = responseMetrics.responseRate;
-              console.log('[Response Rate] Found response rate from GMB API:', {
-                responseRate: `${responseRate}%`,
-                dateRange: '90 days',
-                source: 'GMB API'
-              });
+              console.log('[Response Rate] Using value from Performance API', { responseRate: `${responseRate}%`, dateRange: '90d' });
+            } else {
+              console.log('[Response Rate] Performance API returned no response rate.');
             }
+          } else {
+            console.log('[Response Rate] Missing account/location IDs for Performance API fetch.');
           }
         } catch (error) {
-          console.warn('[Response Rate] Failed to fetch response rate from GMB API:', error);
+          console.warn('[Response Rate] Failed to fetch from Performance API:', error);
         }
       }
-      
+
+      // STEP C: Last-resort internal candidates only (no Your Data fallback by design)
+      if (!responseRate || responseRate === 0) {
+        const responseRateCandidates = {
+          performanceDataResponseRate: performanceData?.responseRate,
+          performanceDataAvgResponseRate: performanceData?.averageResponseRate,
+          performanceDataMessagingResponseRate: performanceData?.messagingResponseRate,
+          targetLocationResponseRate: targetLocation?.responseRate,
+          businessResponseRate: business?.responseRate
+        };
+
+        responseRate = (
+          (performanceData?.responseRate ?? performanceData?.averageResponseRate ?? performanceData?.messagingResponseRate) ??
+          targetLocation?.responseRate ??
+          business?.responseRate ??
+          0
+        );
+
+        console.log('[Response Rate] Using in-memory candidates as last resort', { responseRate, responseRateCandidates });
+      }
+
       console.log('[Response Rate] Starting calculation:', {
         responseRate,
-        responseRateCandidates,
         formula: '(Response Rate) × (8 / 100)',
         maxPoints: 8
       });
-      
+
       if (responseRate > 0) {
         // Formula: (Response Rate) × (8 / 100)
         // Response rate is typically a percentage (0-100), so we use it directly
@@ -1264,7 +1690,7 @@ const ProfileStrengthResults = () => {
       // Expose myTotal and compAvg to the whole computeScore closure for later use in breakdown
       let myTotal = 0;
       let compAvg = 0;
-      
+
       // Declare velocity variables in proper scope
       let velocityScore = 0;
       let velocityLevel = 'N/A';
@@ -1910,7 +2336,7 @@ const ProfileStrengthResults = () => {
         console.log('Account verificationState:', account?.verificationState);
         // Note: Velocity and GMB Feed variables are now declared in proper scope above
 
-        const score = verPts + namePts + addrPts + phonePts + descPts + websitePts + hoursPts + labelPts + catBasePts + catExtraPts + catCityPts + socialPts + appointmentsPts + serviceAreaPts + bookApptPts + qaPts + reviewRatingPts + responseRatePts + reviewsPts;
+        const score = verPts + namePts + addrPts + phonePts + descPts + websitePts + hoursPts + labelPts + catBasePts + catExtraPts + catCityPts + socialPts + appointmentsPts + serviceAreaPts + bookApptPts + qaPts + photosPts + reviewRatingPts + responseRatePts + reviewsPts;
 
         console.log('Target location:', targetLocation?.name || targetLocation?.title || '(none)');
         console.log('Title:', businessTitle);
@@ -1950,6 +2376,17 @@ const ProfileStrengthResults = () => {
           { factor: 'Service area', details: { hasServiceArea }, points: serviceAreaPts },
           { factor: 'Book appointment (explicit)', details: { hasBookAppointment }, points: bookApptPts },
           { factor: 'Q&A section present', details: { hasQASection }, points: qaPts },
+          { factor: 'Photos', details: { 
+            businessType: isHotelRestaurantBusiness ? 'Hotel/Restaurant' : 'Regular',
+            totalPhotos,
+            hasCoverPhoto,
+            hasLogoPhoto,
+            hasMenuPhotos: isHotelRestaurantBusiness ? hasMenuPhotos : undefined,
+            coverPoints: coverPts,
+            logoPoints: logoPts,
+            menuPoints: isHotelRestaurantBusiness ? menuPts : undefined,
+            volumePoints: volumePts
+          }, points: photosPts },
           { factor: 'Review Rating', details: { myRating, capped: reviewRatingPts === 20 }, points: reviewRatingPts },
           { factor: 'Response Rate', details: { responseRate: `${responseRate}%` }, points: responseRatePts },
           { factor: 'Reviews vs competitors', details: { myTotal, compAvg }, points: reviewsPts },
@@ -2089,35 +2526,7 @@ const ProfileStrengthResults = () => {
     <DashboardLayout>
       <MainContent>
         <ContentSection style={{ position: 'relative' }}>
-          {isCalculating && (
-            <LoadingOverlay>
-              <LoadingContainer>
-                <LoadingTitle>Analyzing Your Profile Strength</LoadingTitle>
-                <LoadingSubtitle>
-                  Our AI is performing a comprehensive analysis of your business profile
-                </LoadingSubtitle>
-                
-                <ProgressSection>
-                  <ProgressPercentage>{stepProgress}%</ProgressPercentage>
-                  <ProgressBar variant="determinate" value={stepProgress} />
-                  <CurrentStepText key={currentStep}>{currentStep}</CurrentStepText>
-                </ProgressSection>
-
-                <StepsContainer>
-                  {analysisSteps.map((step, index) => (
-                    <StepItem key={step} completed={completedSteps.includes(step)}>
-                      <StepIcon completed={completedSteps.includes(step)}>
-                        {completedSteps.includes(step) ? '✓' : index + 1}
-                      </StepIcon>
-                      <StepText completed={completedSteps.includes(step)}>
-                        {step}
-                      </StepText>
-                    </StepItem>
-                  ))}
-                </StepsContainer>
-              </LoadingContainer>
-            </LoadingOverlay>
-          )}
+          <AnalysisLoadingPopup open={isCalculating} onComplete={() => {}} />
 
           <HeaderSection>
             <MainTitle>Profile Strength</MainTitle>
@@ -2125,25 +2534,35 @@ const ProfileStrengthResults = () => {
               Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing, and web development.
             </Description>
           </HeaderSection>
-
+          
           <SummaryCard>
             <SummaryColumn>
               <SummaryLabel>Select Account*</SummaryLabel>
               <SummaryValue>{resolvedAccountName || '—'}</SummaryValue>
             </SummaryColumn>
-            
+
             <VerticalDivider />
-            
+
             <SummaryColumn>
               <SummaryLabel>Selected Keyword*</SummaryLabel>
               <SummaryValue>{keywordsState.length ? keywordsState.join(', ') : '—'}</SummaryValue>
             </SummaryColumn>
-            
+
             <VerticalDivider />
-            
+
             <SummaryColumn>
               <SummaryLabel>Location*</SummaryLabel>
               <SummaryValue>{displayAddress || '—'}</SummaryValue>
+            </SummaryColumn>
+
+            <VerticalDivider />
+
+            <SummaryColumn>
+              <SummaryLabel>Analysis Speed</SummaryLabel>
+              <FormControlLabel
+                control={<Switch checked={fastAnalysis} onChange={(e) => setFastAnalysis(e.target.checked)} />}
+                label={fastAnalysis ? 'Instant' : 'Normal'}
+              />
             </SummaryColumn>
 
             <EditButton onClick={openKeywordEditor}>
@@ -2157,19 +2576,15 @@ const ProfileStrengthResults = () => {
               <ScoreValue>{profileScore} / 300</ScoreValue>
             </ScoreSection>
 
-            <ChartContainer>
-              <ChartImage 
-                src="/images/profile-strength-chart.svg" 
-                alt="Profile Strength Chart"
-              />
-            </ChartContainer>
+            {/* Gauge now appears in a popup after analysis completes */}
+            <ChartContainer />
 
             <AboutSection>
               <AboutTitle>About Company Strength</AboutTitle>
               <AboutText>
                 Filler text is text that shares some characteristics of a real written text, but is random or otherwise generated. It may be used to display a sample of fonts, generate text for testing, or to spoof an e-mail spam filter.
               </AboutText>
-              
+
               <LegendContainer>
                 {legendItems.map((item, index) => (
                   <LegendItem key={index}>
@@ -2189,6 +2604,14 @@ const ProfileStrengthResults = () => {
               Export CSV
             </ViewHeatMapButton>
           </div>
+
+          {/* Animated Gauge Popup */}
+          <GaugeResultsPopup
+            open={showGaugePopup}
+            onClose={() => setShowGaugePopup(false)}
+            score={profileScore}
+            maxScore={300}
+          />
 
         </ContentSection>
       </MainContent>

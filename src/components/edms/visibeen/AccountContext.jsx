@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { getSession } from '../../../utils/authUtils';
 
 const AccountContext = createContext();
 
@@ -39,19 +40,48 @@ export const AccountProvider = ({ children }) => {
   const updateAccountInfo = (newInfo) => {
     const normalized = normalizeAccountInfo(newInfo);
     setAccountInfo(normalized);
-    // Also save to localStorage for persistence
-    localStorage.setItem('accountInfo', JSON.stringify(normalized));
+    // Determine current owner (email/id) for scoped persistence
+    try {
+      const session = getSession() || {};
+      const owner = session?.user?.email || session?.email || session?.user?.id || session?.id || session?.accountName || 'anonymous';
+      // Also save to localStorage for persistence (scoped)
+      localStorage.setItem('accountInfo', JSON.stringify(normalized));
+      localStorage.setItem('accountInfoOwner', String(owner));
+    } catch (_) {
+      // Fallback without owner scoping
+      localStorage.setItem('accountInfo', JSON.stringify(normalized));
+    }
   };
 
   const loadAccountInfo = useCallback(() => {
     const saved = localStorage.getItem('accountInfo');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setAccountInfo(normalizeAccountInfo(parsed));
-      } catch (_) {
-        // If parsing fails, clear the bad entry to avoid repeated errors
+    const savedOwner = localStorage.getItem('accountInfoOwner');
+    // Verify owner matches current session to prevent cross-account leakage
+    try {
+      const session = getSession() || {};
+      const currentOwner = session?.user?.email || session?.email || session?.user?.id || session?.id || session?.accountName || 'anonymous';
+      const ownerMatches = savedOwner && String(savedOwner) === String(currentOwner);
+      if (!ownerMatches) {
+        // Clear stale cache if owner mismatches
         localStorage.removeItem('accountInfo');
+        localStorage.removeItem('accountInfoOwner');
+      } else if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setAccountInfo(normalizeAccountInfo(parsed));
+        } catch (_) {
+          localStorage.removeItem('accountInfo');
+        }
+      }
+    } catch (_) {
+      // Fallback to load without owner verification
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setAccountInfo(normalizeAccountInfo(parsed));
+        } catch (_) {
+          localStorage.removeItem('accountInfo');
+        }
       }
     }
     

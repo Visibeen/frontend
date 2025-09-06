@@ -64,7 +64,7 @@ const ProtectedRoute = ({ children }) => {
   }
 
   // Check if user is logged in
-  const userString = sessionStorage.getItem('user');
+  const userString = localStorage.getItem('user');
   if (!userString) {
     return <Navigate to="/" replace />;
   }

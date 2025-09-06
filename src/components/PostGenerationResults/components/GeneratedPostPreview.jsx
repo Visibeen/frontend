@@ -165,9 +165,9 @@ const GeneratedPostPreview = ({ generatedPost, selectedTemplate }) => {
           size="small"
         />
 
-        <CTAButton templateStyle={templateStyle} variant="contained">
+        {/* <CTAButton templateStyle={templateStyle} variant="contained">
           {generatedPost.ctaText}
-        </CTAButton>
+        </CTAButton> */}
       </ContentCard>
     </PreviewContainer>
   );

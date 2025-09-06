@@ -86,7 +86,6 @@ class AutoTokenManager {
                     
                     // Also update localStorage for backward compatibility
                     localStorage.setItem('googleAccessToken', newToken);
-                    sessionStorage.setItem('googleAccessToken', newToken);
                 }
             } catch (error) {
                 console.warn('❌ Google token auto-refresh failed:', error);
@@ -139,7 +138,6 @@ class AutoTokenManager {
         const sources = [
             () => tokenManager.get('google')?.access_token,
             () => localStorage.getItem('googleAccessToken'),
-            () => sessionStorage.getItem('googleAccessToken'),
             () => {
                 // Check URL params (for OAuth redirects)
                 if (typeof window !== 'undefined') {
@@ -167,7 +165,6 @@ class AutoTokenManager {
                     
                     // Sync to legacy storage
                     localStorage.setItem('googleAccessToken', token);
-                    sessionStorage.setItem('googleAccessToken', token);
                     
                     return token;
                 }
@@ -188,7 +185,7 @@ class AutoTokenManager {
         }
 
         // Fallback to legacy storage
-        const legacyToken = localStorage.getItem('googleAccessToken') || sessionStorage.getItem('googleAccessToken');
+        const legacyToken = localStorage.getItem('googleAccessToken');
         if (legacyToken) {
             // Sync back to TokenManager
             tokenManager.set('google', { 
@@ -262,8 +259,6 @@ class AutoTokenManager {
                 tokenManager: googleToken?.access_token ? `${googleToken.access_token.substring(0, 10)}...` : null,
                 localStorage: (typeof window !== 'undefined' && localStorage.getItem('googleAccessToken')) 
                     ? `${localStorage.getItem('googleAccessToken').substring(0, 10)}...` : null,
-                sessionStorage: (typeof window !== 'undefined' && sessionStorage.getItem('googleAccessToken')) 
-                    ? `${sessionStorage.getItem('googleAccessToken').substring(0, 10)}...` : null,
                 environment: process.env.REACT_APP_GOOGLE_ACCESS_TOKEN 
                     ? `${process.env.REACT_APP_GOOGLE_ACCESS_TOKEN.substring(0, 10)}...` : null
             },
@@ -300,7 +295,6 @@ class AutoTokenManager {
                     console.log('✅ Manual Google token refresh successful');
                     // Update legacy storage
                     localStorage.setItem('googleAccessToken', results.google);
-                    sessionStorage.setItem('googleAccessToken', results.google);
                 } else {
                     console.warn('⚠️ Manual Google token refresh returned no result');
                 }

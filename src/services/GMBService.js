@@ -96,14 +96,37 @@ class GMBService {
       headers['X-Goog-User-Project'] = this.projectId;
     }
 
-    let res = await fetch(url, { ...options, headers });
+    // Add a timeout using AbortController to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutMs = typeof options.timeoutMs === 'number' && options.timeoutMs > 0 ? options.timeoutMs : 20000;
+    const timer = setTimeout(() => controller.abort('timeout'), timeoutMs);
+    const { timeoutMs: _omitTimeoutMs, ...restOptions } = options;
+
+    let res;
+    try {
+      res = await fetch(url, { ...restOptions, headers, signal: controller.signal });
+    } catch (e) {
+      if (e && (e.name === 'AbortError' || String(e).includes('timeout'))) {
+        console.warn(`[GMBService] _googleFetch timeout after ${timeoutMs}ms:`, url);
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
     
     // Handle specific permission errors for X-Goog-User-Project
     if (res.status === 403 && this.projectId) {
       console.warn('Permission denied with X-Goog-User-Project header. Retrying without it...');
       const headersWithoutProject = { ...headers };
       delete headersWithoutProject['X-Goog-User-Project'];
-      res = await fetch(url, { ...options, headers: headersWithoutProject });
+      // Retry with same timeout guard
+      const controller2 = new AbortController();
+      const timer2 = setTimeout(() => controller2.abort('timeout'), timeoutMs);
+      try {
+        res = await fetch(url, { ...restOptions, headers: headersWithoutProject, signal: controller2.signal });
+      } finally {
+        clearTimeout(timer2);
+      }
     }
     
     if (res.status === 401) {
@@ -117,7 +140,13 @@ class GMBService {
       if (this.projectId && headers['X-Goog-User-Project']) {
         delete retryHeaders['X-Goog-User-Project'];
       }
-      res = await fetch(url, { ...options, headers: retryHeaders });
+      const controller3 = new AbortController();
+      const timer3 = setTimeout(() => controller3.abort('timeout'), timeoutMs);
+      try {
+        res = await fetch(url, { ...restOptions, headers: retryHeaders, signal: controller3.signal });
+      } finally {
+        clearTimeout(timer3);
+      }
     }
     return res;
   }
@@ -130,27 +159,97 @@ class GMBService {
    * @param {string} locationId - Location ID string (e.g., '67890')
    * @returns {Promise<Array>} List of media items
    */
-  async getMedia(accessToken, accountId, locationId) {
+  async getMedia(accessToken, accountId, locationId, pageSize = 50) {
     try {
       if (!accountId || !locationId) {
         throw new Error('Invalid accountId or locationId');
       }
 
-      const response = await this._googleFetch(
-        `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media`,
-        { method: 'GET' },
-        accessToken
-      );
+      let allItems = [];
+      let nextPageToken = null;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to fetch media');
-      }
+      do {
+        const url = `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media` +
+                    `?pageSize=${encodeURIComponent(pageSize)}` + (nextPageToken ? `&pageToken=${encodeURIComponent(nextPageToken)}` : '');
 
-      const data = await response.json();
-      return Array.isArray(data.mediaItems) ? data.mediaItems : [];
+        const response = await this._googleFetch(
+          url,
+          { method: 'GET' },
+          accessToken
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || 'Failed to fetch media');
+        }
+
+        const data = await response.json();
+        const items = Array.isArray(data.mediaItems) ? data.mediaItems : [];
+        allItems = allItems.concat(items);
+        nextPageToken = data.nextPageToken || null;
+
+        // Safety break to avoid infinite loops
+        if (allItems.length > 5000) {
+          console.warn('[GMBService] Reached media fetch cap of 5000 items, stopping pagination');
+          break;
+        }
+      } while (nextPageToken);
+
+      return allItems;
     } catch (error) {
       console.error('Error fetching media:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get total photo count for a specific location using paginated media endpoint
+   * Counts only PHOTO items (filtering by mediaFormat === 'PHOTO' when present)
+   * @param {string} accessToken
+   * @param {string} accountId
+   * @param {string} locationId
+   * @param {number} pageSize - items per page (default 50)
+   * @returns {Promise<number>} Total count of photos
+   */
+  async getMediaCount(accessToken, accountId, locationId, pageSize = 50) {
+    try {
+      if (!accountId || !locationId) {
+        throw new Error('Invalid accountId or locationId');
+      }
+
+      let total = 0;
+      let nextPageToken = null;
+
+      do {
+        const url = `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/media` +
+                    `?pageSize=${encodeURIComponent(pageSize)}` + (nextPageToken ? `&pageToken=${encodeURIComponent(nextPageToken)}` : '');
+
+        const response = await this._googleFetch(
+          url,
+          { method: 'GET' },
+          accessToken
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || 'Failed to fetch media count');
+        }
+
+        const data = await response.json();
+        const items = Array.isArray(data.mediaItems) ? data.mediaItems : [];
+        // Count photo-only
+        total += items.filter(i => (i.mediaFormat === 'PHOTO' || !i.mediaFormat)).length;
+        nextPageToken = data.nextPageToken || null;
+
+        if (total > 50000) {
+          console.warn('[GMBService] Media count exceeded 50k items, stopping count early');
+          break;
+        }
+      } while (nextPageToken);
+
+      return total;
+    } catch (error) {
+      console.error('Error fetching media count:', error);
       throw error;
     }
   }
@@ -286,7 +385,6 @@ class GMBService {
         
         // Sync to legacy storage for backward compatibility
         localStorage.setItem('googleAccessToken', googleAccessToken);
-        sessionStorage.setItem('googleAccessToken', googleAccessToken);
         
         // Store refresh token securely if available
         if (refreshToken) {
@@ -765,6 +863,45 @@ class GMBService {
     const validChanges = changes.filter(change => !isNaN(change) && change !== null);
     if (validChanges.length === 0) return 0;
     return Math.round(validChanges.reduce((sum, change) => sum + change, 0) / validChanges.length);
+  }
+
+
+  /**
+   * Get photos for a specific location using the media endpoint
+   * Filters media items to return only photos
+   * @param {string} accessToken - Google OAuth access token
+   * @param {string} accountId - Account ID string
+   * @param {string} locationId - Location ID string
+   * @param {number} maxPhotos - Maximum number of photos to return (default 20)
+   * @returns {Promise<Array>} List of photo URLs
+   */
+  async getPhotos(accessToken, accountId, locationId, maxPhotos = 20) {
+    try {
+      if (!accountId || !locationId) {
+        throw new Error('Invalid accountId or locationId');
+      }
+
+      // Get media items
+      const mediaItems = await this.getMedia(accessToken, accountId, locationId, 50);
+      
+      // Filter for photos only and extract URLs
+      const photos = mediaItems
+        .filter(item => item.mediaFormat === 'PHOTO' || !item.mediaFormat)
+        .slice(0, maxPhotos)
+        .map(item => ({
+          url: item.googleUrl || item.sourceUrl,
+          name: item.name,
+          description: item.description,
+          category: item.category
+        }))
+        .filter(photo => photo.url); // Only include items with valid URLs
+
+      console.log(`[GMBService] Found ${photos.length} photos for location ${locationId}`);
+      return photos;
+    } catch (error) {
+      console.error('Error fetching photos:', error);
+      return [];
+    }
   }
 
   /**
@@ -1265,11 +1402,16 @@ class GMBService {
 
       console.log(`[GMB Service] Fetching response rate metrics from: ${url}`);
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+
       const response = await this._googleFetch(
         url,
-        { method: 'GET' },
+        { method: 'GET', signal: controller.signal },
         token
       );
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -1322,6 +1464,63 @@ class GMBService {
       return { responseRate: 0 };
     }
   }
+
+  /**
+   * Compute response rate using live reviews data over the last `days`.
+   * Mirrors logic in BusinessProfile.jsx: percentage of reviews in window that have a reply.
+   * @param {string} accessToken
+   * @param {string} accountName e.g. 'accounts/12345'
+   * @param {string} locationName e.g. 'locations/67890'
+   * @param {number} days default 90
+   * @returns {Promise<{responseRate:number, counted:number, replied:number, days:number}>}
+   */
+  async getResponseRateFromReviews(accessToken, accountName, locationName, days = 90) {
+    try {
+      if (!accountName || !locationName) throw new Error('accountName and locationName are required');
+
+      // Fetch all reviews (paginated internally)
+      const reviewsResp = await this.getReviews(accessToken, accountName, locationName);
+      const arr = Array.isArray(reviewsResp?.reviews)
+        ? reviewsResp.reviews
+        : (Array.isArray(reviewsResp) ? reviewsResp : []);
+
+      const now = Date.now();
+      const windowMs = days * 24 * 60 * 60 * 1000;
+      const getTime = (r) => {
+        const t = r?.updateTime || r?.createTime;
+        const ms = t ? Date.parse(t) : NaN;
+        return Number.isFinite(ms) ? ms : undefined;
+      };
+      const hasReply = (r) => !!(r?.reviewReply && (r.reviewReply.comment || r.reviewReply.updateTime));
+
+      const windowed = arr.filter(r => {
+        const ms = getTime(r);
+        return ms !== undefined && (now - ms <= windowMs);
+      });
+
+      const counted = windowed.length;
+      const replied = windowed.filter(hasReply).length;
+      const responseRate = counted > 0 ? (replied / counted) * 100 : 0;
+
+      console.log('[GMBService] Computed response rate from live reviews', {
+        days,
+        counted,
+        replied,
+        responseRate: Number(responseRate.toFixed(2))
+      });
+
+      return {
+        responseRate,
+        counted,
+        replied,
+        days
+      };
+    } catch (error) {
+      console.warn('[GMBService] getResponseRateFromReviews failed:', error);
+      return { responseRate: 0, counted: 0, replied: 0, days };
+    }
+  }
+
 }
 
 export default new GMBService();

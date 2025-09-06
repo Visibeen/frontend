@@ -57,6 +57,7 @@ const SectionSubtitle = styled(Typography)(({ theme }) => ({
 const FreeWebsite = () => {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [showTemplateGrid, setShowTemplateGrid] = useState(true);
 
   const templates = [
     {
@@ -103,6 +104,7 @@ const FreeWebsite = () => {
 
   const handlePreview = (template) => {
     setPreviewTemplate(template);
+    setShowTemplateGrid(false);
   };
 
   const handleUseTemplate = async (template) => {
@@ -132,6 +134,9 @@ const FreeWebsite = () => {
         // Update preview with real data
         setPreviewTemplate(updatedTemplate);
         
+        // Hide template grid and show preview
+        setShowTemplateGrid(false);
+        
         // Show success message
         alert('Website created successfully with your Google My Business data!');
       } else {
@@ -140,6 +145,9 @@ const FreeWebsite = () => {
         // Fallback to mock data with warning
         alert(`Could not fetch your GMB data: ${result.error}\n\nShowing template with sample data instead.`);
         setPreviewTemplate(template);
+        
+        // Hide template grid and show preview
+        setShowTemplateGrid(false);
       }
       
     } catch (error) {
@@ -148,6 +156,9 @@ const FreeWebsite = () => {
       // Fallback to mock data
       alert(`Error creating website: ${error.message}\n\nShowing template with sample data instead.`);
       setPreviewTemplate(template);
+      
+      // Hide template grid and show preview
+      setShowTemplateGrid(false);
     } finally {
       setSelectedTemplate(null);
     }
@@ -159,6 +170,10 @@ const FreeWebsite = () => {
     window.open(`/live-demo/${template.id}`, '_blank');
   };
 
+  const handleChangeTemplate = () => {
+    setShowTemplateGrid(true);
+  };
+  
   return (
     <DashboardLayout>
       <PageContainer>
@@ -169,29 +184,36 @@ const FreeWebsite = () => {
           </PageSubtitle>
         </PageHeader>
 
-        <SectionContainer>
-          <SectionHeader>
-            <SectionTitle>Select Templates</SectionTitle>
-            <SectionSubtitle>
-              Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing
-            </SectionSubtitle>
-          </SectionHeader>
+        {showTemplateGrid ? (
+          <SectionContainer>
+            <SectionHeader>
+              <SectionTitle>Select Templates</SectionTitle>
+              <SectionSubtitle>
+                Lorem ipsum is a dummy or placeholder text commonly used in graphic design, publishing
+              </SectionSubtitle>
+            </SectionHeader>
 
-          <TemplateGrid
-            templates={templates}
-            selectedTemplate={selectedTemplate}
-            onTemplateSelect={handleTemplateSelect}
-            onPreview={handlePreview}
-            onUseTemplate={handleUseTemplate}
-          />
-        </SectionContainer>
+            <TemplateGrid
+              templates={templates}
+              selectedTemplate={selectedTemplate}
+              onTemplateSelect={handleTemplateSelect}
+              onPreview={handlePreview}
+              onUseTemplate={handleUseTemplate}
+            />
+          </SectionContainer>
+        ) : null}
       </PageContainer>
 
       <TemplatePreview
         template={previewTemplate}
-        onClose={() => setPreviewTemplate(null)}
+        onClose={() => {
+          setPreviewTemplate(null);
+          setShowTemplateGrid(true);
+        }}
         onUseTemplate={handleUseTemplate}
         onViewLive={handleViewLive}
+        onChangeTemplate={handleChangeTemplate}
+        fullscreen={!showTemplateGrid}
       />
     </DashboardLayout>
   );
