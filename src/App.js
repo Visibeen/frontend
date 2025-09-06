@@ -4,7 +4,7 @@ import Register from './components/Register/Register.jsx'
 import Login from './components/Login/Login.jsx';
 import ForgotPassword from './components/Login/ForgotPassword.jsx';
 import Dashboard from './components/Dashboard/Dashboard.jsx';
-import Homepage from './components/Homepage/Homepage.jsx';
+import VisibeenLandingPage from './components/LandingPage/VisibeenLandingPage.jsx';
 import ProfilePage from './components/Dashboard/pages/Profile.jsx';
 import BusinessProfile from './components/Dashboard/pages/BusinessProfile.jsx';
 import ResetPassword from './components/Login/ResetPassword.jsx';
@@ -70,7 +70,7 @@ function App() {
     <AppProvider>
       <Router>
       <Routes>
-        <Route path="/" element={<Homepage />} />
+        <Route path="/" element={<VisibeenLandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/connect-google" element={<GoogleConnect />} />

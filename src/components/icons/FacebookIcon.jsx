@@ -1,3 +1,3 @@
 import * as React from "react";
-const Component = props => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17.438 17.332" {...props}><path xmlns="http://www.w3.org/2000/svg" fill="currentColor" d="M17.437 8.719c0-4.82-3.902-8.72-8.719-8.72A8.716 8.716 0 0 0 0 8.719c0 4.35 3.188 7.96 7.356 8.61v-6.09H5.141v-2.52h2.215v-1.92c0-2.19 1.301-3.39 3.293-3.39.954 0 1.952.17 1.952.17v2.14h-1.1c-1.083 0-1.42.67-1.42 1.36v1.64H12.5l-.387 2.52h-2.03v6.09a8.716 8.716 0 0 0 7.355-8.61" /></svg>;
+const Component = props => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10.607 20.429" {...props}><path xmlns="http://www.w3.org/2000/svg" fill="currentColor" d="M10.61.15v3.24H8.68c-.7 0-1.18.15-1.42.44-.25.3-.37.74-.37 1.33v2.32h3.6l-.48 3.63H6.89v9.32H3.13v-9.32H0V7.48h3.13V4.8c0-1.52.43-2.7 1.28-3.54S6.39 0 7.81 0c1.2 0 2.14.05 2.8.15" /></svg>;
 export default Component;
