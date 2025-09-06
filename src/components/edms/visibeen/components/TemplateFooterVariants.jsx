@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+
 import { Box, Typography, Stack } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -161,29 +162,152 @@ const FooterContainer5 = styled(Box)(({ theme }) => ({
   }
 }));
 
-// Footer Variant 6 - Industrial Steel with metallic accent
+// Footer Variant 6 - Pixel-perfect layout (285x46) matching provided CSS with responsive scaling
 const FooterContainer6 = styled(Box)(({ theme }) => ({
-  background: 'linear-gradient(135deg, #374151 0%, #4B5563 50%, #6B7280 100%)',
-  padding: '14px 18px',
-  borderRadius: '0 0 12px 12px',
-  color: '#ffffff',
+  width: '100%',
   position: 'relative',
-  minHeight: '65px',
+  color: '#ffffff'
+}));
+
+const ScaledWrapper6 = styled(Box)(({ theme }) => ({
+  width: '285px',
+  height: '46px',
+  transformOrigin: 'top left',
+  position: 'relative'
+}));
+
+const OverlapGroup6 = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  height: '46px'
+}));
+
+const BackgroundShape6 = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '285px',
+  height: '32px',
+  top: '13px',
+  left: 0,
+  background: 'linear-gradient(135deg, #003f92 0%, #0066cc 100%)',
+  borderRadius: '4px'
+}));
+
+const PhoneGroup6 = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '52px',
+  height: '15px',
+  top: '22px',
+  left: '14px'
+}));
+
+const PhoneContent6 = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  width: '43px',
+  height: '15px',
+  left: '13px'
+}));
+
+const PhoneNumber6 = styled(Typography)(({ theme }) => ({
+  width: '39px',
+  left: 0,
+  fontFamily: 'Inter, Helvetica, Arial, sans-serif',
+  fontWeight: 600,
+  color: '#fdfffe',
+  fontSize: '5.3px',
+  lineHeight: 1,
+  position: 'absolute',
+  letterSpacing: 0
+}));
+
+const WebsiteGroup6 = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '71px',
+  height: '9px',
+  top: '25px',
+  left: '102px'
+}));
+
+const WebsiteIcon6 = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '9px',
+  height: '9px',
+  top: 0,
+  left: 0,
+  fontSize: '7px',
   display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'space-between',
-  boxShadow: '0 2px 8px rgba(55, 65, 81, 0.4)',
-  '&::after': {
-    content: '""',
-    position: 'absolute',
-    top: '50%',
-    left: '8px',
-    transform: 'translateY(-50%)',
-    width: '4px',
-    height: '30px',
-    background: 'linear-gradient(180deg, #FFA500 0%, #FF6B35 100%)',
-    borderRadius: '2px'
-  }
+  alignItems: 'center',
+  justifyContent: 'center'
+}));
+
+const WebsiteText6 = styled(Typography)(({ theme }) => ({
+  width: '57px',
+  position: 'absolute',
+  top: '2px',
+  left: '13px',
+  fontFamily: 'Inter, Helvetica, Arial, sans-serif',
+  fontWeight: 600,
+  color: '#ffffff',
+  fontSize: '5.3px',
+  textAlign: 'center',
+  lineHeight: 1,
+  letterSpacing: 0
+}));
+
+const AddressGroup6 = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '83px',
+  height: '12px',
+  top: '23px',
+  left: '190px'
+}));
+
+const LocationIcon6 = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '9px',
+  height: '9px',
+  top: '2px',
+  left: 0,
+  fontSize: '7px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
+}));
+
+const AddressText6 = styled(Typography)(({ theme }) => ({
+  width: '68px',
+  position: 'absolute',
+  top: 0,
+  left: '13px',
+  fontFamily: 'Inter, Helvetica, Arial, sans-serif',
+  fontWeight: 600,
+  color: '#ffffff',
+  fontSize: '5.3px',
+  lineHeight: 1,
+  letterSpacing: 0
+}));
+
+const LogoBackground6 = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '160px',
+  height: '18px',
+  top: 0,
+  left: '63px',
+  background: 'linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)',
+  borderRadius: '9px',
+  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+}));
+
+const CompanyName6 = styled(Typography)(({ theme }) => ({
+  width: '129px',
+  position: 'absolute',
+  top: '3px',
+  left: '80px',
+  fontFamily: 'Open Sans, Helvetica, Arial, sans-serif',
+  fontWeight: 700,
+  color: '#003f92',
+  fontSize: '9px',
+  textAlign: 'center',
+  lineHeight: '11.2px',
+  letterSpacing: 0
 }));
 
 // Business Name Styles with enhanced typography
@@ -250,24 +374,212 @@ const AddressText = styled(Typography)(({ theme }) => ({
   textShadow: '0 1px 1px rgba(0,0,0,0.2)'
 }));
 
+// Pixel-perfect Template 1 styled components (color variant #121927)
+const FooterContainer1PX = styled(Box)(({ theme }) => ({
+  width: '100%',
+  position: 'relative',
+  color: '#ffffff'
+}));
+
+const ScaledWrapper1PX = styled(Box)(({ theme }) => ({
+  width: '285px',
+  height: '46px',
+  transformOrigin: 'top left',
+  position: 'relative'
+}));
+
+const OverlapGroup1PX = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  height: '46px'
+}));
+
+const BackgroundShape1PX = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '285px',
+  height: '32px',
+  top: '13px',
+  left: 0,
+  background: '#121927',
+  borderRadius: '4px'
+}));
+
+const PhoneGroup1PX = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '52px',
+  height: '15px',
+  top: '22px',
+  left: '14px'
+}));
+
+const PhoneContent1PX = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  width: '43px',
+  height: '15px',
+  left: '13px'
+}));
+
+const PhoneNumber1PX = styled(Typography)(({ theme }) => ({
+  width: '39px',
+  left: 0,
+  fontFamily: 'Inter, Helvetica, Arial, sans-serif',
+  fontWeight: 600,
+  color: '#fdfffe',
+  fontSize: '5.3px',
+  lineHeight: 1,
+  position: 'absolute',
+  letterSpacing: 0
+}));
+
+const WebsiteGroup1PX = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '71px',
+  height: '9px',
+  top: '25px',
+  left: '102px'
+}));
+
+const WebsiteIcon1PX = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '9px',
+  height: '9px',
+  top: 0,
+  left: 0,
+  fontSize: '7px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
+}));
+
+const WebsiteText1PX = styled(Typography)(({ theme }) => ({
+  width: '57px',
+  position: 'absolute',
+  top: '2px',
+  left: '13px',
+  fontFamily: 'Inter, Helvetica, Arial, sans-serif',
+  fontWeight: 600,
+  color: '#ffffff',
+  fontSize: '5.3px',
+  textAlign: 'center',
+  lineHeight: 1,
+  letterSpacing: 0
+}));
+
+const AddressGroup1PX = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '83px',
+  height: '12px',
+  top: '23px',
+  left: '190px'
+}));
+
+const LocationIcon1PX = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '9px',
+  height: '9px',
+  top: '2px',
+  left: 0,
+  fontSize: '7px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
+}));
+
+const AddressText1PX = styled(Typography)(({ theme }) => ({
+  width: '68px',
+  position: 'absolute',
+  top: 0,
+  left: '13px',
+  fontFamily: 'Inter, Helvetica, Arial, sans-serif',
+  fontWeight: 600,
+  color: '#ffffff',
+  fontSize: '5.3px',
+  lineHeight: 1,
+  letterSpacing: 0
+}));
+
+const LogoBackground1PX = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  width: '160px',
+  height: '18px',
+  top: 0,
+  left: '63px',
+  background: 'linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)',
+  borderRadius: '9px',
+  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+}));
+
+const CompanyName1PX = styled(Typography)(({ theme }) => ({
+  width: '129px',
+  position: 'absolute',
+  top: '3px',
+  left: '80px',
+  fontFamily: 'Open Sans, Helvetica, Arial, sans-serif',
+  fontWeight: 700,
+  color: '#121927',
+  fontSize: '9px',
+  textAlign: 'center',
+  lineHeight: '11.2px',
+  letterSpacing: 0
+}));
 // Template Footer Variants with unique layouts
 // Footer 1 - Centered Layout with Icons
-export const TemplateFooter1 = ({ accountInfo }) => (
-  <FooterContainer1>
-    <BusinessName sx={{ textAlign: 'center', textTransform: 'uppercase' }}>
-      {accountInfo?.businessName || 'URBANTECH SOLUTIONS'}
-    </BusinessName>
-    <ContactInfo sx={{ alignItems: 'center' }}>
-      <Stack direction="row" spacing={3} sx={{ justifyContent: 'center', flexWrap: 'wrap' }}>
-        <ContactText> {accountInfo?.contact || '+91 1234567890'}</ContactText>
-        <WebsiteText> {accountInfo?.website || 'www.urbantechsolutions.com'}</WebsiteText>
-      </Stack>
-      <AddressText sx={{ textAlign: 'center', fontSize: '8px', mt: 1 }}>
-        {accountInfo?.address || '123 Tech Park, Bangalore, Karnataka 560001'}
-      </AddressText>
-    </ContactInfo>
-  </FooterContainer1>
-);
+export const TemplateFooter1 = ({ accountInfo }) => {
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        if (w) setScale(w / 285);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <FooterContainer1PX ref={containerRef} sx={{ height: `${46 * scale}px` }}>
+      <ScaledWrapper1PX sx={{ transform: `scale(${scale})` }}>
+        <OverlapGroup1PX>
+          <BackgroundShape1PX />
+
+          <PhoneGroup1PX>
+            <PhoneContent1PX>
+              <PhoneNumber1PX sx={{ top: '9px' }}>
+                {accountInfo?.contact || '6858653555'}
+              </PhoneNumber1PX>
+              <PhoneNumber1PX sx={{ top: 0 }}>
+                {accountInfo?.contact || '6858653555'}
+              </PhoneNumber1PX>
+            </PhoneContent1PX>
+          </PhoneGroup1PX>
+
+          <WebsiteGroup1PX>
+            <WebsiteIcon1PX>🌐</WebsiteIcon1PX>
+            <WebsiteText1PX>
+              {(accountInfo?.website || 'WWW.WEBSITE.COM').toUpperCase()}
+            </WebsiteText1PX>
+          </WebsiteGroup1PX>
+
+          <AddressGroup1PX>
+            <LocationIcon1PX>📍</LocationIcon1PX>
+            <AddressText1PX>
+              {(accountInfo?.address || '2385 SYCAMORE STREET, COLUMBUS, OH 43215')}
+            </AddressText1PX>
+          </AddressGroup1PX>
+
+          <LogoBackground1PX />
+          <CompanyName1PX>
+            {(accountInfo?.businessName || 'URBANTECH SOLUTIONS').toUpperCase()}
+          </CompanyName1PX>
+        </OverlapGroup1PX>
+      </ScaledWrapper1PX>
+    </FooterContainer1PX>
+  );
+};
 
 // Footer 2 - Dark Blue with Contact Sections
 export const TemplateFooter2 = ({ accountInfo }) => (
@@ -318,20 +630,20 @@ export const TemplateFooter2 = ({ accountInfo }) => (
   </FooterContainer2>
 );
 
-// Footer Container 3 - Retro Vintage Style
+// Footer Container 3 - Modern Professional Style
 const FooterContainer3 = styled(Box)(({ theme }) => ({
-  background: '#2d1b16',
-  color: '#d4af37',
-  borderTop: '3px solid #d4af37',
+  background: 'linear-gradient(135deg, #732f00 0%, #8b3a00 50%, #a04400 100%)',
+  color: '#ffffff',
   position: 'relative',
   overflow: 'hidden',
-  padding: '14px 18px',
+  padding: '12px 16px',
   minHeight: '65px',
   borderRadius: '0 0 12px 12px',
   display: 'flex',
   flexDirection: 'column',
-  justifyContent: 'space-between',
-  boxShadow: '0 2px 8px rgba(45, 27, 22, 0.3)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  boxShadow: '0 4px 12px rgba(115, 47, 0, 0.4)',
   '&::before': {
     content: '""',
     position: 'absolute',
@@ -340,19 +652,19 @@ const FooterContainer3 = styled(Box)(({ theme }) => ({
     right: 0,
     bottom: 0,
     background: `
-      radial-gradient(circle at 25% 25%, rgba(212, 175, 55, 0.1) 0%, transparent 30%),
-      radial-gradient(circle at 75% 75%, rgba(212, 175, 55, 0.05) 0%, transparent 30%)
+      radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 40%)
     `,
     zIndex: 0
   },
   '&::after': {
     content: '""',
     position: 'absolute',
-    top: 5,
-    left: 15,
-    right: 15,
-    height: '1px',
-    background: 'repeating-linear-gradient(90deg, #d4af37 0px, #d4af37 8px, transparent 8px, transparent 16px)',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '2px',
+    background: 'linear-gradient(90deg, transparent 0%, #ff6b35 50%, transparent 100%)',
     zIndex: 1
   }
 }));
@@ -453,37 +765,86 @@ const VintageTagline = styled(Typography)(({ theme }) => ({
   letterSpacing: '0.3px'
 }));
 
-// Footer 3 - Retro Vintage Style (Compact)
+// Modern styled components for Template 3
+const ModernBusinessName = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Poppins, sans-serif',
+  fontSize: '14px',
+  fontWeight: 600,
+  color: '#ffffff',
+  textAlign: 'center',
+  marginBottom: '6px',
+  letterSpacing: '0.5px',
+  textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+  position: 'relative',
+  zIndex: 2
+}));
+
+const ModernContactRow = styled(Stack)(({ theme }) => ({
+  direction: 'row',
+  spacing: 2,
+  justifyContent: 'center',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: '12px',
+  position: 'relative',
+  zIndex: 2
+}));
+
+const ModernContactItem = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Poppins, sans-serif',
+  fontSize: '10px',
+  fontWeight: 400,
+  color: '#fdfffe',
+  lineHeight: 1.3,
+  textShadow: '0 1px 1px rgba(0,0,0,0.2)',
+  '&.phone': {
+    fontWeight: 500
+  },
+  '&.website': {
+    textDecoration: 'underline',
+    cursor: 'pointer',
+    '&:hover': {
+      opacity: 0.8
+    }
+  }
+}));
+
+const ModernAddressText = styled(Typography)(({ theme }) => ({
+  fontFamily: 'Poppins, sans-serif',
+  fontSize: '8px',
+  fontWeight: 400,
+  color: '#fdfffe',
+  textAlign: 'center',
+  lineHeight: 1.4,
+  marginTop: '4px',
+  opacity: 0.9,
+  textShadow: '0 1px 1px rgba(0,0,0,0.2)',
+  position: 'relative',
+  zIndex: 2
+}));
+
+// Footer 3 - Modern Professional Style
 export const TemplateFooter3 = ({ accountInfo }) => (
   <FooterContainer3>
-    {/* Corner Ornaments */}
-    <VintageOrnament sx={{ top: '8px', left: '8px' }}>❦</VintageOrnament>
-    <VintageOrnament sx={{ top: '8px', right: '8px' }}>❦</VintageOrnament>
-    <VintageOrnament sx={{ bottom: '8px', left: '8px' }}>❦</VintageOrnament>
-    <VintageOrnament sx={{ bottom: '8px', right: '8px' }}>❦</VintageOrnament>
-    
     {/* Business Name */}
-    <VintageLogo sx={{ position: 'relative', zIndex: 2, textAlign: 'center', mb: 0.5 }}>
-      {accountInfo?.businessName || 'HERITAGE'}
-    </VintageLogo>
+    <ModernBusinessName>
+      {accountInfo?.businessName || 'Greenpeak Marketing'}
+    </ModernBusinessName>
     
-    {/* Contact Info */}
-    <Stack sx={{ position: 'relative', zIndex: 2, alignItems: 'center' }}>
-      <Stack direction="row" spacing={1} sx={{ justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
-        <VintageEst>Est. 1925</VintageEst>
-        <Typography sx={{ fontSize: '8px', color: '#d4af37' }}>•</Typography>
-        <VintageContactLine className="highlight">Tel: {accountInfo?.contact || '(212) 555-0123'}</VintageContactLine>
-        <Typography sx={{ fontSize: '8px', color: '#d4af37' }}>•</Typography>
-        <VintageWebsite>{accountInfo?.website || 'heritage.co'}</VintageWebsite>
-      </Stack>
-      <Stack direction="row" spacing={1} sx={{ justifyContent: 'center', mt: 0.5, alignItems: 'center' }}>
-        <VintageSocial>f</VintageSocial>
-        <VintageSocial>t</VintageSocial>
-        <VintageSocial>ig</VintageSocial>
-        <Typography sx={{ fontSize: '8px', color: '#d4af37', mx: 1 }}>•</Typography>
-        <VintageTagline>Timeless Elegance</VintageTagline>
-      </Stack>
-    </Stack>
+    {/* Contact Information */}
+    <ModernContactRow>
+      <ModernContactItem className="phone">
+        Contact: {accountInfo?.contact || '+91 875550293'}, {accountInfo?.contact || '+91 875550293'}
+      </ModernContactItem>
+      <ModernContactItem className="website">
+        Website: {accountInfo?.website || 'www.urbantechusa.com'}
+      </ModernContactItem>
+    </ModernContactRow>
+    
+    {/* Address */}
+    <ModernAddressText>
+      {accountInfo?.address || 'B-4/168, General Chanda Singh Colony, Near Fountain Chowk, Back Side Bhagat Petrol Pump, Patiala'}
+    </ModernAddressText>
   </FooterContainer3>
 );
 
@@ -672,92 +1033,217 @@ const DecorativeCircle = styled(Box)(({ theme }) => ({
   }
 }));
 
-// Footer 5 - Banner with Contact Ribbon
+// Pixel-perfect Template 5 (Greenpeak style) with responsive scaling
+const FooterContainer5PX = styled(Box)(({ theme }) => ({
+  width: '100%',
+  position: 'relative'
+}));
+
+const ScaledWrapper5PX = styled(Box)(({ theme }) => ({
+  width: '285.17px',
+  height: '38.3px',
+  transformOrigin: 'top left',
+  position: 'relative'
+}));
+
+const Frame5 = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  width: '285.17px',
+  height: '38.3px',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '2.64px',
+  padding: '4.75px 7.39px',
+  position: 'relative',
+  backgroundColor: '#121927cc'
+}));
+
+const Container5 = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  width: '270.12px',
+  gap: '2.64px',
+  marginTop: '-0.74px',
+  marginBottom: '-0.74px',
+  alignItems: 'center',
+  position: 'relative',
+  flex: '0 0 auto'
+}));
+
+const Title5 = styled(Typography)(({ theme }) => ({
+  position: 'relative',
+  alignSelf: 'stretch',
+  marginTop: '-0.26px',
+  fontFamily: 'Poppins, sans-serif',
+  fontWeight: 500,
+  color: '#ffffff',
+  fontSize: '9px',
+  textAlign: 'center',
+  letterSpacing: 0,
+  lineHeight: '11.2px'
+}));
+
+const Info5 = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  gap: '2.64px',
+  alignSelf: 'stretch',
+  width: '100%',
+  alignItems: 'center',
+  position: 'relative',
+  flex: '0 0 auto'
+}));
+
+const Address5 = styled(Typography)(({ theme }) => ({
+  alignSelf: 'stretch',
+  position: 'relative',
+  marginTop: '-0.26px',
+  fontFamily: 'Poppins, sans-serif',
+  fontWeight: 400,
+  color: '#fdfffe',
+  fontSize: '4.8px',
+  letterSpacing: 0,
+  lineHeight: 1
+}));
+
+const Row5 = styled(Box)(({ theme }) => ({
+  display: 'inline-flex',
+  gap: '26.4px',
+  alignItems: 'center',
+  position: 'relative',
+  flex: '0 0 auto'
+}));
+
+const Contact5 = styled(Typography)(({ theme }) => ({
+  width: '97.7px',
+  position: 'relative',
+  marginTop: '-0.26px',
+  fontFamily: 'Poppins, sans-serif',
+  fontWeight: 400,
+  color: '#fdfffe',
+  fontSize: '4.8px',
+  letterSpacing: 0,
+  lineHeight: 1
+}));
+
+const Website5 = styled(Typography)(({ theme }) => ({
+  width: '83.97px',
+  position: 'relative',
+  marginTop: '-0.26px',
+  fontFamily: 'Poppins, sans-serif',
+  fontWeight: 400,
+  color: '#fdfffe',
+  fontSize: '4.8px',
+  letterSpacing: 0,
+  lineHeight: 1
+}));
+
 export const TemplateFooter5 = ({ accountInfo }) => {
-  const getInitials = (name) => {
-    return name ? name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase() : 'SW';
-  };
+  const containerRef = React.useRef(null);
+  const [scale, setScale] = React.useState(1);
+
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        if (w) setScale(w / 285.17);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const businessName = accountInfo?.businessName || 'Greenpeak Marketing';
+  const contact = accountInfo?.contact || '+91 875550293';
+  const website = accountInfo?.website || 'www.urbantechusa.com';
+  const address = accountInfo?.address || 'B-4/168, General Chanda Singh Colony, Near Fountain Chowk, Back Side Bhagat Petrol Pump, Patiala';
 
   return (
-    <FooterContainer5>
-      {/* Decorative Circles */}
-      <DecorativeCircle sx={{ width: '30px', height: '30px', top: '20%', left: '10%', animationDelay: '0s' }} />
-      <DecorativeCircle sx={{ width: '20px', height: '20px', top: '60%', right: '15%', animationDelay: '1s' }} />
-      <DecorativeCircle sx={{ width: '15px', height: '15px', bottom: '30%', left: '70%', animationDelay: '2s' }} />
-      
-      {/* Banner Top */}
-      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 15px', position: 'relative', zIndex: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'white' }}>
-          <BannerLogo>
-            {getInitials(accountInfo?.businessName)}
-          </BannerLogo>
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <BannerCompanyName>
-              {accountInfo?.businessName || 'SILVER WOLF'}
-            </BannerCompanyName>
-            <BannerDescription>
-              Digital Marketing Studio
-            </BannerDescription>
-          </Box>
-        </Box>
-      </Box>
-      
-      {/* Contact Ribbon */}
-      <ContactRibbon>
-        <RibbonSection>
-          <RibbonIcon>📍</RibbonIcon>
-          <RibbonText>{accountInfo?.address || '890 Wolf Street, Denver, CO 80202'}</RibbonText>
-        </RibbonSection>
-        
-        <RibbonDivider />
-        
-        <RibbonSection>
-          <RibbonIcon>📱</RibbonIcon>
-          <RibbonText className="phone">{accountInfo?.contact || '+1 (555) 789-WOLF'}</RibbonText>
-        </RibbonSection>
-        
-        <RibbonDivider />
-        
-        <RibbonSection>
-          <RibbonIcon>🌐</RibbonIcon>
-          <RibbonText className="highlight">{accountInfo?.website || 'www.silverwolf.studio'}</RibbonText>
-        </RibbonSection>
-      </ContactRibbon>
-    </FooterContainer5>
+    <FooterContainer5PX ref={containerRef} sx={{ height: `${38.3 * scale}px` }}>
+      <ScaledWrapper5PX sx={{ transform: `scale(${scale})` }}>
+        <Frame5>
+          <Container5>
+            <Title5>{businessName}</Title5>
+            <Info5>
+              <Address5>Address: {address}</Address5>
+              <Row5>
+                <Contact5>Contact: {contact} , {contact}</Contact5>
+                <Website5>
+                  Website: {website}
+                </Website5>
+              </Row5>
+            </Info5>
+          </Container5>
+        </Frame5>
+      </ScaledWrapper5PX>
+    </FooterContainer5PX>
   );
 };
 
-// Footer 6 - Industrial Badge Style
-export const TemplateFooter6 = ({ accountInfo }) => (
-  <FooterContainer6>
-    <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', height: '100%' }}>
-      <Stack sx={{ flex: 1, pl: 2 }}>
-        <BusinessName sx={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-          {accountInfo?.businessName || 'Car Repair Services'}
-        </BusinessName>
-        <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
-          <ContactText sx={{ fontSize: '7px', fontFamily: 'monospace' }}>
-            TEL: {accountInfo?.contact || '+91 1234567890'}
-          </ContactText>
-          <WebsiteText sx={{ fontSize: '7px', fontFamily: 'monospace' }}>
-            WEB: {accountInfo?.website || 'www.carrepairservices.com'}
-          </WebsiteText>
-        </Stack>
-      </Stack>
-      <AddressText sx={{ 
-        fontSize: '6px', 
-        textAlign: 'right', 
-        writingMode: 'vertical-rl', 
-        textOrientation: 'mixed',
-        height: '40px',
-        display: 'flex',
-        alignItems: 'center'
-      }}>
-        {accountInfo?.address || '654 Service Center, Delhi, NCR 110001'}
-      </AddressText>
-    </Stack>
-  </FooterContainer6>
-);
+// Footer 6 - Blue gradient info bar with company pill
+export const TemplateFooter6 = ({ accountInfo }) => {
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        if (w) {
+          setScale(w / 285);
+        }
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <FooterContainer6 ref={containerRef} sx={{ height: `${46 * scale}px` }}>
+      <ScaledWrapper6 sx={{ transform: `scale(${scale})` }}>
+        <OverlapGroup6>
+          <BackgroundShape6 />
+
+          <PhoneGroup6>
+            <PhoneContent6>
+              <PhoneNumber6 sx={{ top: '9px' }}>
+                {accountInfo?.contact || '6858653555'}
+              </PhoneNumber6>
+              <PhoneNumber6 sx={{ top: 0 }}>
+                {accountInfo?.contact || '6858653555'}
+              </PhoneNumber6>
+            </PhoneContent6>
+          </PhoneGroup6>
+
+          <WebsiteGroup6>
+            <WebsiteIcon6>🌐</WebsiteIcon6>
+            <WebsiteText6>
+              {(accountInfo?.website || 'WWW.WEBSITE.COM').toUpperCase()}
+            </WebsiteText6>
+          </WebsiteGroup6>
+
+          <AddressGroup6>
+            <LocationIcon6>📍</LocationIcon6>
+            <AddressText6>
+              {(accountInfo?.address || '2385 SYCAMORE STREET, COLUMBUS, OH 43215')}
+            </AddressText6>
+          </AddressGroup6>
+
+          <LogoBackground6 />
+          <CompanyName6>
+            {(accountInfo?.businessName || 'URBANTECH SOLUTIONS').toUpperCase()}
+          </CompanyName6>
+        </OverlapGroup6>
+      </ScaledWrapper6>
+    </FooterContainer6>
+  );
+};
 
 // Main component that selects the appropriate footer variant
 const TemplateFooterVariants = ({ designId, accountInfo }) => {
