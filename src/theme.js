@@ -3,37 +3,37 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#03a9f4', // Blue from design
+      main: '#0b91d6',
       light: '#42a5f5',
       dark: '#0277bd',
       contrastText: '#ffffff'
     },
     secondary: {
-      main: '#00296c', // Dark blue from service titles
-      light: '#1976d2',
-      dark: '#001e4d',
+      main: '#ef232a',
+      light: '#f25a5f',
+      dark: '#d61e24',
       contrastText: '#ffffff'
     },
     error: {
-      main: '#EF232A',
-      light: '#F25A5F',
-      dark: '#D61E24',
-      contrastText: '#FFFFFF'
+      main: '#ef232a',
+      light: '#f25a5f',
+      dark: '#d61e24',
+      contrastText: '#ffffff'
     },
     warning: {
-      main: '#ffeb3b', // Yellow accent from design
+      main: '#ffeb3b',
       light: '#fff176',
       dark: '#f57f17',
       contrastText: '#000000'
     },
     text: {
-      primary: '#333333', // Main text color
-      secondary: '#9ca6c1', // Secondary text color
+      primary: '#121927',
+      secondary: '#a0a0aa',
       disabled: '#a2a9b0'
     },
     background: {
       default: '#ffffff',
-      paper: '#f6f6f6' // Footer background
+      paper: '#fafafa'
     },
     grey: {
       50: '#f9fafb',
@@ -45,77 +45,76 @@ const theme = createTheme({
       600: '#4b5563',
       700: '#374151',
       800: '#1f2937',
-      900: '#111827'
+      900: '#121927'
     },
     divider: 'rgba(160, 160, 170, 0.2)'
   },
   typography: {
-    fontFamily: 'Montserrat, Source Sans Pro, sans-serif',
+    fontFamily: 'Inter, sans-serif',
     fontSize: 14,
-    fontWeightLight: 400,
-    fontWeightRegular: 500,
-    fontWeightMedium: 600,
+    fontWeightLight: 300,
+    fontWeightRegular: 400,
+    fontWeightMedium: 500,
     fontWeightBold: 700,
     h1: {
-      fontFamily: 'Montserrat, sans-serif',
+      fontFamily: 'Inter, sans-serif',
       fontSize: '60px',
-      fontWeight: 500,
-      letterSpacing: '1px',
-      lineHeight: '80px'
+      fontWeight: 700,
+      letterSpacing: '-1.8px',
+      lineHeight: '71px',
+      textTransform: 'capitalize'
     },
     h2: {
-      fontFamily: 'Montserrat, sans-serif', 
-      fontSize: '30px',
+      fontFamily: 'Inter, sans-serif', 
+      fontSize: '46px',
       fontWeight: 700,
-      letterSpacing: '1px',
-      lineHeight: '33px'
+      lineHeight: '50px'
     },
     h3: {
-      fontFamily: 'Montserrat, sans-serif',
-      fontSize: '30px', 
-      fontWeight: 400,
-      letterSpacing: '1px',
-      lineHeight: '33px'
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '42px', 
+      fontWeight: 700,
+      lineHeight: '50px'
     },
     h4: {
-      fontFamily: 'Montserrat, sans-serif',
-      fontSize: '22px',
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '28px',
       fontWeight: 500,
-      letterSpacing: '-0.44px'
+      lineHeight: '40px'
     },
     h5: {
-      fontFamily: 'Montserrat, sans-serif',
-      fontSize: '18px',
-      fontWeight: 700,
-      letterSpacing: '1px',
-      lineHeight: '19.80px'
-    },
-    h6: {
+      fontFamily: 'Inter, sans-serif',
       fontSize: '18px',
       fontWeight: 600,
-      color: '#121927'
-    },
-    body1: {
-      fontFamily: 'Source Sans Pro, sans-serif',
-      fontSize: '16px',
-      fontWeight: 400,
-      letterSpacing: '-0.32px',
       lineHeight: '20px'
     },
-    body2: {
-      fontFamily: 'Source Sans Pro, sans-serif',
-      fontSize: '15.5px',
+    h6: {
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '16px',
+      fontWeight: 600,
+      lineHeight: '20px'
+    },
+    body1: {
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '16px',
       fontWeight: 400,
       lineHeight: '24px'
     },
-    caption: {
-      fontFamily: 'Source Sans Pro, sans-serif',
+    body2: {
+      fontFamily: 'Inter, sans-serif',
       fontSize: '14px',
-      fontWeight: 400
+      fontWeight: 400,
+      lineHeight: '20px'
+    },
+    caption: {
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '12px',
+      fontWeight: 400,
+      lineHeight: '16px'
     }
   },
   shape: {
-    borderRadius: 4
+    borderRadius: 8
   }
 });
 
